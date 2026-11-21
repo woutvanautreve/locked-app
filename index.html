@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Planner">
+<meta name="theme-color" content="#f4f3fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121218" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
+<title>Mijn Planner</title>
+<style>
+:root{
+  --bg:#f4f3fb; --card:#ffffff; --card2:#efedf8; --text:#1c1b29; --muted:#6e6b85; --line:#e3e0f0;
+  --accent:#6c5ce7; --accent2:#a29bfe; --sport:#ff7a45; --gym:#ff7a45; --cardio:#ec4899; --studie:#3b82f6; --overig:#10b981;
+  --danger:#e5484d; --shadow:0 4px 18px rgba(40,30,90,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121218; --card:#1d1c26; --card2:#262533; --text:#f1f0f7; --muted:#9a97b0; --line:#2e2d3c;
+    --accent:#8b7cf6; --accent2:#5b4fc9; --shadow:0 4px 18px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;font-size:16px}
+body{min-height:100vh;padding:env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select{font:inherit;font-size:16px;color:var(--text)}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:28px;margin:8px 0 2px;letter-spacing:-.5px}
+h2{font-size:18px;margin:22px 0 10px}
+.sub{color:var(--muted);font-size:14px}
+.card{background:var(--card);border-radius:18px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px}
+.row{display:flex;align-items:center;gap:12px}
+.between{justify-content:space-between}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--card2);font-size:13px;font-weight:600}
+.view{display:none;animation:fade .2s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.lvl{min-width:118px;text-align:right}
+.bar{height:8px;border-radius:99px;background:var(--card2);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+
+/* ring */
+.ring{position:relative;width:86px;height:86px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:20px}
+.quote{font-style:italic;color:var(--muted);font-size:15px;line-height:1.4}
+
+/* tasks */
+.task{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);border-left:5px solid var(--c)}
+.task .chk{width:28px;height:28px;border-radius:50%;border:2.5px solid var(--c);flex:none;display:grid;place-items:center;transition:.15s}
+.task.done .chk{background:var(--c)}
+.task.done .chk::after{content:"";width:7px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.task .body{flex:1;min-width:0;text-align:left}
+.task .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task.done .t{text-decoration:line-through;color:var(--muted)}
+.task .m{font-size:13px;color:var(--muted);margin-top:2px}
+.c-sport,.c-gym{--c:var(--gym)} .c-cardio{--c:var(--cardio)} .c-studie{--c:var(--studie)} .c-overig{--c:var(--overig)}
+.empty{text-align:center;color:var(--muted);padding:26px 10px}
+.pop{animation:pop .35s ease}
+@keyframes pop{50%{transform:scale(1.04)}}
+.linkbtn{color:var(--accent);font-weight:600;font-size:14px;padding:4px 0}
+
+/* week */
+.weeknav{display:flex;align-items:center;justify-content:space-between;margin:10px 0}
+.weeknav button{width:40px;height:40px;border-radius:12px;background:var(--card);box-shadow:var(--shadow);font-size:20px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:var(--card);border-radius:14px;padding:8px 0;text-align:center;box-shadow:var(--shadow);font-size:12px;color:var(--muted)}
+.day b{display:block;font-size:18px;color:var(--text);margin:2px 0}
+.day.sel{background:var(--accent);color:#fff}
+.day.sel b{color:#fff}
+.day.today:not(.sel) b{color:var(--accent)}
+.dots{display:flex;justify-content:center;gap:3px;height:6px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.wday{margin-top:18px;scroll-margin-top:12px}
+.wday.past{opacity:.6}
+.dayhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dayhead h3{margin:0;font-size:17px}
+.dayhead h3::first-letter{text-transform:uppercase}
+.dayhead .sub{font-size:12px;margin-top:1px}
+.wday.now .dayhead h3{color:var(--accent)}
+.addday{height:32px;padding:0 14px;border-radius:999px;background:var(--card2);color:var(--accent);font-size:14px;font-weight:700}
+.gl{margin-top:12px}
+/* plan-modus */
+#weekGoals.planning{position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:4;box-shadow:0 10px 30px rgba(40,30,90,.22);border:2px solid var(--accent)}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.drag{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:var(--card2);border:2px solid var(--c);border-left-width:6px;font-weight:700;font-size:15px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.drag small{font-size:12px;font-weight:600;color:var(--muted)}
+.drag.lifted{opacity:.35}
+.dragghost{position:fixed;left:0;top:0;z-index:30;pointer-events:none;background:var(--card);box-shadow:0 14px 34px rgba(0,0,0,.3);cursor:grabbing}
+.planmode .wday{padding:6px;margin-left:-6px;margin-right:-6px;border-radius:16px;transition:background .15s,box-shadow .15s}
+.wday.drop{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:0 0 0 2px var(--accent)}
+.day.drop{box-shadow:0 0 0 3px var(--accent)}
+.planmode .fab{display:none}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.opts button{padding:8px 13px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600}
+.opts button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.timebtn{text-align:left;font-weight:600;cursor:pointer}
+.timebtn.empty{color:var(--muted);font-weight:400}
+.timebtn.open{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.timepick{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:-4px 0 14px}
+.timepick .opts{margin-bottom:10px}
+.hours{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.hours button,#tMins button{padding:8px 0;text-align:center;font-variant-numeric:tabular-nums}
+#tMins{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.timepick .btn{padding:11px;font-size:15px}
+.gl .row{margin-bottom:6px;font-size:15px}
+.free{color:var(--muted);font-size:14px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:14px}
+
+/* stats */
+.stat{flex:1;background:var(--card2);border-radius:14px;padding:12px}
+.stat b{display:block;font-size:22px}
+.stat span{font-size:12px;color:var(--muted)}
+.goal{margin-bottom:16px}
+.goal .row{margin-bottom:8px}
+.step{display:flex;align-items:center;gap:8px}
+.step button{width:32px;height:32px;border-radius:10px;background:var(--card2);font-size:18px;font-weight:700}
+.chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:8px}
+.chart>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-size:11px;color:var(--muted)}
+.chart .col{width:100%;flex:none;display:flex;flex-direction:column-reverse;border-radius:8px;overflow:hidden;background:var(--card2)}
+.chart .col i{display:block;flex:none}
+
+/* focus */
+.timer{position:relative;width:240px;height:240px;margin:16px auto}
+.timer svg{transform:rotate(-90deg)}
+.timer .tt{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.timer .tt b{font-size:52px;font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.seg{display:flex;background:var(--card2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;padding:9px 2px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.btn{display:block;width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#fff;font-weight:700;font-size:17px}
+.btn.ghost{background:var(--card2);color:var(--text)}
+.btn.danger{background:transparent;color:var(--danger)}
+.btn[data-armed]{background:var(--danger);color:#fff}
+.btns{display:flex;gap:10px}
+.field{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);margin-bottom:12px;-webkit-appearance:none;appearance:none}
+label.l{display:block;font-size:13px;color:var(--muted);margin:0 0 6px 2px;font-weight:600}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:5}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--muted);padding:2px 10px}
+nav button svg{width:24px;height:24px}
+nav button.on{color:var(--accent)}
+.fab{position:fixed;right:18px;bottom:calc(86px + env(safe-area-inset-bottom));height:52px;padding:0 24px;border-radius:999px;background:var(--accent);color:#fff;font-size:17px;font-weight:700;box-shadow:0 8px 22px rgba(108,92,231,.45);z-index:6}
+
+/* sheet */
+.back{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.2s;z-index:10}
+.back.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;background:var(--bg);border-radius:22px 22px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:11;max-height:92vh;overflow:auto}
+.sheet.on{transform:none}
+.grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--card);border-radius:12px;border:1px solid var(--line);margin-bottom:14px;font-size:15px}
+.toggle input{width:22px;height:22px;accent-color:var(--accent)}
+
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translate(-50%,-250%);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:700;font-size:15px;transition:transform .3s;z-index:20;white-space:nowrap}
+.toast.on{transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<!-- VANDAAG -->
+<section class="view on" id="v-today"><div class="wrap">
+  <div class="top">
+    <div><div class="sub" id="todayDate"></div><h1 id="greet">Hoi!</h1></div>
+    <div class="lvl"><div class="chip" id="lvlChip">Lvl 1</div><div class="bar" style="margin-top:8px"><i id="xpBar"></i></div><div class="sub" style="font-size:12px;margin-top:4px" id="xpTxt"></div></div>
+  </div>
+
+  <div class="card row" style="margin-top:16px">
+    <div class="ring"><svg width="86" height="86"><circle cx="43" cy="43" r="36" stroke="var(--card2)" stroke-width="10" fill="none"/><circle id="ringArc" cx="43" cy="43" r="36" stroke="var(--accent)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="226.2" stroke-dashoffset="226.2" style="transition:stroke-dashoffset .5s"/></svg><b id="ringPct">0%</b></div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:17px" id="dayTxt">Nog niets gepland</div>
+      <div class="sub" id="dayMin" style="margin-top:3px"></div>
+      <div class="chip" style="margin-top:8px" id="streakChip">🔥 0 dagen op rij</div>
+    </div>
+  </div>
+
+  <div class="card quote" id="quote"></div>
+
+  <div id="overdueBox"></div>
+  <h2>Vandaag</h2>
+  <div id="todayList"></div>
+</div></section>
+
+<!-- WEEK -->
+<section class="view" id="v-week"><div class="wrap">
+  <h1>Weekplanning</h1>
+  <div class="weeknav"><button id="wPrev" aria-label="Vorige week">‹</button><div style="font-weight:700" id="wLabel"></div><button id="wNext" aria-label="Volgende week">›</button></div>
+  <div class="days" id="days"></div>
+  <div class="card" id="weekGoals" style="margin-top:14px"></div>
+  <div id="weekList"></div>
+</div></section>
+
+<!-- FOCUS -->
+<section class="view" id="v-focus"><div class="wrap">
+  <h1>Focus</h1>
+  <div class="sub">Zet je telefoon weg en werk geconcentreerd. Elke minuut = 1 XP.</div>
+  <div style="margin-top:16px"><input class="field" id="fSubject" placeholder="Waar werk je aan? (bv. wiskunde H4)" maxlength="60"></div>
+  <div class="seg" id="fDur"></div>
+  <div class="timer"><svg width="240" height="240"><circle cx="120" cy="120" r="108" stroke="var(--card2)" stroke-width="14" fill="none"/><circle id="fArc" cx="120" cy="120" r="108" stroke="var(--studie)" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="678.6" stroke-dashoffset="0"/></svg>
+    <div class="tt"><div><b id="fTime">25:00</b><div class="sub" id="fState">Klaar om te starten</div></div></div></div>
+  <div class="btns"><button class="btn" id="fStart">Start</button><button class="btn ghost" id="fStop" style="display:none">Stop</button></div>
+  <div class="card row between" style="margin-top:18px"><div><div class="sub">Vandaag gefocust</div><div style="font-weight:700;font-size:20px" id="fToday">0 min</div></div><div style="text-align:right"><div class="sub">Deze week</div><div style="font-weight:700;font-size:20px" id="fWeek">0 min</div></div></div>
+</div></section>
+
+<!-- DOELEN -->
+<section class="view" id="v-goals"><div class="wrap">
+  <h1>Doelen</h1>
+  <div class="sub">Je weekdoelen. Kleine stappen, elke week.</div>
+  <div class="card" style="margin-top:16px">
+    <div class="goal">
+      <div class="row between"><div><b>💪 Gym</b><div class="sub" id="gGymTxt"></div></div>
+        <div class="step"><button data-g="gym" data-d="-1">−</button><b id="gGymVal">2x</b><button data-g="gym" data-d="1">+</button></div></div>
+      <div class="bar"><i id="gGymBar" style="background:var(--gym)"></i></div>
+    </div>
+    <div class="goal">
+      <div class="row between"><div><b>🏃 Cardio</b><div class="sub" id="gCardioTxt"></div></div>
+        <div class="step"><button data-g="cardio" data-d="-15">−</button><b id="gCardioVal">1u</b><button data-g="cardio" data-d="15">+</button></div></div>
+      <div class="bar"><i id="gCardioBar" style="background:var(--cardio)"></i></div>
+    </div>
+    <div class="goal" style="margin-bottom:0">
+      <div class="row between"><div><b>📚 School</b><div class="sub" id="gStudieTxt"></div></div>
+        <div class="step"><button data-g="studie" data-d="-30">−</button><b id="gStudieVal">5u</b><button data-g="studie" data-d="30">+</button></div></div>
+      <div class="bar"><i id="gStudieBar" style="background:var(--studie)"></i></div>
+    </div>
+  </div>
+  <div class="row" style="gap:8px">
+    <div class="stat"><b id="sStreak">0</b><span>dagen op rij actief</span></div>
+    <div class="stat"><b id="sBest">0</b><span>langste reeks</span></div>
+    <div class="stat"><b id="sDone">0</b><span>taken afgevinkt</span></div>
+  </div>
+  <h2>Laatste 7 dagen</h2>
+  <div class="card"><div class="chart" id="chart"></div>
+    <div class="row sub" style="font-size:12px;margin-top:10px;gap:14px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sport)"></i> sport</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--studie)"></i> school</span><span>(minuten)</span></div></div>
+  <h2>Instellingen</h2>
+  <div class="card">
+    <label class="l" for="nameIn">Je naam</label>
+    <input class="field" id="nameIn" placeholder="Hoe mag ik je noemen?" maxlength="30">
+    <div class="btns"><button class="btn ghost" id="exportBtn">Back-up downloaden</button></div>
+    <button class="btn danger" id="resetBtn" style="margin-top:6px">Alles wissen</button>
+  </div>
+</div></section>
+
+<button class="fab" id="fab" aria-label="Taak plannen">Plan</button>
+
+<nav>
+  <button data-v="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Vandaag</button>
+  <button data-v="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Week</button>
+  <button data-v="focus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Focus</button>
+  <button data-v="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 21V4M6 4h11l-2 4 2 4H6"/></svg>Doelen</button>
+</nav>
+
+<!-- SHEET -->
+<div class="back" id="back"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h2 style="margin-top:0" id="sTitle">Nieuwe taak</h2>
+  <label class="l">Soort</label>
+  <div class="seg" id="tCat" style="margin-bottom:14px">
+    <button data-c="gym">💪 Gym</button><button data-c="cardio">🏃 Cardio</button><button data-c="studie">📚 School</button><button data-c="overig">✨ Overig</button>
+  </div>
+  <div id="kindWrap"><label class="l">Vak of toets?</label><div class="seg" id="tKind" style="margin-bottom:14px"><button type="button" data-k="vak">📖 Vak</button><button type="button" data-k="toets">📝 Toets</button></div></div>
+  <div id="subWrap"><label class="l" id="subLbl">Welk vak?</label><div class="opts" id="tSub"></div></div>
+  <input class="field" id="tTitle" placeholder="Omschrijving (optioneel)" maxlength="80">
+  <label class="l" for="tDate">Dag</label><input class="field" type="date" id="tDate">
+  <div class="two">
+    <div><label class="l" for="tFromBtn">Van</label><button type="button" class="field timebtn" id="tFromBtn">--:--</button></div>
+    <div><label class="l" for="tToBtn">Tot</label><button type="button" class="field timebtn" id="tToBtn">--:--</button></div>
+  </div>
+  <div class="sub" id="tDurTxt" style="margin:-4px 0 14px 2px;font-weight:600"></div>
+  <div class="timepick" id="tPick" hidden>
+    <div style="font-weight:700;margin-bottom:10px" id="pickLbl">Begintijd</div>
+    <label class="l">Uur</label><div class="opts hours" id="tHours"></div>
+    <label class="l">Minuten</label><div class="opts" id="tMins"></div>
+    <button type="button" class="btn" id="tTimeOk">OK</button>
+  </div>
+  <label class="toggle" id="repWrap">Elke week herhalen (4 weken)<input type="checkbox" id="tRep"></label>
+  <button class="btn" id="tSave">Opslaan</button>
+  <button class="btn danger" id="tDel" style="margin-top:6px">Verwijderen</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const KEY='mijn-planner-v1';
+const XP={gym:20,cardio:20,studie:15,overig:5};
+const CAT={gym:'Gym',cardio:'Cardio',studie:'School',overig:'Overig'};
+const CHEER={gym:'💪 Sterk bezig!',cardio:'🏃 Lekker gelopen!',studie:'🧠 Goed gedaan!',overig:'✅ Afgevinkt!'};
+const isSport=c=>c==='gym'||c==='cardio';
+const QUOTES=[
+ 'Je hoeft niet perfect te zijn, alleen consequent.',
+ 'Elke training telt, ook de korte.',
+ 'Vandaag plannen is morgen minder stress.',
+ 'Motivatie komt vaak pas nádat je begint.',
+ 'Doe het voor de versie van jezelf over een jaar.',
+ 'Eén taak tegelijk. Dat is genoeg.',
+ 'Twintig minuten focus is beter dan twee uur uitstellen.',
+ 'Discipline is jezelf een belofte doen en die nakomen.',
+ 'Een slechte dag is geen slechte week. Pak de draad weer op.',
+ 'Klein beginnen is nog steeds beginnen.',
+ 'Je bent sterker dan je excuses.',
+ 'Rust is ook onderdeel van het plan.',
+ 'Wat je vandaag doet, bouwt aan wie je morgen bent.',
+ 'Vink het af en voel je trots.'
+];
+const DN=['zo','ma','di','wo','do','vr','za'];
+const DNL=['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+const MN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const MNL=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const today=()=>ymd(new Date());
+const monday=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const w=(x.getDay()+6)%7;return addDays(x,-w)};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const toMin=s=>{const[h,m]=s.split(':').map(Number);return h*60+m};
+const fromMin=n=>{n=Math.min(n,23*60+45);return pad(Math.floor(n/60))+':'+pad(n%60)};
+const fmtMin=m=>m>=60?(Math.floor(m/60)+'u'+(m%60?' '+m%60+'m':'')):m+' min';
+
+function defaults(){return{tasks:[],focus:[],goals:{gym:2,cardio:60,studie:300},timer:null,name:'',best:0,fDur:25}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s){const x=Object.assign(defaults(),s);
+  x.goals=Object.assign({gym:2,cardio:60,studie:300},x.goals);delete x.goals.sport;
+  for(const t of x.tasks)if(t.cat==='sport')t.cat='gym';return x}}catch(e){}return defaults()}
+let S=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+let view='today', weekStart=monday(new Date()), selDay=today(), editing=null, cat='studie';
+
+/* ---------- berekeningen ---------- */
+function totalXP(){let x=0;for(const t of S.tasks)if(t.done)x+=XP[t.cat]||0;for(const f of S.focus)x+=f.min;return x}
+function activeDays(){const s=new Set();for(const t of S.tasks)if(t.done&&t.cat!=='overig')s.add(t.date);for(const f of S.focus)s.add(f.date);return s}
+function streak(){const a=activeDays();let d=new Date();if(!a.has(ymd(d)))d=addDays(d,-1);let n=0;while(a.has(ymd(d))){n++;d=addDays(d,-1)}return n}
+function bestStreak(){const a=[...activeDays()].sort();let best=0,cur=0,prev=null;for(const s of a){const d=parse(s);cur=(prev&&ymd(addDays(prev,1))===s)?cur+1:1;best=Math.max(best,cur);prev=d}return best}
+// onlyDone=true: wat je echt gedaan hebt; false: alles wat ingepland is
+function weekStats(start,onlyDone=true){const end=ymd(addDays(start,6)),st=ymd(start);let gym=0,cardio=0,studie=0;
+  for(const t of S.tasks)if((t.done||!onlyDone)&&t.date>=st&&t.date<=end){if(t.cat==='gym')gym++;if(t.cat==='cardio')cardio+=t.dur;if(t.cat==='studie')studie+=t.dur}
+  for(const f of S.focus)if(f.date>=st&&f.date<=end)studie+=f.min;return{gym,cardio,studie}}
+function dayMinutes(d){let sp=0,st=0;for(const t of S.tasks)if(t.done&&t.date===d){if(isSport(t.cat))sp+=t.dur;if(t.cat==='studie')st+=t.dur}for(const f of S.focus)if(f.date===d)st+=f.min;return{sp,st}}
+function tasksOn(d){return S.tasks.filter(t=>t.date===d).sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:(a.time||'99')>(b.time||'99')?1:0)}
+function levelName(l){return l>=20?'Legende':l>=12?'Machine':l>=7?'Planner Pro':l>=3?'Doorzetter':'Starter'}
+
+/* ---------- render ---------- */
+function taskHTML(t,showDate){
+  const meta=[t.time?t.time+'–'+(t.end||fromMin(toMin(t.time)+t.dur)):null,fmtMin(t.dur),t.kind==='toets'?'📝 Toets':CAT[t.cat]];if(showDate){const d=parse(t.date);meta.unshift(DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()])}
+  return '<div class="task c-'+t.cat+(t.done?' done':'')+'" data-id="'+t.id+'"><button class="chk" data-act="toggle" aria-label="Afvinken"></button><button class="body" data-act="edit"><div class="t">'+esc(t.title)+'</div><div class="m">'+meta.filter(Boolean).join(' · ')+'</div></button></div>'
+}
+function renderToday(){
+  const now=new Date(),h=now.getHours();
+  $('todayDate').textContent=DNL[now.getDay()]+' '+now.getDate()+' '+MNL[now.getMonth()];
+  $('greet').textContent=(h<6?'Goedenacht':h<12?'Goedemorgen':h<18?'Goedemiddag':'Goedenavond')+(S.name?', '+S.name:'')+'!';
+  const xp=totalXP(),lvl=Math.floor(xp/100)+1;
+  $('lvlChip').textContent='⭐ Lvl '+lvl+' · '+levelName(lvl);$('xpBar').style.width=(xp%100)+'%';$('xpTxt').textContent=(xp%100)+'/100 XP';
+  const list=tasksOn(today()),done=list.filter(t=>t.done).length,pct=list.length?Math.round(done/list.length*100):0;
+  $('ringArc').style.strokeDashoffset=226.2*(1-pct/100);$('ringPct').textContent=pct+'%';
+  $('dayTxt').textContent=list.length?(done===list.length?'Alles gedaan! 🎉':done+' van '+list.length+' gedaan'):'Nog niets gepland';
+  const m=dayMinutes(today());$('dayMin').textContent=(m.sp||m.st)?('Vandaag: '+fmtMin(m.sp)+' sport · '+fmtMin(m.st)+' school'):'Plan iets voor sport of school';
+  const s=streak();$('streakChip').textContent=(s?'🔥 ':'💤 ')+s+(s===1?' dag':' dagen')+' op rij';
+  const qi=Math.floor((now-new Date(now.getFullYear(),0,0))/864e5)%QUOTES.length;$('quote').textContent='“'+QUOTES[qi]+'”';
+  $('todayList').innerHTML=list.length?list.map(t=>taskHTML(t)).join(''):'<div class="empty">Nog niets gepland voor vandaag.<br>Tik op <b>Plan</b> om je dag te plannen.</div>';
+  const od=S.tasks.filter(t=>!t.done&&t.date<today()&&t.date>=ymd(addDays(new Date(),-14)));
+  $('overdueBox').innerHTML=od.length?'<div class="row between"><h2>Nog open van eerder</h2><button class="linkbtn" data-act="moveall">Alles naar vandaag</button></div>'+od.map(t=>taskHTML(t,true)).join(''):'';
+}
+function renderWeek(){
+  const end=addDays(weekStart,6);
+  $('wLabel').textContent=weekStart.getDate()+' '+MN[weekStart.getMonth()]+' – '+end.getDate()+' '+MN[end.getMonth()];
+  let html='';
+  for(let i=0;i<7;i++){const d=addDays(weekStart,i),k=ymd(d),ts=tasksOn(k);
+    html+='<button class="day'+(k===selDay?' sel':'')+(k===today()?' today':'')+'" data-day="'+k+'">'+DN[d.getDay()]+'<b>'+d.getDate()+'</b><div class="dots">'+ts.slice(0,4).map(t=>'<i class="c-'+t.cat+'"></i>').join('')+'</div></button>'}
+  $('days').innerHTML=html;
+  const p=weekStats(weekStart,false),g=S.goals,over=ymd(addDays(weekStart,6))<today();
+  const line=(ico,name,have,goal,fmt,col)=>'<div class="gl"><div class="row between"><span>'+ico+' <b>'+name+'</b></span><span class="sub">'+fmt(have)+' / '+fmt(goal)+(have>=goal?' ✅':'')+'</span></div><div class="bar"><i style="width:'+Math.min(100,have/goal*100)+'%;background:'+col+'"></i></div></div>';
+  const x=v=>v+'x',miss=[];
+  if(p.gym<g.gym)miss.push('nog '+(g.gym-p.gym)+'x gym');if(p.cardio<g.cardio)miss.push('nog '+fmtMin(g.cardio-p.cardio)+' cardio');
+  const wg=$('weekGoals'),pm=planMode&&!over;wg.classList.toggle('planning',pm);document.body.classList.toggle('planmode',pm&&view==='week');
+  if(pm){
+    const left=(n,f)=>n>0?'nog '+f(n):'✅ gehaald';
+    const chip=(c,label,small)=>'<div class="drag c-'+c+'" data-cat="'+c+'"><span>'+label+'</span><small>'+small+'</small></div>';
+    wg.innerHTML='<div class="row between"><b>Sleep een blok naar een dag</b><button class="linkbtn" data-act="plandone">Klaar</button></div>'
+      +'<div class="sub" style="font-size:13px;margin-top:2px">Houd een blok vast en sleep het naar een dag.</div><div class="chips">'
+      +chip('gym','💪 Gym',left(g.gym-p.gym,x))+chip('cardio','🏃 Cardio',left(g.cardio-p.cardio,fmtMin))+chip('studie','📚 School',left(g.studie-p.studie,fmtMin))+chip('overig','✨ Overig','iets anders')+'</div>';
+  } else wg.innerHTML='<b>Ingepland deze week</b>'+line('💪','Gym',p.gym,g.gym,x,'var(--gym)')+line('🏃','Cardio',p.cardio,g.cardio,fmtMin,'var(--cardio)')+line('📚','School',p.studie,g.studie,fmtMin,'var(--studie)')
+    +(over?'':(miss.length?'<div class="sub" style="margin:14px 0 10px">⚠️ Om je doel te halen moet je '+miss.join(' en ')+' inplannen.</div>':'<div class="sub" style="margin:14px 0 10px">🎯 Je sportdoelen voor deze week staan erin!</div>')+'<button class="btn" data-act="planmode">✨ Plan mijn week</button>');
+  let out='';
+  for(let i=0;i<7;i++){const d=addDays(weekStart,i),k=ymd(d),l=tasksOn(k),tot=l.reduce((a,t)=>a+t.dur,0),dn=l.filter(t=>t.done).length;
+    out+='<div class="wday'+(k===today()?' now':k<today()?' past':'')+'" id="d-'+k+'" data-day="'+k+'"><div class="dayhead"><div><h3>'+(k===today()?'Vandaag · ':'')+DNL[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+'</h3><div class="sub">'+(l.length?dn+'/'+l.length+' gedaan · '+fmtMin(tot):'Niets gepland')+'</div></div><button class="addday" data-act="add" data-day="'+k+'" aria-label="Iets plannen op '+DNL[d.getDay()]+'">Plan</button></div>'
+      +(l.length?l.map(t=>taskHTML(t)).join(''):'<div class="free">Vrij, of tik op Plan om iets in te plannen</div>')+'</div>'}
+  $('weekList').innerHTML=out;
+}
+function renderGoals(){
+  const w=weekStats(monday(new Date())),g=S.goals;
+  $('gGymVal').textContent=g.gym+'x';$('gGymTxt').textContent=w.gym+' van minstens '+g.gym+'x gedaan deze week';$('gGymBar').style.width=Math.min(100,w.gym/g.gym*100)+'%';
+  $('gCardioVal').textContent=fmtMin(g.cardio);$('gCardioTxt').textContent=fmtMin(w.cardio)+' van minstens '+fmtMin(g.cardio)+' gedaan';$('gCardioBar').style.width=Math.min(100,w.cardio/g.cardio*100)+'%';
+  $('gStudieVal').textContent=fmtMin(g.studie);$('gStudieTxt').textContent=fmtMin(w.studie)+' van '+fmtMin(g.studie)+' deze week';$('gStudieBar').style.width=Math.min(100,w.studie/g.studie*100)+'%';
+  const s=streak();S.best=Math.max(S.best||0,bestStreak());$('sStreak').textContent=s;$('sBest').textContent=S.best;$('sDone').textContent=S.tasks.filter(t=>t.done).length;
+  const days=[];for(let i=6;i>=0;i--){const d=addDays(new Date(),-i);days.push({d,m:dayMinutes(ymd(d))})}
+  const max=Math.max(60,...days.map(x=>x.m.sp+x.m.st));
+  $('chart').innerHTML=days.map(x=>{const tot=x.m.sp+x.m.st;return '<div><span>'+(tot||'')+'</span><div class="col" style="height:'+Math.max(4,Math.round(tot/max*80))+'px">'+(x.m.st?'<i style="height:'+Math.round(x.m.st/max*80)+'px;background:var(--studie)"></i>':'')+(x.m.sp?'<i style="height:'+Math.round(x.m.sp/max*80)+'px;background:var(--sport)"></i>':'')+'</div>'+DN[x.d.getDay()]+'</div>'}).join('');
+  if(document.activeElement!==$('nameIn'))$('nameIn').value=S.name||'';
+}
+function render(){renderToday();renderWeek();renderGoals();renderFocus()}
+
+/* ---------- navigatie ---------- */
+function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $('fab').style.display=(v==='today'||v==='week')?'':'none';window.scrollTo(0,0);render()}
+document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v)});
+
+/* ---------- taken ---------- */
+function onListClick(e){
+  const b=e.target.closest('[data-act]');if(!b)return;
+  if(b.dataset.act==='add'){selDay=b.dataset.day;openSheet();return}
+  if(b.dataset.act==='moveall'){for(const t of S.tasks)if(!t.done&&t.date<today())t.date=today();save();render();toast('Naar vandaag verplaatst');return}
+  const el=b.closest('.task'),t=S.tasks.find(x=>x.id===el.dataset.id);if(!t)return;
+  if(b.dataset.act==='toggle'){t.done=!t.done;save();if(t.done)toast(CHEER[t.cat]+' +'+XP[t.cat]+' XP');
+    render();const n=document.querySelector('.view.on [data-id="'+t.id+'"]');if(n)n.classList.add('pop')}
+  else openSheet(t)
+}
+['todayList','weekList','overdueBox'].forEach(id=>$(id).addEventListener('click',onListClick));
+/* ---------- plan mijn week: blokken slepen ---------- */
+let planMode=false,drag=null;
+$('weekGoals').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
+  if(b.dataset.act==='planmode'){planMode=true;renderWeek();$('weekGoals').scrollIntoView({behavior:'smooth',block:'start'})}
+  if(b.dataset.act==='plandone'){planMode=false;renderWeek()}});
+function dropTarget(x,y){const el=document.elementFromPoint(x,y);if(!el)return null;
+  const t=el.closest('.wday,#days .day');if(!t||t.dataset.day<today())return null;return t}
+function setDrop(t){document.querySelectorAll('.drop').forEach(e=>e!==t&&e.classList.remove('drop'));if(t)t.classList.add('drop')}
+$('weekGoals').addEventListener('pointerdown',e=>{const c=e.target.closest('.drag');if(!c||drag)return;e.preventDefault();
+  const r=c.getBoundingClientRect(),g=c.cloneNode(true);g.classList.add('dragghost');g.style.width=r.width+'px';document.body.appendChild(g);
+  drag={cat:c.dataset.cat,g,x:e.clientX,y:e.clientY,ox:e.clientX-r.left,oy:e.clientY-r.top,left:false,target:null};
+  c.classList.add('lifted');moveGhost();requestAnimationFrame(dragLoop)});
+function moveGhost(){drag.g.style.transform='translate('+(drag.x-drag.ox)+'px,'+(drag.y-drag.oy)+'px) scale(1.06)'}
+document.addEventListener('pointermove',e=>{if(!drag)return;e.preventDefault();drag.x=e.clientX;drag.y=e.clientY;moveGhost();
+  const pb=$('weekGoals').getBoundingClientRect().bottom;if(drag.y>pb+10)drag.left=true;
+  drag.target=dropTarget(drag.x,drag.y);setDrop(drag.target)},{passive:false});
+// automatisch scrollen als je met je vinger aan de rand komt
+function dragLoop(){if(!drag)return;const pb=$('weekGoals').getBoundingClientRect().bottom,bottomEdge=innerHeight-90;
+  let dy=0;if(drag.y>bottomEdge-60)dy=Math.min(18,(drag.y-(bottomEdge-60))/3);else if(drag.left&&drag.y<pb+50)dy=-Math.min(18,(pb+50-drag.y)/3);
+  if(dy){scrollBy(0,dy);drag.target=dropTarget(drag.x,drag.y);setDrop(drag.target)}requestAnimationFrame(dragLoop)}
+function endDrag(ok){if(!drag)return;const d=drag;drag=null;d.g.remove();setDrop(null);
+  document.querySelectorAll('.lifted').forEach(e=>e.classList.remove('lifted'));
+  if(ok&&d.target){selDay=d.target.dataset.day;openSheet(null,{cat:d.cat,date:selDay})}}
+document.addEventListener('pointerup',()=>endDrag(true));
+document.addEventListener('pointercancel',()=>endDrag(false));
+
+$('days').addEventListener('click',e=>{const b=e.target.closest('[data-day]');if(b){selDay=b.dataset.day;renderWeek();const s=$('d-'+selDay);if(s)s.scrollIntoView({behavior:'smooth',block:'start'})}});
+$('wPrev').onclick=()=>{weekStart=addDays(weekStart,-7);selDay=ymd(weekStart);renderWeek()};
+$('wNext').onclick=()=>{weekStart=addDays(weekStart,7);selDay=ymd(weekStart);renderWeek()};
+
+/* ---------- taak-formulier ---------- */
+const SUBS={
+  gym:['Full body','Upper','Lower','Anterior','Posterior'],
+  cardio:['Fietsen','Lopen','Zwemmen','Ander'],
+  studie:['Geschiedenis','Nederlands','Wiskunde','Frans','Engels','Chemie','Fysica','Biologie','Esthetica','Duits','Godsdienst','Ander']};
+const SUBL={gym:'Welke training?',cardio:'Welke cardio?',studie:'Welk vak?'};
+const DEFDUR={gym:60,cardio:30,studie:60,overig:30};
+let sub=null,autoTitle=true,kind='vak';
+// titel die automatisch ingevuld wordt, bv. "Wiskunde" of "Toets Wiskunde"
+const autoName=()=>sub&&sub!=='Ander'?(cat==='studie'&&kind==='toets'?'Toets '+sub:sub):'';
+function setKind(k){kind=k;document.querySelectorAll('#tKind button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+  if(autoTitle&&autoName())$('tTitle').value=autoName()}
+$('tKind').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setKind(b.dataset.k)});
+function markSub(){document.querySelectorAll('#tSub button').forEach(b=>b.classList.toggle('on',b.dataset.s===sub))}
+function setCat(c,keep){cat=c;document.querySelectorAll('#tCat button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
+  const list=SUBS[c];$('subWrap').style.display=list?'':'none';$('kindWrap').style.display=c==='studie'?'':'none';
+  $('tSub').innerHTML=list?list.map(s=>'<button data-s="'+s+'">'+s+'</button>').join(''):'';if(list)$('subLbl').textContent=SUBL[c];
+  if(!keep){sub=null;if(autoTitle)$('tTitle').value=''}markSub()}
+$('tCat').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setCat(b.dataset.c);if(!editing&&sFrom){sTo=fromMin(toMin(sFrom)+DEFDUR[cat]);showTimes()}}});
+$('tSub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;sub=b.dataset.s;markSub();
+  if(sub==='Ander'){if(autoTitle)$('tTitle').value='';$('tTitle').placeholder=cat==='studie'?'Welk vak?':'Wat ga je doen?';$('tTitle').focus()}
+  else if(autoTitle||!$('tTitle').value.trim()){$('tTitle').value=autoName();autoTitle=true}});
+$('tTitle').addEventListener('input',()=>{autoTitle=!$('tTitle').value.trim()});
+/* van–tot tijdkiezer: kies begin- en eindtijd, de duur wordt zelf berekend */
+let sFrom='',sTo='',pickT=null;
+$('tHours').innerHTML=Array.from({length:18},(_,i)=>i+6).map(h=>'<button type="button" data-h="'+pad(h)+'">'+pad(h)+'</button>').join('');
+$('tMins').innerHTML=['00','15','30','45'].map(m=>'<button type="button" data-m="'+m+'">:'+m+'</button>').join('');
+function showTimes(){
+  [['tFromBtn',sFrom,'from'],['tToBtn',sTo,'to']].forEach(([id,v,k])=>{const b=$(id);b.textContent=v||'--:--';b.classList.toggle('empty',!v);b.classList.toggle('open',pickT===k)});
+  const d=sFrom&&sTo?toMin(sTo)-toMin(sFrom):null;
+  $('tDurTxt').textContent=d===null?'Kies van hoe laat tot hoe laat':d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"';
+  $('tDurTxt').style.color=d!==null&&d<=0?'var(--danger)':'';
+  const v=pickT==='from'?sFrom:sTo,[h,m]=v?v.split(':'):[null,null];
+  document.querySelectorAll('#tHours button').forEach(x=>x.classList.toggle('on',x.dataset.h===h));
+  document.querySelectorAll('#tMins button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
+  $('pickLbl').textContent=pickT==='from'?'Van hoe laat?':'Tot hoe laat?'}
+function openPick(k){const p=$('tPick');if(pickT===k&&!p.hidden){closePick();return}pickT=k;p.hidden=false;showTimes();
+  const sh=$('sheet'),d=p.getBoundingClientRect().bottom-sh.getBoundingClientRect().bottom+16;if(d>0)sh.scrollTop+=d}
+function closePick(){pickT=null;$('tPick').hidden=true;showTimes()}
+// begintijd verschuiven = eindtijd schuift mee (duur blijft gelijk)
+function setPicked(v){if(pickT==='from'){const keep=sFrom&&sTo?toMin(sTo)-toMin(sFrom):0;sFrom=v;sTo=fromMin(toMin(sFrom)+(keep>0?keep:DEFDUR[cat]))}else sTo=v;showTimes()}
+$('tFromBtn').onclick=()=>openPick('from');$('tToBtn').onclick=()=>openPick('to');
+$('tHours').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const cur=pickT==='from'?sFrom:sTo;setPicked(b.dataset.h+':'+(cur?cur.split(':')[1]:'00'))});
+$('tMins').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const cur=pickT==='from'?sFrom:sTo;
+  setPicked((cur?cur.split(':')[0]:'18')+':'+b.dataset.m);if(pickT==='from'){pickT='to';showTimes()}});
+$('tTimeOk').onclick=closePick;
+function openSheet(t,pre){
+  editing=t||null;pre=pre||{};const c=t?t.cat:(pre.cat||cat);
+  const dd=parse(t?t.date:(pre.date||today()));
+  $('sTitle').textContent=t?'Taak bewerken':pre.cat?({gym:'💪 Gym',cardio:'🏃 Cardio',studie:'📚 School',overig:'✨ Iets'}[pre.cat]+' op '+DNL[dd.getDay()]+' '+dd.getDate()+' '+MN[dd.getMonth()]):'Nieuwe taak';
+  $('tTitle').value=t?t.title:'';$('tTitle').placeholder='Omschrijving (optioneel)';autoTitle=!t||t.title===t.sub||t.title==='Toets '+t.sub;
+  setCat(c,true);sub=t?(t.sub||null):null;markSub();setKind(t&&t.kind||'vak');
+  $('tDate').value=t?t.date:(pre.date||(view==='week'?selDay:today()));
+  sFrom=t?(t.time||''):'';sTo=t?(t.end||(t.time?fromMin(toMin(t.time)+t.dur):'')):'';pickT=null;$('tPick').hidden=true;showTimes();$('tRep').checked=false;
+  $('repWrap').style.display=t?'none':'';$('tDel').style.display=t?'':'none';disarm($('tDel'));
+  $('back').classList.add('on');$('sheet').classList.add('on');$('sheet').scrollTop=0;
+}
+function closeSheet(){$('back').classList.remove('on');$('sheet').classList.remove('on');document.activeElement&&document.activeElement.blur()}
+$('fab').onclick=()=>openSheet();$('back').onclick=closeSheet;
+$('tSave').onclick=()=>{
+  let title=$('tTitle').value.trim()||autoName();
+  const k=cat==='studie'?kind:null;if(k==='toets'&&title&&!/^toets/i.test(title))title='Toets '+title;
+  if(!title){toast(SUBS[cat]&&!sub?SUBL[cat]:'Geef het een naam');if(!SUBS[cat]||sub)$('tTitle').focus();return}
+  if(!sFrom||!sTo){toast('Kies van hoe laat tot hoe laat');openPick(sFrom?'to':'from');return}
+  if(toMin(sTo)<=toMin(sFrom)){toast('"Tot" moet later zijn dan "Van"');openPick('to');return}
+  const date=$('tDate').value||today(),time=sFrom,end=sTo,dur=toMin(sTo)-toMin(sFrom),s=SUBS[cat]?sub:null;
+  if(editing)Object.assign(editing,{title,cat,sub:s,kind:k,date,time,end,dur});
+  else{const n=$('tRep').checked?4:1;for(let i=0;i<n;i++)S.tasks.push({id:uid(),title,cat,sub:s,kind:k,date:ymd(addDays(parse(date),7*i)),time,end,dur,done:false})}
+  save();closeSheet();render();toast(editing?'Opgeslagen':'Ingepland 👍')
+};
+// Bevestigen zonder pop-up: eerste tik "wapent" de knop, tweede tik voert uit
+function armed(b,msg,fn){if(b.dataset.armed){disarm(b);fn();return}
+  b.dataset.orig=b.dataset.orig||b.textContent;b.dataset.armed='1';b.textContent=msg;clearTimeout(b._t);b._t=setTimeout(()=>disarm(b),4000)}
+function disarm(b){if(b.dataset.orig)b.textContent=b.dataset.orig;delete b.dataset.armed;clearTimeout(b._t)}
+$('tDel').onclick=()=>{if(!editing)return;armed($('tDel'),'Tik nogmaals om te verwijderen',()=>{const id=editing.id;S.tasks=S.tasks.filter(t=>t.id!==id);save();closeSheet();render();toast('🗑️ Verwijderd')})};
+
+/* ---------- doelen & instellingen ---------- */
+document.querySelectorAll('.step button').forEach(b=>b.onclick=()=>{const g=b.dataset.g,d=+b.dataset.d;
+  const lim={gym:[1,14],cardio:[15,1200],studie:[30,3000]}[g];S.goals[g]=Math.min(lim[1],Math.max(lim[0],S.goals[g]+d));save();render()});
+$('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();save();renderToday()});
+$('exportBtn').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='planner-backup-'+today()+'.json';a.click()};
+$('resetBtn').onclick=()=>armed($('resetBtn'),'Zeker? Tik nogmaals om ALLES te wissen',()=>{S=defaults();save();render();toast('Alles gewist')});
+
+/* ---------- focus timer ---------- */
+const DURS=[15,25,45,60];
+$('fDur').innerHTML=DURS.map(d=>'<button data-d="'+d+'">'+d+' min</button>').join('');
+$('fDur').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||S.timer)return;S.fDur=+b.dataset.d;save();renderFocus()});
+let audio;
+function beep(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(t=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);g.gain.setValueAtTime(.25,audio.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+t+.3);o.start(audio.currentTime+t);o.stop(audio.currentTime+t+.3)})}catch(e){}}
+function remaining(){const T=S.timer;if(!T)return S.fDur*60;return T.end?Math.max(0,Math.round((T.end-Date.now())/1000)):T.left}
+function logFocus(min,subject){if(min>=1){S.focus.push({date:today(),min,subject:subject||''})}}
+function finishTimer(){const T=S.timer;logFocus(Math.round(T.total/60),T.subject);S.timer=null;save();beep();toast('🎯 Sessie klaar! +'+Math.round(T.total/60)+' XP');render()}
+function renderFocus(){
+  const T=S.timer,left=remaining(),total=T?T.total:S.fDur*60;
+  document.querySelectorAll('#fDur button').forEach(b=>{b.classList.toggle('on',+b.dataset.d===(T?Math.round(T.total/60):S.fDur));b.style.opacity=T?.5:1});
+  $('fTime').textContent=pad(Math.floor(left/60))+':'+pad(left%60);
+  $('fArc').style.strokeDashoffset=678.6*(1-left/total);
+  $('fStart').textContent=!T?'Start':T.end?'Pauze':'Verder';
+  $('fStop').style.display=T?'':'none';
+  $('fState').textContent=!T?'Klaar om te starten':T.end?(T.subject?esc(T.subject):'Focus…'):'Gepauzeerd';
+  $('fSubject').disabled=!!T;if(T&&document.activeElement!==$('fSubject'))$('fSubject').value=T.subject||'';
+  let td=0;for(const f of S.focus)if(f.date===today())td+=f.min;$('fToday').textContent=fmtMin(td);$('fWeek').textContent=fmtMin(weekFocus());
+}
+function weekFocus(){const st=ymd(monday(new Date()));let m=0;for(const f of S.focus)if(f.date>=st)m+=f.min;return m}
+$('fStart').onclick=()=>{
+  try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();audio.resume()}catch(e){}
+  const T=S.timer;
+  if(!T)S.timer={total:S.fDur*60,end:Date.now()+S.fDur*60000,left:null,subject:$('fSubject').value.trim()};
+  else if(T.end){T.left=remaining();T.end=null}
+  else{T.end=Date.now()+T.left*1000;T.left=null}
+  save();renderFocus()
+};
+$('fStop').onclick=()=>armed($('fStop'),'Zeker stoppen?',()=>{const T=S.timer;if(!T)return;const done=Math.floor((T.total-remaining())/60);
+  logFocus(done,T.subject);S.timer=null;save();render();toast(done>=1?'+'+done+' XP':'Sessie gestopt')});
+setInterval(()=>{if(S.timer&&S.timer.end){if(remaining()<=0)finishTimer();else if(view==='focus')renderFocus()}},500);
+
+/* ---------- algemeen ---------- */
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
+render();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
