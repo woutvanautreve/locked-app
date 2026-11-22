@@ -252,6 +252,10 @@ nav button:active{transform:scale(.88)}
 .frrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
 .frrow:last-child{border-bottom:0}
 .frrow.me b{color:var(--accent)}
+.frrow.tap{cursor:pointer}.frrow.tap:active{opacity:.6}
+.wocard{padding:12px 14px}
+.woex{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-top:1px solid var(--line)}
+.woex span:first-child{font-weight:700}.woex span:last-child{color:var(--muted);text-align:right}
 .frrank{width:32px;text-align:center;font-size:20px;font-weight:800;color:var(--muted)}
 .frval{text-align:right;line-height:1.1}
 .frval b{display:block;font-size:20px}
@@ -1280,7 +1284,7 @@ function finishWorkout(){
   if(!t){const st=new Date(W.start),from=pad(st.getHours())+':'+pad(Math.floor(st.getMinutes()/15)*15);
     t={id:uid(),title:W.type,cat:'gym',sub:W.type,date:today(),time:from,end:fromMin(toMin(from)+mins),dur:mins,done:false};S.tasks.push(t)}
   t.done=true;S.workout=null;stopRest();save();render();
-  try{frSyncEx().catch(()=>{})}catch(e){} // nieuwe resultaten delen met vrienden
+  try{frSyncEx().catch(()=>{});frSyncWo().catch(()=>{})}catch(e){} // nieuwe resultaten delen met vrienden
   toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
   if(prs.length)setTimeout(()=>toast('🏆 Nieuw PR: '+prs[0]),2000)}
 
@@ -1312,6 +1316,7 @@ $('cdSave').onclick=()=>{const{km,sec}=cdRead(),err=$('cdErr');
   const best=prev.length?prev.reduce((b,c)=>{const v=paceOf(type,c.km,c.sec).v;return p.higher?Math.max(b,v):Math.min(b,v)},p.higher?-1:Infinity):null;
   const longest=prev.length?Math.max(...prev.map(c=>c.km)):null;
   S.cardio.push({id:uid(),type,name,date,km,sec});
+  setTimeout(()=>{try{frSyncWo().catch(()=>{})}catch(e){}},0); // laatste workouts op je profiel bijwerken
   // geplande cardiotaak van die dag afvinken, of er een aanmaken (telt mee voor je cardiodoel)
   const mins=Math.max(1,Math.round(sec/60));
   let t=S.tasks.find(x=>x.cat==='cardio'&&x.date===date&&!x.done&&x.sub===type)||S.tasks.find(x=>x.cat==='cardio'&&x.date===date&&!x.done);
@@ -1985,6 +1990,7 @@ async function frLoad(){
   const sc=await sb('/rest/v1/scores?select=*&week=eq.'+ymd(monday(new Date())))||[];
   fr.scores={};for(const s of sc)fr.scores[s.user_id]=s;fr.loaded=Date.now();
   try{await frSyncEx();await frLoadEx()}catch(e){} // oefening-grafieken (stoort de ranglijst niet als het misgaat)
+  try{await frSyncWo()}catch(e){} // laatste 5 workouts op je profiel
   if(view==='progress')renderProgress()}
 /* oefening-grafieken delen: beste set per oefening per dag */
 function myExRows(){const best={};
@@ -1995,6 +2001,35 @@ async function frSyncEx(){if(!auth||!fr.profile||S.shareEx===false)return;const 
   await sb('/rest/v1/exercise_stats',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:rows})}
 async function frLoadEx(){if(!auth||!fr.friends.length){fr.exStats=[];return}
   fr.exStats=await sb('/rest/v1/exercise_stats?select=user_id,ex,d,kg,reps&user_id=in.('+fr.friends.map(f=>f.id).join(',')+')&order=d')||[];fr.exLoaded=Date.now()}
+/* laatste 5 workouts (gym + cardio) op je profiel, zodat vrienden ze kunnen bekijken */
+function myRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
+  const gym=(S.workouts||[]).map(w=>({id:String(w.id).slice(0,30),at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type).slice(0,40),
+    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:{ex:w.ex.slice(0,15).map(e=>({n:e.n.slice(0,40),s:e.sets.slice(0,12).map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))}}));
+  const cd=(S.cardio||[]).map(c=>({id:String(c.id).slice(0,30),at:new Date(parse(c.date).getTime()+12*3600000).toISOString(),kind:'cardio',title:String(c.name||c.type).slice(0,40),
+    mins:r(c.sec/60,1440),info:{type:c.type,km:c.km,sec:c.sec}}));
+  return gym.concat(cd).sort((a,b)=>a.at<b.at?1:-1).slice(0,5).map(x=>Object.assign({user_id:auth.uid},x))}
+async function frSyncWo(){if(!auth||!fr.profile||S.shareWo===false)return;const rows=myRecentWo();
+  if(rows.length)await sb('/rest/v1/recent_workouts',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:rows});
+  // oudere workouts weghalen, zodat er online maar 5 staan
+  await sb('/rest/v1/recent_workouts?user_id=eq.'+auth.uid+(rows.length?'&id=not.in.('+rows.map(x=>'"'+x.id.replace(/"/g,'')+'"').join(',')+')':''),{method:'DELETE'})}
+async function frOpenFriend(id){fr.view=id;fr.wo=null;fr.woErr='';renderFriends();window.scrollTo(0,0);
+  try{fr.wo=await sb('/rest/v1/recent_workouts?select=*&user_id=eq.'+id+'&order=at.desc&limit=5')||[]}catch(e){fr.woErr=e.message;fr.wo=[]}
+  if(fr.view===id)renderFriends()}
+function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()],i=w.info||{};
+  if(w.kind==='cardio'){const p=paceOf(i.type,+i.km,+i.sec);
+    return '<div class="card wocard"><div class="row between"><b>🏃 '+esc(w.title)+'</b><span class="sub" style="font-size:12px">'+when+'</span></div>'
+      +'<div class="sub" style="margin-top:4px">'+fmtKg(+i.km)+' km · '+fmtDur(+i.sec)+(p&&p.txt?' · '+esc(p.txt):'')+'</div></div>'}
+  const ex=i.ex||[],n=ex.reduce((a,e)=>a+e.s.filter(s=>!s[2]).length,0);
+  return '<div class="card wocard"><div class="row between"><b>💪 '+esc(w.title)+'</b><span class="sub" style="font-size:12px">'+when+(w.mins?' · '+w.mins+' min':'')+'</span></div>'
+    +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' sets</div>'
+    +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')+'</div>'}
+function friendProfileHTML(){const f=fr.friends.find(x=>x.id===fr.view);if(!f){fr.view=null;return null}const s=fr.scores[f.id]||{};
+  return '<button class="linkbtn" data-act="frback" style="margin-top:6px">‹ Vrienden</button><h1>'+esc(f.nickname)+'</h1>'
+    +'<div class="card"><div class="sub" style="font-size:12px;margin-bottom:4px">Deze week</div><b>'+(s.xp||0)+' XP</b>'
+    +'<div class="sub" style="font-size:13px;margin-top:4px">💪 '+(s.gym||0)+'x gym · 🏃 '+fmtMin(s.cardio||0)+' · 📚 '+fmtMin(s.school||0)+' · 🔥 '+(s.streak||0)+' dagen · 🐠 '+(s.fish||0)+' vissen</div></div>'
+    +'<h2>Laatste 5 workouts</h2>'
+    +(fr.wo===null?'<div class="empty">Laden…</div>':fr.woErr?'<div class="frmsg err">⚠️ '+esc(fr.woErr)+'</div>'
+      :fr.wo.length?fr.wo.map(woCard).join(''):'<div class="empty">'+esc(f.nickname)+' heeft nog geen workouts gedeeld.</div>')}
 async function frRun(fn,okMsg){fr.busy=true;fr.err='';renderFriends();
   try{await fn();if(okMsg)fr.msg=okMsg}catch(e){fr.err=e.message}fr.busy=false;renderFriends()}
 
@@ -2040,7 +2075,9 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
   const msg=(fr.err?'<div class="frmsg err">⚠️ '+esc(fr.err)+'</div>':'')+(fr.msg?'<div class="frmsg ok">'+fr.msg+'</div>':'');
   const busy=fr.busy?' disabled':'';
   let h='<h1>Vrienden</h1><div class="sub">Wie maakt deze week de meeste vooruitgang? 🏆</div>';
-  if(fr.pending==='reset'){
+  const prof=auth&&fr.profile&&fr.view&&!fr.pending?friendProfileHTML():null; // profiel van een vriend open?
+  if(prof)h=prof;
+  else if(fr.pending==='reset'){
     h+='<div class="card" style="margin-top:14px"><b>Nieuw wachtwoord kiezen</b>'+msg+'<label class="l" for="frNewPw" style="margin-top:10px">Nieuw wachtwoord (minstens 6 tekens)</label><input class="field" id="frNewPw" type="password" autocomplete="new-password"><button class="btn" data-act="newpw"'+busy+'>Opslaan</button></div>'}
   else if(fr.pending==='confirmed'||fr.pending==='linkerror'){
     h+='<div class="card" style="margin-top:14px">'+(fr.pending==='confirmed'?'<b>✅ Je e-mail is bevestigd!</b><div class="sub" style="margin-top:6px">Open LOCKED nu via het icoon op je <b>beginscherm</b> en log daar in met je e-mail en wachtwoord.</div>':'<b>Deze link werkt niet (meer)</b>'+msg+'<div class="sub" style="margin-top:6px">Vraag een nieuwe aan via "Wachtwoord vergeten" of registreer opnieuw.</div>')
@@ -2053,7 +2090,7 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
       +msg+'<button class="btn" data-act="'+(reg?'signup':'signin')+'"'+busy+'>'+(fr.busy?'Even geduld…':reg?'Account maken':'Inloggen')+'</button>'
       +(!reg&&fr.canResend?'<button class="btn ghost" data-act="resend" style="margin-top:8px"'+busy+'>📧 Bevestigingsmail opnieuw sturen</button>':'')
       +(reg?'':'<button class="linkbtn" data-act="forgot" style="margin-top:10px">Wachtwoord vergeten?</button>')+'</div>'
-      +'<div class="sub" style="font-size:12px;margin:10px 2px">🔒 Online staan alleen je bijnaam en je weekscores. Je planning, toetsen en trainingen blijven op je iPhone.</div>'}
+      +'<div class="sub" style="font-size:12px;margin:10px 2px">🔒 Online staan alleen je bijnaam, je weekscores en (als je delen aanzet) je oefening-grafieken en laatste 5 workouts. Je planning en toetsen blijven op je iPhone.</div>'}
   else if(fr.needNick){
     h+='<div class="card" style="margin-top:14px"><b>Kies je bijnaam</b>'+msg+'<label class="l" for="frNick" style="margin-top:10px">Bijnaam (zien je vrienden)</label><input class="field" id="frNick" maxlength="20" placeholder="bv. Wout"><button class="btn" data-act="setnick"'+busy+'>Opslaan</button></div>'}
   else if(!fr.profile){
@@ -2066,20 +2103,26 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
       +'<div class="row between" style="margin:20px 0 8px"><h2 style="margin:0">🏆 Deze week</h2><button class="linkbtn" data-act="reload"'+busy+'>'+(fr.busy?'…':'↻ Vernieuwen')+'</button></div>'
       +'<div class="seg" id="frMetric" style="margin-bottom:10px">'+Object.keys(METRICS).map(k=>'<button data-act="metric" data-k="'+k+'" class="'+(k===m?'on':'')+'">'+METRICS[k][0]+'</button>').join('')+'</div>'
       +'<div class="card" style="padding:4px 14px">'+rows.map((r,i)=>{const s=r.s;
-        return '<div class="frrow'+(r.me?' me':'')+'"><div class="frrank">'+(['🥇','🥈','🥉'][i]||'#'+(i+1))+'</div><div style="flex:1;min-width:0"><b>'+esc(r.nickname)+(r.me?' <span class="sub" style="font-size:12px">(jij)</span>':'')+'</b>'
+        return '<div class="frrow'+(r.me?' me':' tap')+'"'+(r.me?'':' data-act="frprof" data-id="'+r.id+'" role="button" tabindex="0" aria-label="Profiel van '+esc(r.nickname)+'"')+'><div class="frrank">'+(['🥇','🥈','🥉'][i]||'#'+(i+1))+'</div><div style="flex:1;min-width:0"><b>'+esc(r.nickname)+(r.me?' <span class="sub" style="font-size:12px">(jij)</span>':'')+'</b>'
           +'<div class="sub" style="font-size:12px">💪 '+(s.gym||0)+'x · 🏃 '+fmtMin(s.cardio||0)+' · 📚 '+fmtMin(s.school||0)+' · 🔥 '+(s.streak||0)+' · 🐠 '+(s.fish||0)+'</div></div>'
           +'<div class="frval"><b>'+(s[m]||0)+'</b><span>'+METRICS[m][1]+'</span></div></div>'}).join('')+'</div>'
       +(fr.friends.length?'':'<div class="sub" style="font-size:13px;margin:10px 2px">Nog geen vrienden. Stuur je vriendencode door en voeg die van je vrienden toe.</div>')
       +(fr.loaded?'<div class="sub" style="font-size:12px;margin:8px 2px">Bijgewerkt om '+new Date(fr.loaded).toTimeString().slice(0,5)+'. Elke maandag begint een nieuwe week.</div>':'')
-      +(fr.friends.length?'<h2>Mijn vrienden</h2><div class="card" style="padding:4px 14px">'+fr.friends.map(f=>'<div class="hist"><b>'+esc(f.nickname)+'</b><button class="linkbtn" data-act="unfriend" data-id="'+f.id+'" style="font-size:13px;color:var(--muted)">verwijderen</button></div>').join('')+'</div>':'')
+      +(fr.friends.length?'<h2>Mijn vrienden</h2><div class="card" style="padding:4px 14px">'+fr.friends.map(f=>'<div class="hist"><button class="linkbtn" data-act="frprof" data-id="'+f.id+'" style="font-size:16px"><b>'+esc(f.nickname)+'</b> <span class="sub" style="font-size:12px">profiel ›</span></button><button class="linkbtn" data-act="unfriend" data-id="'+f.id+'" style="font-size:13px;color:var(--muted)">verwijderen</button></div>').join('')+'</div>':'')
       +'<h2>Delen</h2><div class="card"><label class="toggle" style="margin:0 0 6px"><span>📈 Deel mijn oefening-grafieken met vrienden</span><input type="checkbox" data-act="shareex"'+(S.shareEx===false?'':' checked')+'></label>'
-      +'<div class="sub" style="font-size:12px;line-height:1.4">Je beste set per oefening per training (kg × herhalingen) komt online, zodat vrienden hun grafiek met de jouwe kunnen vergelijken bij Sporten → Vooruitgang. Zet je dit uit, dan wordt het meteen verwijderd.</div></div>'
+      +'<div class="sub" style="font-size:12px;line-height:1.4">Je beste set per oefening per training (kg × herhalingen) komt online, zodat vrienden hun grafiek met de jouwe kunnen vergelijken bij Sporten → Vooruitgang. Zet je dit uit, dan wordt het meteen verwijderd.</div>'
+      +'<label class="toggle" style="margin:14px 0 6px"><span>🏋️ Toon mijn laatste 5 workouts op mijn profiel</span><input type="checkbox" data-act="sharewo"'+(S.shareWo===false?'':' checked')+'></label>'
+      +'<div class="sub" style="font-size:12px;line-height:1.4">Vrienden zien dan je laatste 5 trainingen (oefeningen, sets en cardio) als ze op je naam tikken. Zet je dit uit, dan worden ze meteen verwijderd.</div></div>'
       +'<div class="sub" style="font-size:12px;margin:16px 2px 4px">'+esc(auth.email||'')+'</div><button class="linkbtn" data-act="logout" style="color:var(--danger)">Uitloggen</button>'}
   el.innerHTML=h;for(const id in keep){const i=$(id);if(i&&!i.value)i.value=keep[id]}}
 $('frWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act,v=id=>($(id)&&$(id).value||'').trim();fr.msg='';
   if(a==='mode'){fr.mode=b.dataset.m;fr.err='';renderFriends();return}
   if(a==='shareex'){const on=b.checked;S.shareEx=on;save();
     frRun(async()=>{if(on)await frSyncEx();else await sb('/rest/v1/exercise_stats?user_id=eq.'+auth.uid,{method:'DELETE'})},on?'📈 Je oefening-grafieken worden gedeeld met je vrienden':'🔒 Je oefening-grafieken zijn verwijderd en worden niet meer gedeeld');return}
+  if(a==='sharewo'){const on=b.checked;S.shareWo=on;save();
+    frRun(async()=>{if(on)await frSyncWo();else await sb('/rest/v1/recent_workouts?user_id=eq.'+auth.uid,{method:'DELETE'})},on?'🏋️ Je vrienden zien nu je laatste 5 workouts':'🔒 Je workouts zijn verwijderd en worden niet meer gedeeld');return}
+  if(a==='frprof'){frOpenFriend(b.dataset.id);return}
+  if(a==='frback'){fr.view=null;renderFriends();window.scrollTo(0,0);return}
   if(a==='pendok'){fr.pending=null;fr.err='';renderFriends();if(auth)frRun(frLoad);return}
   if(a==='metric'){fr.metric=b.dataset.k;renderFriends();return}
   if(a==='signup'){const nick=v('frNick'),email=v('frEmail'),pw=$('frPw').value;
