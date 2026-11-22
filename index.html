@@ -570,9 +570,9 @@ function streak(){const a=activeDays();let d=new Date();if(!a.has(ymd(d)))d=addD
 function bestStreak(){const a=[...activeDays()].sort();let best=0,cur=0,prev=null;for(const s of a){const d=parse(s);cur=(prev&&ymd(addDays(prev,1))===s)?cur+1:1;best=Math.max(best,cur);prev=d}return best}
 // onlyDone=true: wat je echt gedaan hebt; false: alles wat ingepland is
 function weekStats(start,onlyDone=true){const end=ymd(addDays(start,6)),st=ymd(start);let gym=0,cardio=0,studie=0;
-  for(const t of S.tasks)if((t.done||!onlyDone)&&t.date>=st&&t.date<=end){if(t.cat==='gym')gym++;if(t.cat==='cardio')cardio+=t.dur;if(t.cat==='studie')studie+=t.dur}
+  for(const t of S.tasks)if((t.done||!onlyDone)&&t.date>=st&&t.date<=end){if(t.cat==='gym')gym++;if(t.cat==='cardio')cardio+=t.dur;if(t.cat==='studie'&&t.kind!=='toets')studie+=t.dur} // toetsen zijn verplicht: tellen niet mee voor je doel
   for(const f of S.focus)if(f.date>=st&&f.date<=end)studie+=f.min;return{gym,cardio,studie}}
-function dayMinutes(d){let sp=0,st=0;for(const t of S.tasks)if(t.done&&t.date===d){if(isSport(t.cat))sp+=t.dur;if(t.cat==='studie')st+=t.dur}for(const f of S.focus)if(f.date===d)st+=f.min;return{sp,st}}
+function dayMinutes(d){let sp=0,st=0;for(const t of S.tasks)if(t.done&&t.date===d){if(isSport(t.cat))sp+=t.dur;if(t.cat==='studie'&&t.kind!=='toets')st+=t.dur}for(const f of S.focus)if(f.date===d)st+=f.min;return{sp,st}}
 function tasksOn(d){return S.tasks.filter(t=>t.date===d).sort((a,b)=>(a.time||'99')<(b.time||'99')?-1:(a.time||'99')>(b.time||'99')?1:0)}
 function levelName(l){return l>=20?'Legende':l>=12?'Machine':l>=7?'Planner Pro':l>=3?'Doorzetter':'Starter'}
 
@@ -646,7 +646,7 @@ function renderGoals(){
 }
 /* ---------- badges ---------- */
 function badgeStats(){
-  const done=S.tasks.filter(t=>t.done),sum=(c)=>done.filter(t=>t.cat===c).reduce((a,t)=>a+t.dur,0);
+  const done=S.tasks.filter(t=>t.done),sum=(c)=>done.filter(t=>t.cat===c&&t.kind!=='toets').reduce((a,t)=>a+t.dur,0);
   const school=sum('studie')+S.focus.reduce((a,f)=>a+f.min,0);
   const weeks=new Set(done.map(t=>ymd(monday(parse(t.date)))));
   const weekGoal=[...weeks].some(w=>{const s=weekStats(parse(w));return s.gym>=S.goals.gym&&s.cardio>=S.goals.cardio});
