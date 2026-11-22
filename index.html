@@ -494,7 +494,9 @@ nav button.on{color:var(--accent)}
   <div class="card">
     <label class="l" for="nameIn">Je naam</label>
     <input class="field" id="nameIn" placeholder="Hoe mag ik je noemen?" maxlength="30">
-    <div class="btns"><button class="btn ghost" id="exportBtn">Back-up downloaden</button></div>
+    <div class="btns"><button class="btn ghost" id="exportBtn">Back-up downloaden</button><button class="btn ghost" id="importBtn">Back-up terugzetten</button></div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <div class="sub" style="font-size:12px;margin-top:6px;line-height:1.4">Tip: download een back-up voor je LOCKED opnieuw op je beginscherm zet. Daarna zet je hem hier terug, zodat je niets kwijt bent.</div>
     <button class="btn danger" id="resetBtn" style="margin-top:6px">Alles wissen</button>
   </div>
 </div></section>
@@ -1047,6 +1049,14 @@ document.querySelectorAll('.step button').forEach(b=>b.onclick=()=>{const g=b.da
   const lim={gym:[1,14],cardio:[15,1200],studie:[30,3000]}[g];S.goals[g]=Math.min(lim[1],Math.max(lim[0],S.goals[g]+d));save();render()});
 $('nameIn').addEventListener('input',e=>{S.name=e.target.value.trim();save();renderToday()});
 $('exportBtn').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='planner-backup-'+today()+'.json';a.click()};
+// back-up terugzetten: eerst twee keer tikken (alles wordt vervangen), dan het bestand kiezen
+$('importBtn').onclick=()=>armed($('importBtn'),'Tik nogmaals: je huidige gegevens worden vervangen',()=>{$('importFile').value='';$('importFile').click()});
+$('importFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{let d=null;try{d=JSON.parse(r.result)}catch(x){}
+    if(!d||typeof d!=='object'||!Array.isArray(d.tasks)){toast('⚠️ Dit is geen LOCKED-back-up');return}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(x){toast('⚠️ Terugzetten lukte niet');return}
+    toast('✅ Back-up teruggezet!');setTimeout(()=>location.reload(),700)};
+  r.readAsText(f)};
 $('resetBtn').onclick=()=>armed($('resetBtn'),'Zeker? Tik nogmaals om ALLES te wissen',()=>{S=defaults();save();render();toast('Alles gewist')});
 
 /* ---------- focus timer ---------- */

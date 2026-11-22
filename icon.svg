@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 180 180" width="512" height="512">
+  <!-- LOCKED app-icoon: futuristische vis met een halter in zijn mond -->
+  <defs>
+    <g id="db">
+      <path d="M134 30 V150" stroke="#fff" stroke-width="8" fill="none"/>
+      <path d="M117 43 H151 L155 47 V53 L151 57 H117 L113 53 V47 Z" fill="#fff"/>
+      <path d="M117 123 H151 L155 127 V133 L151 137 H117 L113 133 V127 Z" fill="#fff"/>
+      <path d="M121 50 H147 M121 130 H147" stroke="#0B0B0F" stroke-width="2"/>
+    </g>
+    <g id="fish">
+      <g fill="#fff" stroke="#0B0B0F" stroke-width="4" stroke-linejoin="miter">
+        <path d="M72 65 L96 44 L101 61 Z"/>
+        <path d="M46 90 L22 66 L31 90 L22 114 Z"/>
+        <path d="M46 90 L70 64 L104 60 L128 74 L142 90 L128 106 L104 120 L70 116 Z"/>
+      </g>
+      <path d="M96 62 L108 90 L96 118 M52 90 H86" fill="none" stroke="#0B0B0F" stroke-width="2.5"/>
+      <path d="M141 90 H128" stroke="#0B0B0F" stroke-width="4"/>
+      <path d="M111 80 L125 76 L127 81.5 L113 85.5 Z" fill="#0B0B0F"/>
+    </g>
+  </defs>
+  <rect width="180" height="180" fill="#0B0B0F"/>
+  <g transform="translate(90 90) scale(0.9) translate(-82 -90)">
+    <g transform="translate(90 90) skewX(-10) translate(-84 -90)">
+      <use xlink:href="#db" href="#db"/>
+      <use xlink:href="#fish" href="#fish"/>
+    </g>
+    <path d="M6 80 H20 M2 90 H24 M8 100 H20" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
