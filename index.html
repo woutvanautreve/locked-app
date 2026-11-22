@@ -120,7 +120,14 @@ nav button:active{transform:scale(.88)}
 .planned{border:2px solid var(--gym)}
 .exc{padding:14px}
 .exc .sub{font-size:12px;margin:2px 0 8px}
-.setrow{display:grid;grid-template-columns:34px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:6px}
+.setrow{display:grid;grid-template-columns:34px 1fr 1fr 56px 44px;gap:6px;align-items:center;margin-bottom:6px}
+.setrow>span.wu{color:#e8862a;font-size:12px}
+.setrow.wset input{border-style:dashed}
+.srest{width:100%;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;text-align:center;text-align-last:center;-webkit-appearance:none;appearance:none;padding:0 2px}
+.srest.own{color:var(--gym);border-color:var(--gym)}
+.srest:disabled{opacity:1;border-color:transparent}
+.perrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.perrow select{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);font-weight:700;color:inherit}
 .setrow.head{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
 .setrow.head span{text-align:center}
 .setrow>span{text-align:center;font-weight:700;color:var(--muted)}
@@ -538,8 +545,12 @@ nav button.on{color:var(--accent)}
   <input class="field" id="exName" placeholder="bv. Incline dumbbell press" maxlength="40">
   <label class="l">Aantal sets</label>
   <div class="bigstep"><button type="button" id="exSetsMin" aria-label="Minder sets">−</button><b id="exSetsVal">3</b><button type="button" id="exSetsPlus" aria-label="Meer sets">+</button></div>
+  <label class="l">🔥 Opwarmsets <span style="font-weight:400">(tellen niet mee voor je PR en grafiek)</span></label>
+  <div class="bigstep"><button type="button" id="exWarmMin" aria-label="Minder opwarmsets">−</button><b id="exWarmVal">0</b><button type="button" id="exWarmPlus" aria-label="Meer opwarmsets">+</button></div>
   <label class="l">Rusttijd tussen sets</label>
   <div class="opts" id="exRest"></div>
+  <button type="button" class="linkbtn" id="exPerBtn" style="margin:4px 0 6px">⏱ Andere rust per set ▾</button>
+  <div id="exPer" hidden style="margin-bottom:12px"></div>
   <label class="toggle" id="exSaveWrap"><span>Ook bewaren in workout <b id="exSchemaName"></b></span><input type="checkbox" id="exSaveSchema" checked></label>
   <button class="btn" id="exSave">Opslaan</button>
   <button class="btn danger" id="exDel" style="margin-top:6px">Verwijderen uit schema</button>
@@ -1097,27 +1108,37 @@ if(!S.rest)S.rest=90;
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n};
 const mmss=s=>Math.floor(s/60)+':'+pad(Math.floor(s%60));
 // alle gelogde sets van een oefening, per training (nieuwste laatst)
-function history(name){return S.workouts.filter(w=>w.ex.some(e=>e.n===name)).map(w=>({date:w.date,sets:w.ex.find(e=>e.n===name).sets}))}
-function bestSet(sets){return sets.reduce((b,s)=>!b||s.kg>b.kg||(s.kg===b.kg&&s.reps>b.reps)?s:b,null)}
+// geschiedenis zonder opwarmsets (die tellen niet mee voor PR's en grafieken)
+function history(name){return S.workouts.filter(w=>w.ex.some(e=>e.n===name)).map(w=>({date:w.date,sets:w.ex.find(e=>e.n===name).sets.filter(s=>!s.w)})).filter(h=>h.sets.length)}
+function bestSet(sets){return sets.filter(s=>!s.w).reduce((b,s)=>!b||s.kg>b.kg||(s.kg===b.kg&&s.reps>b.reps)?s:b,null)}
 function prOf(name){return bestSet(history(name).flatMap(h=>h.sets))}
 function lastOf(name){const h=history(name);return h.length?h[h.length-1].sets:null}
-// voorstel voor een set: vorige set van vandaag, anders dezelfde set van vorige keer
-function hint(ex,j,last){const p=j>0?ex.sets[j-1]:null;
+// alle sets van vorige keer, mét opwarmsets (voor de voorstellen)
+function lastRaw(name){for(let k=S.workouts.length-1;k>=0;k--){const e=S.workouts[k].ex.find(e=>e.n===name);if(e)return e.sets}return null}
+// voorstel voor een set: vorige set van vandaag (zelfde soort), anders dezelfde set van vorige keer
+function hint(ex,j,last){const s=ex.sets[j],w=!!s.w,same=ex.sets.filter(x=>!!x.w===w),k=same.indexOf(s),p=k>0?same[k-1]:null;
   if(p&&(p.kg!==''||p.reps!==''))return{kg:p.kg,reps:p.reps};
-  const l=last&&(last[j]||last[last.length-1]);return l?{kg:l.kg,reps:l.reps}:{kg:'',reps:''}}
+  const L=(last||[]).filter(x=>!!x.w===w),l=L[k]||L[L.length-1];return l?{kg:l.kg,reps:l.reps}:{kg:'',reps:''}}
 
 const newSets=n=>Array.from({length:n},()=>({kg:'',reps:'',done:false}));
+// sets voor een oefening uit je schema: eerst de opwarmsets, elk met hun eigen rust (0 = standaard)
+const buildSets=x=>Array.from({length:x.warm||0},(_,k)=>({kg:'',reps:'',done:false,w:true,rest:(x.wr||[])[k]||0}))
+  .concat(Array.from({length:x.sets||3},(_,k)=>({kg:'',reps:'',done:false,rest:(x.sr||[])[k]||0})));
 const restOf=ex=>ex.rest||S.rest;
+const restOfSet=(ex,s)=>s&&s.rest||restOf(ex);
+const RESTS=[30,45,60,90,120,150,180];
+const shortRest=s=>s<60?s+'s':Math.floor(s/60)+':'+pad(s%60);
 const fmtRest=s=>s<=90?s+' sec':s%60?Math.floor(s/60)+':'+pad(s%60)+' min':s/60+' min';
 const wtypes=()=>S.wtypes;
 let wDetail=null,wNew=false,wRename=false,wEdit=false; // schermstatus van het Training-tabblad
 function startWorkout(type){
   if(!(S.schemas[type]||[]).length){toast('Voeg eerst een oefening toe');return}
   askNotify(); // eerste keer: toestemming vragen voor meldingen (moet na een tik)
-  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>({n:x.n,rest:x.rest||0,sets:newSets(x.sets||3)}))};
+  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>({n:x.n,rest:x.rest||0,sets:buildSets(x)}))};
   wEdit=false;wDetail=null;save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
 
-function exInfo(x){return (x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(x.rest?'':' (standaard)')}
+function exInfo(x){const own=(x.wr||[]).concat(x.sr||[]).some(Boolean);
+  return (x.warm?'🔥'+x.warm+' + ':'')+(x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(own?' · eigen rust':x.rest?'':' (standaard)')}
 function renderTrain(){
   const W=S.workout,el=$('trainWrap');
   if(W){renderActive(el,W);return}
@@ -1156,16 +1177,22 @@ function renderActive(el,W){
   el.innerHTML='<div class="row between" style="margin-top:8px;align-items:flex-start"><div><div class="sub">Bezig met</div><h1 style="margin-top:0">'+esc(W.type)+'</h1></div>'
     +'<div style="text-align:right"><div class="chip" id="wElapsed">0:00</div><div><button class="editbtn'+(wEdit?' on':'')+'" data-act="wedit">'+(wEdit?'✅ Klaar':'✏️ Bewerken')+'</button></div></div></div>'
     +(wEdit?'<div class="editnote">✏️ Bewerkmodus: voeg oefeningen of sets toe of haal ze weg. Tik op <b>✅ Klaar</b> als je klaar bent.</div>':'')
-    +W.ex.map((ex,i)=>{const last=lastOf(ex.n),pr=prOf(ex.n);
+    +W.ex.map((ex,i)=>{const last=lastOf(ex.n),raw=lastRaw(ex.n),pr=prOf(ex.n);let nr=0;
       return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b>'+(wEdit?'<button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen" style="color:var(--danger)">✕ Weg</button>':'')+'</div>'
         +'<div class="sub">⏱ '+fmtRest(restOf(ex))+' rust · '+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
-        +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span></span></div>'
-        +ex.sets.map((s,j)=>{const h=hint(ex,j,last);return '<div class="setrow'+(s.done?' done':'')+'"><span>'+(j+1)+'</span>'
+        +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span>Rust</span><span></span></div>'
+        +ex.sets.map((s,j)=>{const h=hint(ex,j,raw);if(!s.w)nr++;
+          const rs='<select class="srest'+(s.rest?' own':'')+'" data-i="'+i+'" data-j="'+j+'" aria-label="Rust na deze set"'+(wEdit?'':' disabled')+'>'
+            +'<option value="0">'+shortRest(restOf(ex))+'</option>'+RESTS.map(r=>'<option value="'+r+'"'+(s.rest===r?' selected':'')+'>'+shortRest(r)+'</option>').join('')+'</select>';
+          return '<div class="setrow'+(s.done?' done':'')+(s.w?' wset':'')+'"><span'+(s.w?' class="wu" title="Opwarmset">🔥W':'>'+nr)+'</span>'
           +'<input inputmode="decimal" data-i="'+i+'" data-j="'+j+'" data-f="kg" value="'+esc(s.kg)+'" placeholder="'+esc(h.kg)+'" aria-label="kilo">'
           +'<input inputmode="numeric" data-i="'+i+'" data-j="'+j+'" data-f="reps" value="'+esc(s.reps)+'" placeholder="'+esc(h.reps)+'" aria-label="herhalingen">'
-          +'<button class="setchk" data-act="set" data-i="'+i+'" data-j="'+j+'" aria-label="Set klaar">✓</button></div>'}).join('')
-        +(wEdit?'<div class="row" style="gap:18px"><button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button>'
-          +(ex.sets.length>1?'<button class="linkbtn" data-act="rmset" data-i="'+i+'" style="color:var(--danger)">− Set</button>':'')+'</div>':'')+'</div>'}).join('')
+          +rs+'<button class="setchk" data-act="set" data-i="'+i+'" data-j="'+j+'" aria-label="Set klaar">✓</button></div>'}).join('')
+        +(wEdit?'<div class="row" style="gap:16px;flex-wrap:wrap"><button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button>'
+          +(nr>1?'<button class="linkbtn" data-act="rmset" data-i="'+i+'" style="color:var(--danger)">− Set</button>':'')
+          +'<button class="linkbtn" data-act="addwarm" data-i="'+i+'">+ 🔥 Opwarmset</button>'
+          +(ex.sets.some(s=>s.w)?'<button class="linkbtn" data-act="rmwarm" data-i="'+i+'" style="color:var(--danger)">− Opwarmset</button>':'')+'</div>'
+          +'<div class="sub" style="font-size:11px;margin:6px 0 0">Tik op de rust naast een set om die set een eigen rusttijd te geven.</div>':'')+'</div>'}).join('')
     +(wEdit?'<button class="btn ghost" data-act="addex" style="margin:4px 0 16px">+ Oefening toevoegen</button>':'<div style="height:6px"></div>')
     +'<button class="btn" data-act="finish">✅ Training afronden</button><button class="btn danger" data-act="cancel" style="margin-top:6px">Training annuleren</button>';
   tickWorkout()}
@@ -1202,30 +1229,35 @@ $('trainWrap').addEventListener('keydown',e=>{if(e.key!=='Enter')return;
 
 $('trainWrap').addEventListener('input',e=>{const f=e.target.dataset.f;if(!f||!S.workout)return;
   S.workout.ex[+e.target.dataset.i].sets[+e.target.dataset.j][f]=e.target.value.trim();save()});
+// eigen rusttijd voor één set (alleen in bewerkmodus)
+$('trainWrap').addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('srest')||!S.workout||!wEdit)return;
+  const s=S.workout.ex[+t.dataset.i].sets[+t.dataset.j];s.rest=+t.value||0;save();renderTrain()});
 $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,W=S.workout,i=+b.dataset.i;
   if(!W){trainNav(a,b,i);return}
   if(a==='wedit'){wEdit=!wEdit;renderTrain();return}
-  if(['addset','rmset','rmex','addex'].includes(a)&&!wEdit)return; // vergrendeld zolang je niet op Bewerken tikt
+  if(['addset','rmset','addwarm','rmwarm','rmex','addex'].includes(a)&&!wEdit)return; // vergrendeld zolang je niet op Bewerken tikt
   if(a==='set'){const ex=W.ex[i],j=+b.dataset.j,s=ex.sets[j];
     if(s.done){s.done=false;save();renderTrain();return}
-    const h=hint(ex,j,lastOf(ex.n));if(s.kg==='')s.kg=String(h.kg??'');if(s.reps==='')s.reps=String(h.reps??'');
+    const h=hint(ex,j,lastRaw(ex.n));if(s.kg==='')s.kg=String(h.kg??'');if(s.reps==='')s.reps=String(h.reps??'');
     if(num(s.reps)===null||num(s.reps)<=0){s.reps='';toast('Vul je herhalingen in');renderTrain();return}
     if(s.kg===''||num(s.kg)===null)s.kg='0';
     s.done=true;save();renderTrain();
     // laatste set van de laatste oefening: geen rust meer nodig
-    if(!(i===W.ex.length-1&&ex.sets.every(x=>x.done)))startRest(restOf(ex),ex.sets.every(x=>x.done)?(W.ex[i+1]||{}).n:ex.n);return}
+    if(!(i===W.ex.length-1&&ex.sets.every(x=>x.done)))startRest(restOfSet(ex,s),ex.sets.every(x=>x.done)?(W.ex[i+1]||{}).n:ex.n);return}
   if(a==='addset'){W.ex[i].sets.push({kg:'',reps:'',done:false});save();renderTrain();return}
-  if(a==='rmset'){const l=W.ex[i].sets;if(l.length>1){l.pop();save();renderTrain()}return}
+  if(a==='rmset'){const l=W.ex[i].sets;if(l.filter(s=>!s.w).length>1){let k=l.length-1;while(k>=0&&l[k].w)k--;l.splice(k,1);save();renderTrain()}return}
+  if(a==='addwarm'){const l=W.ex[i].sets;let k=0;while(k<l.length&&l[k].w)k++;l.splice(k,0,{kg:'',reps:'',done:false,w:true});save();renderTrain();return}
+  if(a==='rmwarm'){const l=W.ex[i].sets;let k=-1;l.forEach((s,x)=>{if(s.w)k=x});if(k>=0){l.splice(k,1);save();renderTrain()}return}
   if(a==='rmex'){armed(b,'Weg?',()=>{W.ex.splice(i,1);save();renderTrain()});return}
   if(a==='addex'){openEx({mode:'workout',type:W.type});return}
   if(a==='cancel'){armed(b,'Zeker? Tik nogmaals om te annuleren',()=>{S.workout=null;stopRest();save();render();toast('Training geannuleerd')});return}
   if(a==='finish')finishWorkout()});
 
 function finishWorkout(){
-  const W=S.workout,ex=W.ex.map(e=>({n:e.n,sets:e.sets.filter(s=>s.done).map(s=>({kg:num(s.kg)||0,reps:num(s.reps)||0}))})).filter(e=>e.sets.length);
+  const W=S.workout,ex=W.ex.map(e=>({n:e.n,sets:e.sets.filter(s=>s.done).map(s=>Object.assign({kg:num(s.kg)||0,reps:num(s.reps)||0},s.w?{w:true}:{}))})).filter(e=>e.sets.length);
   if(!ex.length){toast('Vink minstens 1 set af met ✓');return}
   // nieuwe PR's zoeken (vóór het opslaan vergelijken met de geschiedenis)
-  const prs=ex.map(e=>{const old=prOf(e.n),nw=bestSet(e.sets);return old&&(nw.kg>old.kg||(nw.kg===old.kg&&nw.reps>old.reps))?e.n+' '+nw.kg+' kg':null}).filter(Boolean);
+  const prs=ex.map(e=>{const old=prOf(e.n),nw=bestSet(e.sets);return old&&nw&&(nw.kg>old.kg||(nw.kg===old.kg&&nw.reps>old.reps))?e.n+' '+nw.kg+' kg':null}).filter(Boolean);
   const end=Date.now(),mins=Math.max(15,Math.round((end-W.start)/60000));
   S.workouts.push({id:uid(),type:W.type,date:today(),start:W.start,end,ex});
   // geplande gymtaak van vandaag afvinken, of er een aanmaken zodat het meetelt voor je doelen
@@ -1334,10 +1366,20 @@ function renderSchemas(){
   renderNotif();renderPush();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer}
 
 /* formulier eigen oefening (voor schema of lopende training) */
-const RESTS=[30,45,60,90,120,150,180];
-let exCtx=null,exSets=3,exRestSel=0;
-function setExSets(n){exSets=Math.min(10,Math.max(1,n));$('exSetsVal').textContent=exSets}
-function setExRest(s){exRestSel=s;document.querySelectorAll('#exRest button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s))}
+let exCtx=null,exSets=3,exRestSel=0,exWarm=0,exWR=[],exSR=[];
+function setExSets(n){exSets=Math.min(10,Math.max(1,n));$('exSetsVal').textContent=exSets;renderExPer()}
+function setExWarm(n){exWarm=Math.min(5,Math.max(0,n));$('exWarmVal').textContent=exWarm;renderExPer()}
+function setExRest(s){exRestSel=s;document.querySelectorAll('#exRest button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s));renderExPer()}
+// lijstje "rust na elke set" (0 = de rusttijd hierboven)
+function renderExPer(){const box=$('exPer');if(!box||box.hidden)return;
+  const sel=(k,arr,v)=>'<select data-k="'+k+'" data-a="'+arr+'"><option value="0">Zoals hierboven ('+fmtRest(exRestSel)+')</option>'
+    +RESTS.map(r=>'<option value="'+r+'"'+(v===r?' selected':'')+'>'+fmtRest(r)+'</option>').join('')+'</select>';
+  let h='';for(let k=0;k<exWarm;k++)h+='<div class="perrow"><span>🔥 Na opwarmset '+(k+1)+'</span>'+sel(k,'w',exWR[k]||0)+'</div>';
+  for(let k=0;k<exSets;k++)h+='<div class="perrow"><span>Na set '+(k+1)+(k===exSets-1?' <span class="sub" style="font-size:11px">(voor de volgende oefening)</span>':'')+'</span>'+sel(k,'s',exSR[k]||0)+'</div>';
+  box.innerHTML=h}
+$('exPer').addEventListener('change',e=>{const t=e.target.closest('select');if(!t)return;(t.dataset.a==='w'?exWR:exSR)[+t.dataset.k]=+t.value||0});
+$('exPerBtn').onclick=()=>{const b=$('exPer');b.hidden=!b.hidden;$('exPerBtn').textContent='⏱ Andere rust per set '+(b.hidden?'▾':'▴');renderExPer()};
+$('exWarmMin').onclick=()=>setExWarm(exWarm-1);$('exWarmPlus').onclick=()=>setExWarm(exWarm+1);
 $('exRest').innerHTML=RESTS.map(s=>'<button type="button" data-s="'+s+'">'+fmtRest(s)+'</button>').join('');
 $('exRest').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setExRest(+b.dataset.s)});
 $('exSetsMin').onclick=()=>setExSets(exSets-1);$('exSetsPlus').onclick=()=>setExSets(exSets+1);
@@ -1350,7 +1392,9 @@ $('exName').addEventListener('input',()=>{if($('exLibWrap').hidden)return;render
 function openEx(ctx){exCtx=ctx;const x=ctx.mode==='schema'&&ctx.i>=0?S.schemas[ctx.type][ctx.i]:null;
   $('exTitle').textContent=x?'Oefening bewerken':'Oefening toevoegen';
   $('exLibWrap').hidden=!!x;$('exNameLbl').textContent=x?'Naam':'Of typ zelf een oefening';
-  $('exName').value=x?x.n:'';setExSets(x?x.sets||3:3);setExRest(x&&x.rest?x.rest:S.rest);
+  exWR=x&&x.wr?x.wr.slice():[];exSR=x&&x.sr?x.sr.slice():[];
+  const own=exWR.concat(exSR).some(Boolean);$('exPer').hidden=!own;$('exPerBtn').textContent='⏱ Andere rust per set '+(own?'▴':'▾');
+  $('exName').value=x?x.n:'';setExSets(x?x.sets||3:3);setExWarm(x?x.warm||0:0);setExRest(x&&x.rest?x.rest:S.rest);
   $('exSaveWrap').hidden=ctx.mode!=='workout';$('exSchemaName').textContent=ctx.type;$('exSaveSchema').checked=true;
   $('exDel').hidden=!x;disarm($('exDel'));
   if(!x)renderExLib();
@@ -1358,7 +1402,9 @@ function openEx(ctx){exCtx=ctx;const x=ctx.mode==='schema'&&ctx.i>=0?S.schemas[c
 function closeEx(){$('exSheet').classList.remove('on');$('back').classList.remove('on');document.activeElement&&document.activeElement.blur()}
 $('exSave').onclick=()=>{const n=$('exName').value.trim();if(!n){toast('Geef je oefening een naam');$('exName').focus();return}
   const item={n,sets:exSets,rest:exRestSel===S.rest?0:exRestSel},l=S.schemas[exCtx.type]=S.schemas[exCtx.type]||[];
-  if(exCtx.mode==='workout'){S.workout.ex.push({n,rest:item.rest,sets:newSets(exSets)});if($('exSaveSchema').checked&&!l.some(x=>x.n===n))l.push(item)}
+  if(exWarm)item.warm=exWarm;
+  const fill=(a,n)=>Array.from({length:n},(_,k)=>a[k]||0),wr=fill(exWR,exWarm),sr=fill(exSR,exSets);if(wr.some(Boolean))item.wr=wr;if(sr.some(Boolean))item.sr=sr;
+  if(exCtx.mode==='workout'){S.workout.ex.push({n,rest:item.rest,sets:buildSets(item)});if($('exSaveSchema').checked&&!l.some(x=>x.n===n))l.push(item)}
   else if(exCtx.i>=0)l[exCtx.i]=item;else l.push(item);
   save();closeEx();render();toast(exCtx.mode==='workout'?'➕ '+n+' toegevoegd':'Opgeslagen in '+exCtx.type)};
 $('exDel').onclick=()=>armed($('exDel'),'Tik nogmaals om te verwijderen',()=>{S.schemas[exCtx.type].splice(exCtx.i,1);save();closeEx();render();toast('Verwijderd')});
