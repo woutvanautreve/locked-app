@@ -1860,6 +1860,7 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
       +'<label class="l" for="frEmail">E-mail</label><input class="field" id="frEmail" type="email" inputmode="email" autocomplete="email" placeholder="naam@voorbeeld.be">'
       +'<label class="l" for="frPw">Wachtwoord'+(reg?' (minstens 6 tekens)':'')+'</label><input class="field" id="frPw" type="password" autocomplete="'+(reg?'new-password':'current-password')+'">'
       +msg+'<button class="btn" data-act="'+(reg?'signup':'signin')+'"'+busy+'>'+(fr.busy?'Even geduld…':reg?'Account maken':'Inloggen')+'</button>'
+      +(!reg&&fr.canResend?'<button class="btn ghost" data-act="resend" style="margin-top:8px"'+busy+'>📧 Bevestigingsmail opnieuw sturen</button>':'')
       +(reg?'':'<button class="linkbtn" data-act="forgot" style="margin-top:10px">Wachtwoord vergeten?</button>')+'</div>'
       +'<div class="sub" style="font-size:12px;margin:10px 2px">🔒 Online staan alleen je bijnaam en je weekscores. Je planning, toetsen en trainingen blijven op je iPhone.</div>'}
   else if(fr.needNick){
@@ -1892,7 +1893,9 @@ $('frWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');
     if(pw.length<6){fr.err='Je wachtwoord moet minstens 6 tekens hebben';renderFriends();return}
     frRun(async()=>{const r=await frSignUp(nick,email,pw);if(r==='in')await frLoad();else{fr.mode='login';fr.msg='📧 Bijna klaar! Open de mail van Supabase en klik op de bevestigingslink (kijk ook bij spam). Kom daarna hier terug en log in.'}});return}
   if(a==='signin'){const email=v('frEmail'),pw=$('frPw').value;if(!email||!pw){fr.err='Vul je e-mail en wachtwoord in';renderFriends();return}
-    frRun(async()=>{await frSignIn(email,pw);await frLoad()},'');return}
+    fr.canResend=false;frRun(async()=>{try{await frSignIn(email,pw)}catch(e){if(/bevestig eerst/i.test(e.message))fr.canResend=true;throw e}fr.canResend=false;await frLoad()},'');return}
+  if(a==='resend'){const email=v('frEmail');if(!email.includes('@')){fr.err='Vul je e-mailadres in';renderFriends();return}
+    frRun(async()=>{await sb('/auth/v1/resend?redirect_to='+encodeURIComponent(APP_URL),{method:'POST',noAuth:true,body:{type:'signup',email}});fr.canResend=false},'📧 Nieuwe bevestigingsmail verstuurd. Klik op de link en log daarna hier in.');return}
   if(a==='forgot'){const email=v('frEmail');if(!email.includes('@')){fr.err='Vul eerst je e-mailadres in';renderFriends();return}
     frRun(()=>sb('/auth/v1/recover?redirect_to='+encodeURIComponent(APP_URL),{method:'POST',noAuth:true,body:{email}}),'📧 Check je mail voor een link om een nieuw wachtwoord te kiezen.');return}
   if(a==='newpw'){const pw=$('frNewPw').value;if(pw.length<6){fr.err='Minstens 6 tekens';renderFriends();return}
