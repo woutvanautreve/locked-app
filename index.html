@@ -218,6 +218,19 @@ h2{font-size:18px;margin:22px 0 10px}
 .chart2 .pt{fill:var(--gym);stroke:var(--card);stroke-width:2}
 .chart2 .xhair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
 .chcap{font-size:13px;margin-top:4px}
+/* schooluren en vakanties */
+.schoolcard{background:color-mix(in srgb,var(--studie) 14%,var(--card));border-radius:14px;padding:11px 14px;margin-bottom:12px;font-size:14px}
+.schoolcard.vac{background:color-mix(in srgb,#f59e0b 18%,var(--card))}
+.schoolrow{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--studie) 14%,transparent) 0 8px,color-mix(in srgb,var(--studie) 7%,transparent) 8px 16px);border-radius:12px;padding:9px 14px;margin-bottom:8px;font-size:14px;color:var(--text)}
+.dots .vdot{font-size:9px;line-height:6px}
+.sdays.off{opacity:.45;pointer-events:none}
+.sdrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+.sdday{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+.sdday input{width:20px;height:20px;accent-color:var(--accent)}
+.sdtime{display:flex;align-items:center;gap:4px}
+.sdtime select{font-size:15px;padding:7px 6px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text)}
+.vacrow{padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:10px}
+.vacrow.past{opacity:.55}
 .chart2 .lnc{stroke:var(--cardio)}
 .chart2 .ptc{fill:var(--cardio)}
 .chlabel{font-size:13px;font-weight:700;margin-bottom:2px}
@@ -349,6 +362,7 @@ nav button.on{color:var(--accent)}
 
   <div class="card quote" id="quote"></div>
 
+  <div id="schoolBox"></div>
   <div id="examBox"></div>
 
   <div id="overdueBox"></div>
@@ -419,6 +433,10 @@ nav button.on{color:var(--accent)}
   <h2>Laatste 7 dagen</h2>
   <div class="card"><div class="chart" id="chart"></div>
     <div class="row sub" style="font-size:12px;margin-top:10px;gap:14px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sport)"></i> sport</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--studie)"></i> school</span><span>(minuten)</span></div></div>
+  <h2>🏫 Schooluren</h2>
+  <div class="card" id="schoolSet"></div>
+  <h2>🏖️ Vakanties</h2>
+  <div class="card" id="vacSet"></div>
   <h2>Instellingen</h2>
   <div class="card">
     <label class="l" for="nameIn">Je naam</label>
@@ -624,6 +642,9 @@ function renderToday(){
   $('todayList').innerHTML=list.length?list.map(t=>taskHTML(t)).join(''):'<div class="empty">Nog niets gepland voor vandaag.<br>Tik op <b>Plan</b> om je dag te plannen.</div>';
   // komende toetsen (3 weken vooruit) met aftellen en hoeveel studieblokken ervoor gepland zijn
   const ex=S.tasks.filter(t=>t.kind==='toets'&&!t.done&&t.date>=today()&&t.date<=ymd(addDays(new Date(),21))).sort((a,b)=>a.date<b.date?-1:1);
+  const vNow=vacOn(today()),sNow=schoolOn(today()),mNow=now.getHours()*60+now.getMinutes();
+  $('schoolBox').innerHTML=vNow?'<div class="schoolcard vac">🏖️ <b>'+esc(vNow.name)+'</b> · geen school tot en met '+DN[parse(vNow.to).getDay()]+' '+parse(vNow.to).getDate()+' '+MN[parse(vNow.to).getMonth()]+'</div>'
+    :sNow?'<div class="schoolcard">🏫 <b>School</b> '+sNow.from+'–'+sNow.to+(mNow>=toMin(sNow.from)&&mNow<toMin(sNow.to)?' · <b>nu op school</b>':mNow>=toMin(sNow.to)?' · gedaan voor vandaag ✅':'')+'</div>':'';
   $('examBox').innerHTML=ex.length?'<h2>📝 Komende toetsen</h2><div class="card" style="padding:6px 14px">'+ex.map(t=>{
     const n=Math.round((parse(t.date)-parse(today()))/864e5),d=parse(t.date);
     const prep=S.tasks.filter(x=>x.cat==='studie'&&x.kind!=='toets'&&x.sub&&x.sub===t.sub&&x.date>=today()&&x.date<=t.date).length;
@@ -639,7 +660,7 @@ function renderWeek(){
   $('wLabel').textContent=weekStart.getDate()+' '+MN[weekStart.getMonth()]+' – '+end.getDate()+' '+MN[end.getMonth()];
   let html='';
   for(let i=0;i<7;i++){const d=addDays(weekStart,i),k=ymd(d),ts=tasksOn(k);
-    html+='<button class="day'+(k===selDay?' sel':'')+(k===today()?' today':'')+'" data-day="'+k+'">'+DN[d.getDay()]+'<b>'+d.getDate()+'</b><div class="dots">'+ts.slice(0,4).map(t=>'<i class="c-'+t.cat+'"></i>').join('')+'</div></button>'}
+    html+='<button class="day'+(k===selDay?' sel':'')+(k===today()?' today':'')+'" data-day="'+k+'">'+DN[d.getDay()]+'<b>'+d.getDate()+'</b><div class="dots">'+(vacOn(k)&&!ts.length?'<span class="vdot">🏖</span>':ts.slice(0,4).map(t=>'<i class="c-'+t.cat+'"></i>').join(''))+'</div></button>'}
   $('days').innerHTML=html;
   const p=weekStats(weekStart,false),g=S.goals,over=ymd(addDays(weekStart,6))<today();
   const line=(ico,name,have,goal,fmt,col)=>'<div class="gl"><div class="row between"><span>'+ico+' <b>'+name+'</b></span><span class="sub">'+fmt(have)+' / '+fmt(goal)+(have>=goal?' ✅':'')+'</span></div><div class="bar"><i style="width:'+Math.min(100,have/goal*100)+'%;background:'+col+'"></i></div></div>';
@@ -657,7 +678,9 @@ function renderWeek(){
     +(over?'':(miss.length?'<div class="sub" style="margin:14px 0 10px">⚠️ Om je doel te halen moet je '+miss.join(' en ')+' inplannen.</div>':'<div class="sub" style="margin:14px 0 10px">🎯 Je sportdoelen voor deze week staan erin!</div>')+'<button class="btn" data-act="planmode">✨ Plan mijn week</button>');
   let out='';
   for(let i=0;i<7;i++){const d=addDays(weekStart,i),k=ymd(d),l=tasksOn(k),tot=l.reduce((a,t)=>a+t.dur,0),dn=l.filter(t=>t.done).length;
-    out+='<div class="wday'+(k===today()?' now':k<today()?' past':'')+'" id="d-'+k+'" data-day="'+k+'"><div class="dayhead"><div><h3>'+(k===today()?'Vandaag · ':'')+DNL[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+'</h3><div class="sub">'+(l.length?dn+'/'+l.length+' gedaan · '+fmtMin(tot):'Niets gepland')+'</div></div><button class="addday" data-act="add" data-day="'+k+'" aria-label="Iets plannen op '+DNL[d.getDay()]+'">Plan</button></div>'
+    const vac=vacOn(k),sch=schoolOn(k);
+    out+='<div class="wday'+(k===today()?' now':k<today()?' past':'')+'" id="d-'+k+'" data-day="'+k+'"><div class="dayhead"><div><h3>'+(k===today()?'Vandaag · ':'')+DNL[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+'</h3><div class="sub">'+(vac?'🏖️ '+esc(vac.name)+' · ':'')+(l.length?dn+'/'+l.length+' gedaan · '+fmtMin(tot):'Niets gepland')+'</div></div><button class="addday" data-act="add" data-day="'+k+'" aria-label="Iets plannen op '+DNL[d.getDay()]+'">Plan</button></div>'
+      +(sch?'<div class="schoolrow">🏫 School <b>'+sch.from+'–'+sch.to+'</b></div>':'')
       +(l.length?l.map(t=>taskHTML(t,false,pm&&!t.done&&k>=today())).join(''):'<div class="free">Vrij, of tik op Plan om iets in te plannen</div>')+'</div>'}
   $('weekList').innerHTML=out;
 }
@@ -702,6 +725,40 @@ function renderBadges(){
   $('badgeHead').textContent='Badges · '+got.length+'/'+BADGES.length;
   $('badges').innerHTML=BADGES.map(b=>{const[v,g]=b.p(s),ok=v>=g;
     return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')}
+/* ---------- schooluren en vakanties ---------- */
+const SDAYS=[1,2,3,4,5,6,0];
+function schoolDef(){const d={};for(const k of SDAYS)d[k]={on:k>=1&&k<=5,from:'08:30',to:k===3?'12:00':'15:30'};return{on:false,days:d}}
+function vacOn(ds){return (S.vac||[]).find(v=>v.from&&v.to&&ds>=v.from&&ds<=v.to)}
+function schoolOn(ds){const sc=S.school;if(!sc||!sc.on||vacOn(ds))return null;const d=sc.days[parse(ds).getDay()];return d&&d.on?d:null}
+const TIMES=[];for(let m=6*60;m<=19*60;m+=5)TIMES.push(fromMin(m));
+const tsel=(day,f,v)=>'<select data-day="'+day+'" data-f="'+f+'" aria-label="'+(f==='from'?'Begin':'Einde')+' '+DNL[day]+'">'+TIMES.map(t=>'<option'+(t===v?' selected':'')+'>'+t+'</option>').join('')+'</select>';
+function renderSchoolSet(){const sc=S.school||(S.school=schoolDef());
+  $('schoolSet').innerHTML='<label class="toggle" style="margin:0 0 6px"><span>Schooluren tonen in je planning</span><input type="checkbox" data-s="on"'+(sc.on?' checked':'')+'></label>'
+    +'<div class="sub" style="font-size:12px;margin:0 2px 10px">Je ziet ze op Vandaag en in je week, en je krijgt een waarschuwing als je iets tijdens school plant.</div>'
+    +'<div class="sdays'+(sc.on?'':' off')+'">'+SDAYS.map(k=>{const x=sc.days[k];
+      return '<div class="sdrow"><label class="sdday"><input type="checkbox" data-s="day" data-day="'+k+'"'+(x.on?' checked':'')+'> '+DNL[k].replace(/^./,c=>c.toUpperCase())+'</label>'
+        +(x.on?'<div class="sdtime">'+tsel(k,'from',x.from)+'<span>–</span>'+tsel(k,'to',x.to)+'</div>':'<span class="sub" style="font-size:13px">geen school</span>')+'</div>'}).join('')+'</div>'}
+function renderVacSet(){const V=(S.vac=S.vac||[]).slice().sort((a,b)=>a.from<b.from?-1:1),now=vacOn(today());
+  $('vacSet').innerHTML=(now?'<div class="schoolcard vac" style="margin-bottom:10px">🏖️ Je hebt nu <b>'+esc(now.name)+'</b>!</div>':'')
+    +(V.length?V.map(v=>'<div class="vacrow'+(v.to<today()?' past':'')+'" data-id="'+v.id+'"><div class="row" style="gap:6px"><input class="field" data-v="name" value="'+esc(v.name)+'" maxlength="30" aria-label="Naam vakantie" style="margin:0;flex:1"><button class="linkbtn" data-act="rmvac" style="color:var(--danger);padding:0 6px" aria-label="Vakantie verwijderen">✕</button></div>'
+      +'<div class="two" style="margin-top:6px"><div><label class="l">Van</label><input class="field" type="date" data-v="from" value="'+v.from+'" style="margin:0"></div><div><label class="l">Tot en met</label><input class="field" type="date" data-v="to" value="'+v.to+'" style="margin:0"></div></div></div>').join('')
+      :'<div class="sub" style="font-size:14px;margin-bottom:10px">Nog geen vakanties. Voeg je volgende vakantie toe, dan zie je die in je planning en verdwijnen je schooluren in die periode.</div>')
+    +'<button class="btn ghost" data-act="addvac">+ Vakantie toevoegen</button>'}
+$('schoolSet').addEventListener('change',e=>{const t=e.target,sc=S.school;
+  if(t.dataset.s==='on')sc.on=t.checked;else if(t.dataset.s==='day')sc.days[t.dataset.day].on=t.checked;
+  else if(t.dataset.f){const d=sc.days[t.dataset.day];d[t.dataset.f]=t.value;if(toMin(d.to)<=toMin(d.from)){d.to=fromMin(toMin(d.from)+60);toast('Einde moet na het begin liggen')}}
+  save();renderSchoolSet();renderToday();renderWeek()});
+$('vacSet').addEventListener('input',e=>{const r=e.target.closest('.vacrow');if(!r||e.target.dataset.v!=='name')return;const v=S.vac.find(x=>x.id===r.dataset.id);v.name=e.target.value.trim()||'Vakantie';save()});
+$('vacSet').addEventListener('change',e=>{const r=e.target.closest('.vacrow'),f=e.target.dataset.v;if(!r||!f)return;const v=S.vac.find(x=>x.id===r.dataset.id);
+  if(f==='name'){renderToday();renderWeek();return}
+  v[f]=e.target.value;if(v.to<v.from){if(f==='from')v.to=v.from;else v.from=v.to;toast('"Tot en met" moet na "Van" liggen')}
+  save();renderVacSet();renderToday();renderWeek()});
+$('vacSet').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
+  if(b.dataset.act==='addvac'){S.vac.push({id:uid(),name:'Vakantie',from:today(),to:ymd(addDays(new Date(),7))});save();renderVacSet();renderToday();renderWeek();
+    const rows=$('vacSet').querySelectorAll('.vacrow');const last=[...rows].find(r=>r.dataset.id===S.vac[S.vac.length-1].id);if(last){const i=last.querySelector('[data-v="name"]');i.focus();i.select()}}
+  if(b.dataset.act==='rmvac'){const id=b.closest('.vacrow').dataset.id;armed(b,'Weg?',()=>{S.vac=S.vac.filter(v=>v.id!==id);save();renderVacSet();renderToday();renderWeek()})}});
+$('tDate').addEventListener('change',()=>showTimes());
+
 function render(){
   if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));if(!S.workouts)S.workouts=[];if(!S.rest)S.rest=90; // ook na "Alles wissen"
   for(const k in S.schemas)S.schemas[k]=S.schemas[k].map(x=>typeof x==='string'?{n:x,sets:3,rest:0}:x); // oud formaat omzetten
@@ -711,7 +768,8 @@ function render(){
   // tijdens het typen in een set niet opnieuw tekenen (anders verlies je je cursor)
   const ae=document.activeElement;if(!(ae&&ae.tagName==='INPUT'&&ae.closest('#trainWrap')))renderTrain();
   renderSchemas();renderProgress();
-  checkWeeklyBonus();renderAqua();renderDice();renderDex()}
+  checkWeeklyBonus();renderAqua();renderDice();renderDex();
+  if(!(ae&&ae.closest&&ae.closest('#schoolSet,#vacSet'))){renderSchoolSet();renderVacSet()}}
 
 /* ---------- navigatie ---------- */
 function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
@@ -816,7 +874,8 @@ $('tMins').innerHTML=['00','15','30','45'].map(m=>'<button type="button" data-m=
 function showTimes(){
   [['tFromBtn',sFrom,'from'],['tToBtn',sTo,'to']].forEach(([id,v,k])=>{const b=$(id);b.textContent=v||'--:--';b.classList.toggle('empty',!v);b.classList.toggle('open',pickT===k)});
   const d=sFrom&&sTo?toMin(sTo)-toMin(sFrom):null;
-  $('tDurTxt').textContent=d===null?'Kies van hoe laat tot hoe laat':d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"';
+  const sc=schoolOn($('tDate').value||today()),clash=sc&&d>0&&toMin(sFrom)<toMin(sc.to)&&toMin(sTo)>toMin(sc.from);
+  $('tDurTxt').textContent=(d===null?'Kies van hoe laat tot hoe laat':d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"')+(clash?' · ⚠️ valt tijdens school ('+sc.from+'–'+sc.to+')':'');
   $('tDurTxt').style.color=d!==null&&d<=0?'var(--danger)':'';
   const v=pickT==='from'?sFrom:sTo,[h,m]=v?v.split(':'):[null,null];
   document.querySelectorAll('#tHours button').forEach(x=>x.classList.toggle('on',x.dataset.h===h));
