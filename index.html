@@ -143,7 +143,12 @@ h2{font-size:18px;margin:22px 0 10px}
 .coinchip{background:color-mix(in srgb,#f59e0b 18%,transparent);color:var(--text);font-weight:800;padding:7px 12px;border-radius:999px;font-size:15px;white-space:nowrap}
 .tank{position:relative;height:330px;margin-top:14px;border-radius:22px;overflow:hidden;background:linear-gradient(180deg,#7dd3fc 0%,#0ea5e9 45%,#075985 100%);box-shadow:inset 0 0 40px rgba(0,0,0,.25)}
 .tank .sand{position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(#fde68a,#d4a35a)}
-.tank .plants{position:absolute;left:0;right:0;bottom:22px;width:100%;height:80px}
+.tank .plants{position:absolute;left:0;right:0;bottom:22px;width:100%;height:90px;z-index:1}
+.tank .sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 5s ease-in-out infinite}
+.tank .sway.s2{animation-duration:6.5s;animation-delay:-2s}
+@keyframes sway{50%{transform:rotate(4deg)}}
+.tank .rays{position:absolute;inset:-20% -10% 30% -10%;background:repeating-linear-gradient(100deg,rgba(255,255,255,.13) 0 22px,transparent 22px 70px);filter:blur(6px);animation:rays 9s ease-in-out infinite alternate;pointer-events:none;-webkit-mask-image:linear-gradient(#000,transparent);mask-image:linear-gradient(#000,transparent)}
+@keyframes rays{to{transform:translateX(30px)}}
 .tankempty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;font-size:15px;padding:30px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
 .bubble{position:absolute;bottom:20px;width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);animation:bubble 6s linear infinite}
 @keyframes bubble{from{transform:translateY(0);opacity:0}10%{opacity:1}to{transform:translateY(-320px);opacity:0}}
@@ -158,6 +163,10 @@ h2{font-size:18px;margin:22px 0 10px}
 .fish.r3:not(.sil){filter:drop-shadow(0 0 4px #c084fc)}
 .fish.r4:not(.sil){filter:drop-shadow(0 0 6px #fbbf24);animation:legend 2.4s ease-in-out infinite}
 @keyframes legend{50%{filter:drop-shadow(0 0 12px #fde68a)}}
+.fish .glowpulse{animation:glowp 2.2s ease-in-out infinite}
+@keyframes glowp{50%{opacity:.45}}
+.fish .shim{animation:shim 3.2s ease-in-out infinite}
+@keyframes shim{50%{opacity:.08}}
 /* mutaties */
 .fish .spark{animation:twinkle 1.6s ease-in-out infinite}
 @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
@@ -1143,84 +1152,274 @@ const ODDS=[45,28,15,9,3]; // kans in % per zeldzaamheid
 const DICE=[
   {n:'Vijver',p:50,c:'#84cc16',e:'🪷'},{n:'Rivier',p:120,c:'#0ea5e9',e:'🏞️'},{n:'Rif',p:250,c:'#f97316',e:'🪸'},
   {n:'Oceaan',p:500,c:'#2563eb',e:'🌊'},{n:'Diepzee',p:1000,c:'#7c3aed',e:'🌌'}];
-// [naam, dobbelsteen, zeldzaamheid, vorm, kleur1, kleur2, patroon]
+// ===== Vissen: soorten =====
+// b=lichaam, t=staart, df/dh=rugvin+hoogte, af=aarsvin, c1=lichaam, c2=vinnen, bel=buik, p=patroon, pc=patroonkleur,
+// f=kenmerken, er=oog-grootte, ir=iriskleur, tc=staartkleur, gl=gloeikleur
 const FISH=[
- ['Goudvisje',0,0,'oval','#f59e0b','#fbbf24',''],['Stekelbaars',0,0,'oval','#94a3b8','#475569','stripes'],
- ['Rietvoorn',0,1,'oval','#cbd5e1','#ef4444',''],['Zonnebaars',0,1,'tall','#f97316','#0ea5e9','spots'],
- ['Witte Koi',0,2,'long','#f8fafc','#ef4444','spots'],['Bittervoorn',0,2,'oval','#a78bfa','#f472b6','band'],
- ['Spiegelkarper',0,3,'round','#a16207','#fde68a','spots'],['Glaskoi',0,3,'long','#bae6fd','#38bdf8','band'],
- ['Gouden Koi',0,4,'long','#facc15','#fff7ae','spots'],['Maankarper',0,4,'round','#e2e8f0','#c4b5fd','band'],
- ['Grondel',1,0,'oval','#a8a29e','#78716c','spots'],['Elrits',1,0,'long','#84cc16','#3f6212','band'],
- ['Forel',1,1,'long','#a3a38a','#dc2626','spots'],['Kwabaal',1,1,'long','#57534e','#a8a29e','spots'],
- ['Regenboogforel',1,2,'long','#94a3b8','#ec4899','band'],['Snoekbaars',1,2,'long','#65a30d','#1e293b','stripes'],
- ['Steur',1,3,'shark','#64748b','#cbd5e1','spots'],['Zilverzalm',1,3,'oval','#e2e8f0','#fb7185','band'],
- ['Rivierdraak',1,4,'long','#059669','#fbbf24','stripes'],['Kristalsnoek',1,4,'long','#a5f3fc','#e0e7ff','stripes'],
- ['Clownvisje',2,0,'oval','#f97316','#ffffff','stripes'],['Juffertje',2,0,'oval','#2563eb','#60a5fa',''],
- ['Doktersvis',2,1,'tall','#1d4ed8','#facc15','band'],['Keizersvis',2,1,'tall','#1e3a8a','#fde047','stripes'],
- ['Koffervis',2,2,'round','#facc15','#1e293b','spots'],['Picassovis',2,2,'oval','#f1f5f9','#0f172a','stripes'],
- ['Leeuwvis',2,3,'tall','#b91c1c','#fef2f2','stripes'],['Mandarijnvis',2,3,'oval','#0ea5e9','#f97316','stripes'],
- ['Regenboogpapegaai',2,4,'oval','#22c55e','#ec4899','band'],['Koraalkoning',2,4,'tall','#fb7185','#fde68a','spots'],
- ['Makreel',3,0,'long','#1e40af','#93c5fd','stripes'],['Sardientje',3,0,'long','#cbd5e1','#64748b',''],
- ['Tonijn',3,1,'shark','#1e3a8a','#cbd5e1','band'],['Zeebaars',3,1,'oval','#475569','#94a3b8',''],
- ['Zwaardvis',3,2,'long','#334155','#94a3b8',''],['Maanvis',3,2,'round','#9ca3af','#e5e7eb',''],
- ['Hamerhaai',3,3,'shark','#6b7280','#d1d5db',''],['Manta',3,3,'ray','#1f2937','#e5e7eb','spots'],
- ['Blauwe Marlijn',3,4,'long','#1d4ed8','#38bdf8','stripes'],['Oceaanfeniks',3,4,'tall','#f97316','#facc15','band'],
- ['Lantaarnvis',4,0,'oval','#1e293b','#67e8f9','spots'],['Bijlvis',4,0,'tall','#9ca3af','#e5e7eb','band'],
- ['Zeeduivel',4,1,'round','#3f3f46','#a3e635','spots'],['Addervis',4,1,'long','#111827','#22d3ee','spots'],
- ['Pelikaanaal',4,2,'long','#0f172a','#a78bfa','band'],['Glasinktvis',4,2,'squid','#e0f2fe','#7dd3fc','spots'],
- ['Reuzeninktvis',4,3,'squid','#b91c1c','#fca5a5','spots'],['Spookhaai',4,3,'shark','#e5e7eb','#a5b4fc',''],
- ['Kosmische Kwal',4,4,'jelly','#a78bfa','#f0abfc','spots'],['Leviathan',4,4,'shark','#1e1b4b','#22d3ee','stripes']
-].map((a,i)=>({id:'f'+(i+1),n:a[0],d:a[1],r:a[2],s:a[3],c1:a[4],c2:a[5],p:a[6]}));
+ {n:'Goudvisje',d:0,r:0,b:'gold',t:'fan',df:'soft',dh:10,af:'soft',c1:'#f97316',c2:'#fb923c',bel:'#fed7aa',f:['scales','longfins'],ir:'#fde68a'},
+ {n:'Stekelbaars',d:0,r:0,b:'slim',t:'round',df:'sticks',dh:9,af:'soft',c1:'#7c9a6a',c2:'#a3b18a',bel:'#f87171',p:'bars',pc:'#3f5f3f',f:['scales']},
+ {n:'Rietvoorn',d:0,r:1,b:'carp',t:'fork',df:'soft',dh:9,af:'soft',c1:'#cbd5e1',c2:'#ef4444',bel:'#f8fafc',f:['scales'],ir:'#f97316'},
+ {n:'Zonnebaars',d:0,r:1,b:'disc',t:'round',df:'spiny',dh:9,af:'soft',c1:'#9ca35a',c2:'#a3a35a',bel:'#f97316',p:'dots',pc:'#f59e0b',f:['headlines','earspot','scales']},
+ {n:'Witte Koi',d:0,r:2,b:'carp',t:'fork',df:'longsoft',dh:8,af:'soft',c1:'#f8fafc',c2:'#f1f5f9',bel:'#ffffff',p:'blotch',pc:'#dc2626',f:['scales','barbels','longfins']},
+ {n:'Bittervoorn',d:0,r:2,b:'gold',t:'fork',df:'soft',dh:8,af:'soft',c1:'#c4b5fd',c2:'#f472b6',bel:'#fce7f3',p:'band',pc:'#22d3ee',f:['scales','shimmer']},
+ {n:'Spiegelkarper',d:0,r:3,b:'carp',t:'fork',df:'longsoft',dh:8,af:'soft',c1:'#b07a1e',c2:'#8a5a12',bel:'#fde68a',f:['mirror','barbels']},
+ {n:'Glaskoi',d:0,r:3,b:'carp',t:'fan',df:'longsoft',dh:8,af:'soft',c1:'#bae6fd',c2:'#e0f2fe',bel:'#f0f9ff',p:'blotch',pc:'#7dd3fc',f:['glass','barbels','longfins']},
+ {n:'Gouden Koi',d:0,r:4,b:'carp',t:'fan',df:'longsoft',dh:9,af:'soft',c1:'#facc15',c2:'#fde047',bel:'#fef9c3',p:'blotch',pc:'#f59e0b',f:['scales','barbels','longfins','shimmer'],ir:'#fff7ae'},
+ {n:'Maankarper',d:0,r:4,b:'gold',t:'fan',df:'soft',dh:10,af:'soft',c1:'#3b4a7a',c2:'#c4b5fd',bel:'#8b9bd0',p:'dots',pc:'#e0e7ff',f:['moon','scales','longfins','shimmer'],ir:'#fef9c3'},
+ {n:'Grondel',d:1,r:0,b:'slim',t:'fork',df:'soft',dh:8,af:'soft',c1:'#a8a29e',c2:'#a8a29e',bel:'#f5f5f4',p:'spots',pc:'#57534e',f:['barbels','scales']},
+ {n:'Elrits',d:1,r:0,b:'slim',t:'fork',df:'small',dh:7,af:'soft',c1:'#7f9a56',c2:'#a3a35a',bel:'#fde68a',p:'bars',pc:'#3f6212',f:['scales']},
+ {n:'Forel',d:1,r:1,b:'slim',t:'square',df:'soft',dh:8,af:'soft',c1:'#a3a37a',c2:'#a8a07a',bel:'#fef3c7',p:'halospots',pc:'#dc2626',f:['adipose','scales']},
+ {n:'Kwabaal',d:1,r:1,b:'pike',t:'round',df:'ribbon',dh:5,af:'ribbon',c1:'#78716c',c2:'#78716c',bel:'#d6d3d1',p:'blotch',pc:'#44403c',f:['chinbarbel']},
+ {n:'Regenboogforel',d:1,r:2,b:'slim',t:'square',df:'soft',dh:8,af:'soft',c1:'#9ca3af',c2:'#9ca3af',bel:'#f1f5f9',p:'rainbowband',pc:'#ec4899',f:['adipose','speckle','scales']},
+ {n:'Snoekbaars',d:1,r:2,b:'pike',t:'fork',df:'spiny',dh:9,af:'soft',c1:'#8ca26a',c2:'#94a3b8',bel:'#f1f5f9',p:'bars',pc:'#334155',f:['scales','fangs'],ir:'#e5e7eb'},
+ {n:'Steur',d:1,r:3,b:'shark',t:'shark',df:'tri',dh:7,af:'tri',c1:'#64748b',c2:'#64748b',bel:'#e2e8f0',f:['scutes','barbels']},
+ {n:'Zilverzalm',d:1,r:3,b:'torpedo',t:'fork',df:'soft',dh:8,af:'soft',c1:'#cbd5e1',c2:'#94a3b8',bel:'#ffffff',p:'backspeckle',pc:'#334155',f:['adipose','pinkflush','scales','shimmer']},
+ {n:'Rivierdraak',d:1,r:4,b:'pike',t:'fan',df:'spiny',dh:11,af:'soft',c1:'#059669',c2:'#fbbf24',bel:'#fde68a',f:['scales','horns','barbels','shimmer'],ir:'#ef4444'},
+ {n:'Kristalsnoek',d:1,r:4,b:'pike',t:'fork',df:'soft',dh:8,af:'soft',c1:'#a5f3fc',c2:'#e0e7ff',bel:'#f0fdff',f:['glass','crystal','shimmer'],ir:'#22d3ee'},
+ {n:'Clownvisje',d:2,r:0,b:'clown',t:'round',df:'soft',dh:9,af:'soft',c1:'#f97316',c2:'#f97316',bel:'#fdba74',p:'clown',f:['finedge'],ir:'#fb923c'},
+ {n:'Juffertje',d:2,r:0,b:'gold',t:'fork',df:'soft',dh:9,af:'soft',c1:'#2563eb',c2:'#3b82f6',bel:'#60a5fa',p:'neon',pc:'#67e8f9',f:['scales']},
+ {n:'Doktersvis',d:2,r:1,b:'disc',t:'lunate',df:'longsoft',dh:6,af:'longsoft',c1:'#1d4ed8',c2:'#1e3a8a',bel:'#3b82f6',p:'tang',pc:'#0f172a',tc:'#facc15',f:['tailspine']},
+ {n:'Keizersvis',d:2,r:1,b:'disc',t:'round',df:'longsoft',dh:6,af:'longsoft',c1:'#1e3a8a',c2:'#1e40af',bel:'#1e40af',p:'emperor',pc:'#fde047',tc:'#facc15',f:['mask']},
+ {n:'Koffervis',d:2,r:2,b:'box',t:'round',df:'small',dh:6,af:'small',c1:'#facc15',c2:'#fde047',bel:'#fef08a',p:'spots',pc:'#111827',f:[]},
+ {n:'Picassovis',d:2,r:2,b:'disc',t:'round',df:'spiny',dh:7,af:'longsoft',c1:'#e2e8f0',c2:'#cbd5e1',bel:'#f8fafc',p:'picasso',pc:'#0f172a',f:[],ir:'#f59e0b'},
+ {n:'Leeuwvis',d:2,r:3,b:'carp',t:'round',df:'none',af:'soft',c1:'#b91c1c',c2:'#fecaca',bel:'#fee2e2',p:'zebra',pc:'#fff1f2',f:['lionspines']},
+ {n:'Mandarijnvis',d:2,r:3,b:'gold',t:'round',df:'soft',dh:9,af:'soft',c1:'#0ea5e9',c2:'#f97316',bel:'#38bdf8',p:'swirl',pc:'#f97316',f:[]},
+ {n:'Regenboogpapegaai',d:2,r:4,b:'carp',t:'lunate',df:'longsoft',dh:7,af:'soft',c1:'#22c55e',c2:'#ec4899',bel:'#a7f3d0',f:['rainbow','beak','scales','shimmer']},
+ {n:'Koraalkoning',d:2,r:4,b:'disc',t:'round',df:'tall',dh:12,af:'tall',c1:'#fb7185',c2:'#fde68a',bel:'#fecdd3',p:'spots',pc:'#fde68a',f:['crown','scales','shimmer']},
+ {n:'Makreel',d:3,r:0,b:'torpedo',t:'lunate',df:'small',dh:7,af:'small',c1:'#1e40af',c2:'#64748b',bel:'#f1f5f9',p:'tiger',pc:'#0f172a',f:['finlets']},
+ {n:'Sardientje',d:3,r:0,b:'slim',t:'fork',df:'soft',dh:7,af:'small',c1:'#475569',c2:'#94a3b8',bel:'#f8fafc',p:'dotrow',pc:'#1e293b',f:['shimmer','scales']},
+ {n:'Tonijn',d:3,r:1,b:'torpedo',t:'lunate',df:'tri',dh:9,af:'tri',c1:'#1e3a8a',c2:'#facc15',bel:'#e2e8f0',f:['finlets','shimmer']},
+ {n:'Zeebaars',d:3,r:1,b:'carp',t:'fork',df:'spiny',dh:9,af:'soft',c1:'#64748b',c2:'#94a3b8',bel:'#e2e8f0',f:['scales']},
+ {n:'Zwaardvis',d:3,r:2,b:'sword',t:'lunate',df:'tri',dh:11,af:'tri',c1:'#334155',c2:'#475569',bel:'#cbd5e1',f:['sword']},
+ {n:'Maanvis',d:3,r:2,b:'mola',t:'mola',df:'mola',dh:17,af:'mola',c1:'#9ca3af',c2:'#9ca3af',bel:'#e5e7eb',p:'speckle',pc:'#6b7280',f:[]},
+ {n:'Hamerhaai',d:3,r:3,b:'shark',t:'shark',df:'tri',dh:11,af:'tri',c1:'#6b7280',c2:'#6b7280',bel:'#e5e7eb',f:['hammer','gillslits']},
+ {n:'Manta',d:3,r:3,s:'ray',c1:'#1f2937',c2:'#e5e7eb',f:[]},
+ {n:'Blauwe Marlijn',d:3,r:4,b:'sword',t:'lunate',df:'sail',dh:14,af:'tri',c1:'#1d4ed8',c2:'#1e40af',bel:'#e2e8f0',p:'lightbars',pc:'#7dd3fc',f:['spear','shimmer']},
+ {n:'Oceaanfeniks',d:3,r:4,b:'carp',t:'fan',df:'sail',dh:13,af:'soft',c1:'#f97316',c2:'#facc15',bel:'#fde68a',f:['flame','scales'],ir:'#fff7ed'},
+ {n:'Lantaarnvis',d:4,r:0,b:'slim',t:'fork',df:'soft',dh:7,af:'soft',c1:'#1e293b',c2:'#334155',bel:'#475569',f:['photo','scales'],gl:'#67e8f9',er:5},
+ {n:'Bijlvis',d:4,r:0,b:'hatchet',t:'fork',df:'small',dh:6,af:'small',c1:'#94a3b8',c2:'#cbd5e1',bel:'#f1f5f9',f:['photo','shimmer'],gl:'#a5f3fc',er:6},
+ {n:'Zeeduivel',d:4,r:1,b:'angler',t:'round',df:'small',dh:6,af:'small',c1:'#3f3f46',c2:'#52525b',bel:'#52525b',p:'speckle',pc:'#18181b',f:['lure','fangs'],gl:'#a3e635',er:3},
+ {n:'Addervis',d:4,r:1,b:'slim',t:'fork',df:'soft',dh:7,af:'soft',c1:'#111827',c2:'#1f2937',bel:'#1f2937',f:['viperfangs','photo'],gl:'#22d3ee',er:4.5},
+ {n:'Pelikaanaal',d:4,r:2,b:'eel',t:'point',df:'ribbon',dh:3,af:'ribbon',c1:'#0f172a',c2:'#1e1b4b',bel:'#1e1b4b',f:['bigmouth','glowtip'],gl:'#a78bfa',er:2.4},
+ {n:'Glasinktvis',d:4,r:2,s:'squid',c1:'#e0f2fe',c2:'#7dd3fc',f:['glass']},
+ {n:'Reuzeninktvis',d:4,r:3,s:'squid',c1:'#b91c1c',c2:'#fca5a5',f:[]},
+ {n:'Spookhaai',d:4,r:3,b:'chimaera',t:'whip',df:'tri',dh:10,af:'none',c1:'#e5e7eb',c2:'#c7d2fe',bel:'#f8fafc',f:['ghost'],er:6.5,ir:'#a5b4fc'},
+ {n:'Kosmische Kwal',d:4,r:4,s:'jelly',c1:'#a78bfa',c2:'#f0abfc',f:['cosmic']},
+ {n:'Leviathan',d:4,r:4,b:'shark',t:'shark',df:'tri',dh:11,af:'tri',c1:'#1e1b4b',c2:'#312e81',bel:'#3730a3',f:['runes','viperfangs'],gl:'#22d3ee',ir:'#ef4444'}
+].map((o,i)=>Object.assign({id:'f'+(i+1)},o));
 
-// tekent een vis als SVG (naar rechts kijkend)
-// sil = silhouet (nog niet gevangen), mut = mutatie 'b'/'g'/'d' (brons/goud/diamant)
-const MUT={b:{n:'Brons',e:'🥉',kans:8,c1:'#d98f4e',c2:'#8a4f1f',glow:'#e0a36b',sp:1},
-           g:{n:'Goud',e:'🥇',kans:3,c1:'#f4c534',c2:'#a77a05',glow:'#ffe27a',sp:2},
-           d:{n:'Diamant',e:'💎',kans:1,c1:'#d7f3ff',c2:'#4fc3f0',glow:'#9be7ff',sp:4}};
+// ===== Vissen: tekenen =====
+const MUT={b:{n:'Brons',e:'🥉',kans:8,c1:'#d98f4e',c2:'#8a4f1f',bel:'#f6c99a',glow:'#e0a36b',sp:1},
+           g:{n:'Goud',e:'🥇',kans:3,c1:'#f4c534',c2:'#b8860b',bel:'#fff3b0',glow:'#ffe27a',sp:2},
+           d:{n:'Diamant',e:'💎',kans:1,c1:'#d7f3ff',c2:'#4fc3f0',bel:'#ffffff',glow:'#9be7ff',sp:4}};
 function shade(h,a){const n=parseInt(h.slice(1),16),t=a<0?0:255,p=Math.abs(a);
   const c=[n>>16,n>>8&255,n&255].map(v=>Math.round((t-v)*p+v));return '#'+((1<<24)|(c[0]<<16)|(c[1]<<8)|c[2]).toString(16).slice(1)}
+function mix(a,b,t){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);const c=[16,8,0].map(s=>Math.round(((x>>s)&255)*(1-t)+((y>>s)&255)*t));return '#'+((1<<24)|(c[0]<<16)|(c[1]<<8)|c[2]).toString(16).slice(1)}
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const hsh=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
+const R1=n=>Math.round(n*10)/10;
+// lichaamsvormen (assenstelsel 120x72, midden y=36, kop rechts)
+const BODY={
+  gold:{x0:38,x1:96,ht:17,hb:16,tn:4,pk:.46,bl:.62},clown:{x0:36,x1:98,ht:14,hb:13,tn:4.5,pk:.5,bl:.7},
+  carp:{x0:30,x1:100,ht:15,hb:13,tn:4.5,pk:.45,bl:.52},slim:{x0:24,x1:104,ht:10.5,hb:9.5,tn:3.5,pk:.47,bl:.42},
+  eel:{x0:30,x1:100,ht:5,hb:5,tn:1.6,pk:.7,bl:.6},pike:{x0:18,x1:108,ht:8.5,hb:8,tn:3,pk:.42,bl:.3},
+  disc:{x0:42,x1:92,ht:20,hb:20,tn:4,pk:.46,bl:.58},box:{x0:40,x1:94,ht:15,hb:16,tn:5,pk:.5,bl:.92},
+  torpedo:{x0:22,x1:104,ht:12,hb:11,tn:2.4,pk:.42,bl:.32},sword:{x0:22,x1:92,ht:11,hb:10,tn:2.4,pk:.42,bl:.35},
+  shark:{x0:20,x1:106,ht:10.5,hb:9,tn:2.4,pk:.38,bl:.26,nose:-1.6},chimaera:{x0:34,x1:98,ht:11,hb:10,tn:2,pk:.6,bl:.55},
+  hatchet:{x0:48,x1:90,ht:8,hb:22,tn:3,pk:.55,bl:.62},angler:{x0:44,x1:98,ht:16,hb:18,tn:4,pk:.62,bl:.85},
+  mola:{x0:46,x1:90,ht:21,hb:21,tn:13,pk:.52,bl:.82}};
+function bodyPath(B){const{x0,x1,ht,hb,tn,pk,bl,nose=0}=B,cy=36,px=x0+(x1-x0)*pk,ny=cy+nose;
+  return 'M'+x0+' '+(cy-tn)+' C'+R1(x0+(px-x0)*.45)+' '+R1(cy-tn-ht*.15)+' '+R1(px-(px-x0)*.45)+' '+(cy-ht)+' '+R1(px)+' '+(cy-ht)
+   +' C'+R1(px+(x1-px)*.6)+' '+(cy-ht)+' '+x1+' '+R1(ny-ht*bl)+' '+x1+' '+ny
+   +' C'+x1+' '+R1(ny+hb*bl)+' '+R1(px+(x1-px)*.6)+' '+(cy+hb)+' '+R1(px)+' '+(cy+hb)
+   +' C'+R1(px-(px-x0)*.45)+' '+(cy+hb)+' '+R1(x0+(px-x0)*.45)+' '+R1(cy+tn+hb*.15)+' '+x0+' '+(cy+tn)+'Z'}
+function tailPath(t,x,s){const c=36;switch(t){
+  case 'fan':return 'M'+(x+2)+' '+(c-3)+' C'+(x-8)+' '+R1(c-s*1.3)+' '+(x-24)+' '+R1(c-s*1.5)+' '+(x-31)+' '+R1(c-s*.8)+' C'+(x-25)+' '+R1(c-s*.45)+' '+(x-20)+' '+(c-2)+' '+(x-23)+' '+c+' C'+(x-20)+' '+(c+2)+' '+(x-25)+' '+R1(c+s*.45)+' '+(x-31)+' '+R1(c+s*.8)+' C'+(x-24)+' '+R1(c+s*1.5)+' '+(x-8)+' '+R1(c+s*1.3)+' '+(x+2)+' '+(c+3)+'Z';
+  case 'round':return 'M'+(x+2)+' '+(c-3)+' C'+(x-6)+' '+R1(c-s)+' '+(x-17)+' '+R1(c-s*1.05)+' '+(x-19)+' '+c+' C'+(x-17)+' '+R1(c+s*1.05)+' '+(x-6)+' '+R1(c+s)+' '+(x+2)+' '+(c+3)+'Z';
+  case 'square':return 'M'+(x+2)+' '+(c-3)+' C'+(x-5)+' '+R1(c-s*.7)+' '+(x-12)+' '+R1(c-s*1.15)+' '+(x-17)+' '+R1(c-s*1.15)+' C'+(x-15)+' '+R1(c-s*.4)+' '+(x-15)+' '+R1(c+s*.4)+' '+(x-17)+' '+R1(c+s*1.15)+' C'+(x-12)+' '+R1(c+s*1.15)+' '+(x-5)+' '+R1(c+s*.7)+' '+(x+2)+' '+(c+3)+'Z';
+  case 'lunate':return 'M'+(x+2)+' '+(c-2)+' C'+(x-3)+' '+R1(c-s*.5)+' '+(x-9)+' '+R1(c-s*1.1)+' '+(x-15)+' '+R1(c-s*1.5)+' C'+(x-12)+' '+R1(c-s*.55)+' '+(x-9)+' '+c+' '+(x-9)+' '+c+' C'+(x-9)+' '+c+' '+(x-12)+' '+R1(c+s*.55)+' '+(x-15)+' '+R1(c+s*1.5)+' C'+(x-9)+' '+R1(c+s*1.1)+' '+(x-3)+' '+R1(c+s*.5)+' '+(x+2)+' '+(c+2)+'Z';
+  case 'shark':return 'M'+(x+2)+' '+(c-2)+' C'+(x-6)+' '+R1(c-s*.6)+' '+(x-13)+' '+R1(c-s*1.3)+' '+(x-19)+' '+R1(c-s*1.9)+' C'+(x-15)+' '+R1(c-s*.7)+' '+(x-12)+' '+(c-1)+' '+(x-11)+' '+(c+1)+' C'+(x-12)+' '+R1(c+s*.5)+' '+(x-14)+' '+R1(c+s*.9)+' '+(x-14)+' '+R1(c+s*1.1)+' C'+(x-8)+' '+R1(c+s*.6)+' '+(x-3)+' '+R1(c+s*.3)+' '+(x+2)+' '+(c+2)+'Z';
+  case 'point':return 'M'+(x+2)+' '+(c-s*.5)+' C'+(x-8)+' '+R1(c-s*.4)+' '+(x-18)+' '+(c-.6)+' '+(x-28)+' '+c+' C'+(x-18)+' '+(c+.6)+' '+(x-8)+' '+R1(c+s*.4)+' '+(x+2)+' '+(c+s*.5)+'Z';
+  case 'whip':return 'M'+(x+2)+' '+(c-2.5)+' C'+(x-8)+' '+(c-4)+' '+(x-20)+' '+(c-1)+' '+(x-34)+' '+(c+2)+' C'+(x-20)+' '+(c+1)+' '+(x-8)+' '+(c+4)+' '+(x+2)+' '+(c+2.5)+'Z';
+  case 'mola':return 'M'+(x+3)+' '+(c-s)+' Q'+(x-5)+' '+R1(c-s*.75)+' '+(x-6)+' '+R1(c-s*.4)+' Q'+(x-9)+' '+R1(c-s*.15)+' '+(x-6)+' '+c+' Q'+(x-9)+' '+R1(c+s*.15)+' '+(x-6)+' '+R1(c+s*.4)+' Q'+(x-5)+' '+R1(c+s*.75)+' '+(x+3)+' '+(c+s)+'Z';
+  default:return 'M'+(x+2)+' '+(c-3)+' C'+(x-5)+' '+R1(c-s*.6)+' '+(x-11)+' '+R1(c-s*1.1)+' '+(x-18)+' '+R1(c-s*1.3)+' C'+(x-14)+' '+R1(c-s*.5)+' '+(x-11)+' '+(c-1)+' '+(x-10)+' '+c+' C'+(x-11)+' '+(c+1)+' '+(x-14)+' '+R1(c+s*.5)+' '+(x-18)+' '+R1(c+s*1.3)+' C'+(x-11)+' '+R1(c+s*1.1)+' '+(x-5)+' '+R1(c+s*.6)+' '+(x+2)+' '+(c+3)+'Z'}}
+function finPath(t,B,h,down){const{x0,x1,ht,hb,pk}=B,L=x1-x0,px=x0+L*pk,s=down?1:-1,y=down?36+hb-2.5:36-ht+2.5,Y=v=>R1(y+s*v);
+  switch(t){
+    case 'soft':{const a=down?x0+L*.18:px-L*.2,b=down?x0+L*.42:px+L*.1;return 'M'+R1(a)+' '+Y(-3)+' C'+R1(a+L*.05)+' '+Y(h*.9)+' '+R1(b-L*.08)+' '+Y(h*1.05)+' '+R1(b)+' '+Y(h*.5)+' L'+R1(b+2)+' '+Y(-3)+'Z'}
+    case 'small':{const a=down?x0+L*.22:px-L*.1,b=a+L*.16;return 'M'+R1(a)+' '+Y(-3)+' C'+R1(a+2)+' '+Y(h*.8)+' '+R1(b-3)+' '+Y(h)+' '+R1(b)+' '+Y(h*.4)+' L'+R1(b+1)+' '+Y(-3)+'Z'}
+    case 'longsoft':{const a=down?x0+L*.08:px-L*.32,b=down?px+L*.05:px+L*.22;return 'M'+R1(a)+' '+Y(-3)+' C'+R1(a+2)+' '+Y(h*1.1)+' '+R1(a+L*.15)+' '+Y(h)+' '+R1(b-5)+' '+Y(h*.6)+' L'+R1(b)+' '+Y(-3)+'Z'}
+    case 'spiny':{const a=px-L*.25,b=px+L*.12,n=6,w=(b-a)/n;let d='M'+R1(a)+' '+Y(-3);
+      for(let i=0;i<n;i++){const x=a+w*(i+.5),hh=h*(1-Math.abs(i-1.6)/n*.75);d+=' L'+R1(x)+' '+Y(hh)+' L'+R1(x+w*.55)+' '+Y(hh*.42)}return d+' L'+R1(b)+' '+Y(-3)+'Z'}
+    case 'sticks':{let d='';for(let i=0;i<3;i++){const x=px-L*.22+i*L*.14;d+='M'+R1(x-1.6)+' '+Y(-3)+' L'+R1(x-.4)+' '+Y(h*(1-i*.15))+' L'+R1(x+1.6)+' '+Y(-3)+'Z '}return d}
+    case 'sail':{const a=px-L*.34,b=px+L*.26;return 'M'+R1(a)+' '+Y(-3)+' C'+R1(a+1)+' '+Y(h*1.25)+' '+R1(a+L*.22)+' '+Y(h*1.35)+' '+R1(b)+' '+Y(h*.35)+' L'+R1(b+2)+' '+Y(-3)+'Z'}
+    case 'tall':case 'tallb':{const a=px+L*.08;return 'M'+R1(a)+' '+Y(-3)+' C'+R1(px)+' '+Y(h*.5)+' '+R1(px-L*.3)+' '+Y(h*1.1)+' '+R1(px-L*.52)+' '+Y(h*1.25)+' C'+R1(px-L*.34)+' '+Y(h*.55)+' '+R1(px-L*.34)+' '+Y(0)+' '+R1(px-L*.3)+' '+Y(-4)+'Z'}
+    case 'tri':{const a=down?x0+L*.25:px-L*.05;return 'M'+R1(a)+' '+Y(-3)+' C'+R1(a+2)+' '+Y(h*.5)+' '+R1(a+4)+' '+Y(h*.9)+' '+R1(a+6)+' '+Y(h)+' C'+R1(a+8)+' '+Y(h*.6)+' '+R1(a+11)+' '+Y(h*.1)+' '+R1(a+16)+' '+Y(-3)+'Z'}
+    case 'mola':{const a=x0+1;return 'M'+R1(a)+' '+Y(-5)+' C'+R1(a-2)+' '+Y(h*.5)+' '+R1(a+2)+' '+Y(h)+' '+R1(a+7)+' '+Y(h*1.05)+' C'+R1(a+11)+' '+Y(h*.9)+' '+R1(a+13)+' '+Y(h*.4)+' '+R1(a+15)+' '+Y(-5)+'Z'}
+    case 'ribbon':return 'M'+R1(x0+4)+' '+Y(-2)+' C'+R1(x0+L*.3)+' '+Y(h*1.4)+' '+R1(x1-L*.45)+' '+Y(h*1.4)+' '+R1(x1-L*.3)+' '+Y(-3)+'Z';
+    default:return ''}}
+// patronen binnen het lichaam
+function patternSVG(F,B,pc,c2,rand){const{x0,x1,ht,hb}=B,L=x1-x0,cy=36,X=t=>R1(x0+L*t);let o='';
+  switch(F.p){
+    case 'bars':for(let i=0;i<6;i++)o+='<ellipse cx="'+X(.18+i*.13)+'" cy="'+(cy-2)+'" rx="'+R1(L*.03)+'" ry="'+(ht+2)+'" fill="'+pc+'" opacity=".42"/>';break;
+    case 'lightbars':for(let i=0;i<9;i++)o+='<rect x="'+X(.12+i*.085)+'" y="'+(cy-ht)+'" width="1.4" height="'+(ht*1.4)+'" fill="'+pc+'" opacity=".55"/>';break;
+    case 'spots':for(let i=0;i<14;i++)o+='<circle cx="'+X(.12+rand()*.75)+'" cy="'+R1(cy-ht*.8+rand()*(ht+hb)*.8)+'" r="'+R1(1+rand()*1.6)+'" fill="'+pc+'" opacity=".85"/>';break;
+    case 'halospots':for(let i=0;i<11;i++){const x=X(.15+rand()*.7),y=R1(cy-ht*.7+rand()*(ht+hb)*.6),r=R1(1+rand()*.9);o+='<circle cx="'+x+'" cy="'+y+'" r="'+(r+1)+'" fill="#fff" opacity=".7"/><circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+pc+'"/>'}break;
+    case 'blotch':for(let i=0;i<4;i++)o+='<ellipse cx="'+X(.2+i*.2+rand()*.06)+'" cy="'+R1(cy-ht*.4+rand()*ht*.7)+'" rx="'+R1(L*(.07+rand()*.06))+'" ry="'+R1(ht*(.35+rand()*.3))+'" transform="rotate('+Math.round(rand()*60-30)+' '+X(.2+i*.2)+' '+cy+')" fill="'+pc+'" opacity=".9"/>';break;
+    case 'band':o='<path d="M'+x0+' '+(cy+1)+' Q'+X(.5)+' '+(cy-ht*.25)+' '+x1+' '+(cy-2)+'" stroke="'+pc+'" stroke-width="4" fill="none" opacity=".75"/>';break;
+    case 'rainbowband':o='<path d="M'+x0+' '+(cy+1)+' Q'+X(.5)+' '+(cy-2)+' '+x1+' '+(cy)+'" stroke="'+pc+'" stroke-width="5" fill="none" opacity=".6"/>';break;
+    case 'dots':for(let i=0;i<22;i++)o+='<circle cx="'+X(.1+rand()*.65)+'" cy="'+R1(cy-ht*.8+rand()*(ht+hb)*.85)+'" r=".9" fill="'+pc+'" opacity=".85"/>';break;
+    case 'speckle':case 'backspeckle':for(let i=0;i<30;i++)o+='<circle cx="'+X(.08+rand()*.85)+'" cy="'+R1(cy-ht+rand()*(F.p==='backspeckle'?ht:ht+hb))+'" r=".65" fill="'+pc+'" opacity=".7"/>';break;
+    case 'dotrow':for(let i=0;i<7;i++)o+='<circle cx="'+X(.55+i*.055)+'" cy="'+R1(cy-ht*.45)+'" r="1.1" fill="'+pc+'" opacity=".8"/>';o+='<path d="M'+x0+' '+(cy+1)+' L'+x1+' '+(cy-1)+'" stroke="#e0f2fe" stroke-width="1.6" opacity=".6"/>';break;
+    case 'clown':[.12,.47,.8].forEach((t,i)=>{o+='<ellipse cx="'+X(t)+'" cy="'+cy+'" rx="'+R1(L*(i===2?.05:.065))+'" ry="'+(ht+4)+'" fill="#fff" stroke="#111827" stroke-width="1.6"/>'});break;
+    case 'neon':for(let i=0;i<9;i++)o+='<circle cx="'+X(.2+rand()*.65)+'" cy="'+R1(cy-ht*.6+rand()*ht*1.1)+'" r="1.1" fill="'+pc+'"/>';o+='<path d="M'+X(.55)+' '+(cy-ht*.5)+' Q'+X(.75)+' '+(cy-ht*.9)+' '+X(.95)+' '+(cy-ht*.3)+'" stroke="'+pc+'" stroke-width="1" fill="none"/>';break;
+    case 'tang':o='<path d="M'+X(.05)+' '+(cy+4)+' C'+X(.3)+' '+(cy-ht*.9)+' '+X(.6)+' '+(cy-ht*.9)+' '+X(.82)+' '+(cy-ht*.3)+' C'+X(.6)+' '+(cy-ht*.3)+' '+X(.45)+' '+(cy+4)+' '+X(.25)+' '+(cy+2)+' C'+X(.4)+' '+(cy+8)+' '+X(.2)+' '+(cy+hb*.4)+' '+X(.05)+' '+(cy+4)+'Z" fill="'+pc+'" opacity=".9"/>';break;
+    case 'emperor':for(let i=0;i<11;i++)o+='<path d="M'+X(-.1+i*.11)+' '+(cy+hb)+' Q'+X(.05+i*.11)+' '+cy+' '+X(.15+i*.11)+' '+(cy-ht)+'" stroke="'+pc+'" stroke-width="1.5" fill="none" opacity=".9"/>';break;
+    case 'picasso':o='<path d="M'+X(.55)+' '+(cy-ht)+' L'+X(.4)+' '+(cy+hb)+' M'+X(.62)+' '+(cy-ht)+' L'+X(.48)+' '+(cy+hb)+'" stroke="'+pc+'" stroke-width="2.2"/><path d="M'+X(.7)+' '+cy+' L'+x1+' '+(cy+1)+'" stroke="#2563eb" stroke-width="2.4"/><path d="M'+X(.3)+' '+(cy+2)+' Q'+X(.15)+' '+(cy+6)+' '+X(.02)+' '+(cy+3)+'" stroke="'+pc+'" stroke-width="3" fill="none"/><ellipse cx="'+X(.25)+'" cy="'+(cy+hb*.6)+'" rx="'+R1(L*.15)+'" ry="5" fill="#f59e0b" opacity=".7"/>';break;
+    case 'zebra':for(let i=0;i<10;i++)o+='<path d="M'+X(.06+i*.095)+' '+(cy-ht-2)+' Q'+X(.1+i*.095)+' '+cy+' '+X(.04+i*.095)+' '+(cy+hb+2)+'" stroke="'+pc+'" stroke-width="2" fill="none" opacity=".85"/>';break;
+    case 'swirl':for(let i=0;i<6;i++){const y=cy-ht+4+i*((ht+hb-6)/5);o+='<path d="M'+x0+' '+R1(y)+' Q'+X(.2)+' '+R1(y-4)+' '+X(.4)+' '+R1(y)+' T'+X(.8)+' '+R1(y)+' T'+X(1.1)+' '+R1(y)+'" stroke="#0f172a" stroke-width="3" fill="none" opacity=".5"/><path d="M'+x0+' '+R1(y)+' Q'+X(.2)+' '+R1(y-4)+' '+X(.4)+' '+R1(y)+' T'+X(.8)+' '+R1(y)+' T'+X(1.1)+' '+R1(y)+'" stroke="'+pc+'" stroke-width="1.6" fill="none"/>'}break;
+    case 'tiger':for(let i=0;i<12;i++)o+='<path d="M'+X(.1+i*.07)+' '+(cy-ht)+' q2 4 -1 7 q-2 3 1 6" stroke="'+pc+'" stroke-width="1.4" fill="none" opacity=".75"/>';break}
+  return o}
 let svgN=0;
-function fishSVG(f,sil,cls,mut){
-  const id='fx'+(++svgN),M=mut&&MUT[mut],c1=M?M.c1:f.c1,c2=M?M.c2:f.c2;
-  let body,tail,fin='',rays='',gill='',pec='',ex=68,ey=26,eye=true,shine='';
-  switch(f.s){
-    case 'long':body='<path d="M14 30 C26 19 66 18 92 27 Q95 30 92 33 C66 42 26 41 14 30Z"/>';tail='<path d="M18 30 L3 19 Q8 30 3 41Z"/>';fin='<path d="M38 22 Q56 10 74 21 L70 23 Q56 17 42 24Z"/>';
-      rays='M44 21 L46 16 M52 19 L54 14 M60 19 L62 15';gill='M76 23 Q72 30 76 37';pec='<ellipse cx="68" cy="35" rx="6" ry="2.5" transform="rotate(20 68 35)"/>';ex=84;ey=28;shine='<ellipse cx="62" cy="25" rx="16" ry="2.2"/>';break;
-    case 'round':body='<circle cx="52" cy="30" r="20"/>';tail='<path d="M34 30 L17 18 Q21 30 17 42Z"/>';fin='<path d="M42 12 Q52 2 62 11 Q52 9 42 12Z"/>';
-      rays='M22 23 L33 29 M22 37 L33 31';gill='M60 18 Q55 30 60 42';pec='<ellipse cx="55" cy="36" rx="6" ry="3" transform="rotate(30 55 36)"/>';ex=64;ey=24;shine='<ellipse cx="50" cy="17" rx="10" ry="3.5"/>';break;
-    case 'tall':body='<ellipse cx="52" cy="30" rx="22" ry="19"/>';tail='<path d="M32 30 L15 18 Q19 30 15 42Z"/>';fin='<path d="M40 15 Q50 -2 64 13Z M40 45 Q50 62 64 47Z"/>';
-      rays='M46 12 L49 4 M54 11 L56 3 M46 48 L49 56 M54 49 L56 57';gill='M60 17 Q55 30 60 43';pec='<ellipse cx="55" cy="35" rx="6" ry="2.5" transform="rotate(25 55 35)"/>';ex=65;ey=25;shine='<ellipse cx="50" cy="17" rx="11" ry="3"/>';break;
-    case 'shark':body='<path d="M10 30 Q38 13 88 26 Q97 30 88 34 Q60 41 38 40 Q22 38 10 30Z"/>';tail='<path d="M15 30 L1 11 Q8 26 6 30 Q8 34 1 49Z"/>';fin='<path d="M42 22 L52 4 L60 21Z M48 39 L54 47 L58 39Z"/>';
-      gill='M70 25 L70 33 M73 25 L73 33 M76 26 L76 33';ex=81;ey=27;shine='<ellipse cx="58" cy="22" rx="20" ry="2.5"/>';break;
-    case 'ray':body='<path d="M54 9 Q72 16 95 30 Q72 44 54 51 Q42 40 16 30 Q42 20 54 9Z"/>';tail='<path d="M18 29 L0 31 L18 31.5Z"/>';ex=74;ey=27;shine='<ellipse cx="56" cy="22" rx="14" ry="3"/>';break;
-    case 'jelly':body='<path d="M22 33 Q22 5 50 5 Q78 5 78 33 Q71 30 64 33 Q57 30 50 33 Q43 30 36 33 Q29 30 22 33Z"/>';tail='<path d="M30 33 q5 8 0 16 q-4 6 0 10 M42 33 q5 10 0 20 M58 33 q5 10 0 20 M70 33 q5 8 0 16 q-4 6 0 10" fill="none" stroke-width="2.6" stroke-linecap="round"/>';eye=false;shine='<ellipse cx="42" cy="13" rx="12" ry="4"/>';break;
-    case 'squid':body='<path d="M4 30 L26 17 Q60 14 67 30 Q60 46 26 43Z"/>';tail='<path d="M64 24 q14 -7 30 -3 M66 28 q14 -1 31 2 M66 32 q14 3 29 9 M64 36 q12 7 22 13" fill="none" stroke-width="2.8" stroke-linecap="round"/>';fin='<path d="M4 30 L14 17 L22 22Z M4 30 L14 43 L22 38Z"/>';ex=56;ey=26;shine='<ellipse cx="40" cy="22" rx="18" ry="2.5"/>';break;
-    default:body='<path d="M20 30 C28 13 64 11 80 26 Q83 30 80 34 C64 49 28 47 20 30Z"/>';tail='<path d="M23 30 L5 15 Q11 30 5 45Z"/>';fin='<path d="M36 17 Q50 2 64 15 Q50 11 36 17Z"/>';
-      rays='M9 20 L20 29 M9 40 L20 31 M44 12 L46 7 M52 10 L54 5';gill='M66 18 Q60 30 66 42';pec='<ellipse cx="60" cy="36" rx="7" ry="3" transform="rotate(25 60 36)"/>';shine='<ellipse cx="52" cy="18" rx="15" ry="3.2"/>'}
-  if(sil)return '<svg viewBox="0 0 100 60" class="fish sil'+(cls?' '+cls:'')+'" aria-hidden="true"><g fill="currentColor" stroke="currentColor">'+tail+fin+'</g><g fill="currentColor">'+body+'</g></svg>';
-  const pat=f.p==='stripes'?[30,44,58,72].map(x=>'<rect x="'+x+'" y="0" width="5" height="60" rx="2"/>').join('')
-    :f.p==='spots'?[[42,24],[56,34],[34,33],[64,22],[50,16],[46,38]].map(([x,y],i)=>'<circle cx="'+x+'" cy="'+y+'" r="'+(i%2?2.4:3.2)+'"/>').join('')
-    :f.p==='band'?'<rect x="0" y="27.5" width="100" height="5" rx="2"/>':'';
-  const st=(x,y,s)=>'<path class="spark" style="animation-delay:-'+((x*7+y)%16)/10+'s" d="M'+x+' '+(y-s)+' Q'+x+' '+y+' '+(x+s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y+s)+' Q'+x+' '+y+' '+(x-s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y-s)+'Z" fill="#fff"/>';
-  const sparks=M?[[60,14,4.5],[30,44,3.5],[86,40,4],[18,16,3.5]].slice(0,M.sp).map(a=>st(...a)).join(''):'';
-  const facets=mut==='d'?'<path d="M30 14 L48 30 L36 46 M48 30 L66 14 M48 30 L64 46 M66 14 L80 30 L64 46" fill="none" stroke="#fff" stroke-width="1" opacity=".7"/>':'';
-  const metal=M?'<rect x="-20" y="0" width="16" height="60" fill="#fff" opacity="'+(mut==='b'?.18:.28)+'" transform="skewX(-25) translate(60 0)"/>':'';
-  return '<svg viewBox="0 0 100 60" class="fish r'+f.r+(mut?' m'+mut:'')+(cls?' '+cls:'')+'" aria-hidden="true"><defs>'
-    +'<clipPath id="'+id+'c">'+body+'</clipPath>'
-    +'<linearGradient id="'+id+'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c1,.35)+'"/><stop offset=".55" stop-color="'+c1+'"/><stop offset="1" stop-color="'+shade(c1,-.3)+'"/></linearGradient>'
-    +'<linearGradient id="'+id+'f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="'+shade(c2,-.15)+'"/><stop offset="1" stop-color="'+shade(c2,.2)+'"/></linearGradient></defs>'
-    +'<g fill="url(#'+id+'f)" stroke="'+shade(c2,-.35)+'" stroke-width=".8" stroke-linejoin="round" opacity=".95">'+tail+fin+'</g>'
-    +(rays?'<path d="'+rays+'" stroke="'+shade(c2,-.4)+'" stroke-width=".8" opacity=".45" fill="none"/>':'')
-    +'<g fill="url(#'+id+'g)" stroke="'+shade(c1,-.4)+'" stroke-width="1">'+body+'</g>'
-    +'<g clip-path="url(#'+id+'c)">'
-      +'<g fill="'+c2+'" opacity=".85">'+pat+'</g>'
-      +'<ellipse cx="50" cy="46" rx="40" ry="9" fill="#fff" opacity=".18"/>'
-      +metal+facets
-      +(gill?'<path d="'+gill+'" fill="none" stroke="'+shade(c1,-.45)+'" stroke-width="1.2" opacity=".55"/>':'')
-      +'<g fill="#fff" opacity=".35">'+shine+'</g></g>'
-    +(pec?'<g fill="'+shade(c2,.1)+'" stroke="'+shade(c2,-.35)+'" stroke-width=".6" opacity=".9">'+pec+'</g>':'')
-    +(eye?'<circle cx="'+ex+'" cy="'+ey+'" r="3.8" fill="#fff" stroke="'+shade(c1,-.5)+'" stroke-width=".8"/><circle cx="'+(ex+.9)+'" cy="'+ey+'" r="2.1" fill="#0f172a"/><circle cx="'+(ex+1.6)+'" cy="'+(ey-.9)+'" r=".8" fill="#fff"/>':'')
-    +sparks+'</svg>'}
+function fishSVG(F,sil,cls,mut){
+  const id='fx'+(++svgN),M=mut&&MUT[mut],has=k=>F.f&&F.f.includes(k);
+  const c1=M?M.c1:F.c1,c2=M?M.c2:F.c2,bel=M?M.bel:(F.bel||shade(F.c1,.6)),pc=M?shade(M.c1,-.35):(F.pc||c2),tc=M?M.c2:(F.tc||c2),gl=F.gl||'#67e8f9';
+  const rand=rng(hsh(F.n)),wrap=(inner,defs)=>'<svg viewBox="0 0 120 72" class="fish r'+F.r+(mut?' m'+mut:'')+(sil?' sil':'')+(cls?' '+cls:'')+'" aria-hidden="true">'+(defs?'<defs>'+defs+'</defs>':'')+inner+'</svg>';
+  const sparkle=()=>{if(!M)return '';const st=(x,y,s)=>'<path class="spark" style="animation-delay:-'+((x*7+y)%16)/10+'s" d="M'+x+' '+(y-s)+' Q'+x+' '+y+' '+(x+s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y+s)+' Q'+x+' '+y+' '+(x-s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y-s)+'Z" fill="#fff"/>';
+    return [[72,14,5],[36,52,4],[100,48,4.5],[22,20,4]].slice(0,M.sp).map(a=>st(...a)).join('')};
+  // ---- speciale vormen ----
+  if(F.s==='ray'){const body='M104 36 C100 30 88 25 78 6 C70 22 50 27 32 31 L16 34 L0 35.5 L16 37 L32 41 C50 45 70 50 78 66 C88 47 100 42 104 36Z',ceph='M103 33 q7 -3 9 -9 q-2 7 -7 11Z M103 39 q7 3 9 9 q-2 -7 -7 -11Z';
+    if(sil)return wrap('<path d="'+body+'" fill="currentColor"/><path d="'+ceph+'" fill="currentColor"/>');
+    return wrap('<path d="'+body+'" fill="url(#'+id+'b)" stroke="'+shade(c1,-.4)+'" stroke-width=".8"/><path d="M78 8 C82 20 90 28 100 33 M78 64 C82 52 90 44 100 39" stroke="'+shade(c1,.35)+'" stroke-width="1.2" fill="none" opacity=".6"/>'
+      +'<path d="M70 24 C60 30 60 42 70 48 C80 44 84 40 84 36 C84 32 80 28 70 24Z" fill="'+c2+'" opacity=".18"/><circle cx="64" cy="31" r="1.6" fill="'+c2+'" opacity=".6"/><circle cx="58" cy="40" r="1.2" fill="'+c2+'" opacity=".6"/><circle cx="70" cy="42" r="1.4" fill="'+c2+'" opacity=".6"/>'
+      +'<path d="'+ceph+'" fill="'+shade(c1,.15)+'" stroke="'+shade(c1,-.4)+'" stroke-width=".6"/><circle cx="96" cy="30.5" r="1.8" fill="#0b1020"/><circle cx="96" cy="41.5" r="1.8" fill="#0b1020"/><circle cx="96.5" cy="30" r=".6" fill="#fff"/><circle cx="96.5" cy="41" r=".6" fill="#fff"/>'
+      +(mut==='d'?'<path d="M78 8 L70 36 L78 64 M40 32 L70 36 L40 40" stroke="#fff" stroke-width=".8" fill="none" opacity=".7"/>':'')+sparkle(),
+      '<linearGradient id="'+id+'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c1,.25)+'"/><stop offset=".5" stop-color="'+c1+'"/><stop offset="1" stop-color="'+shade(c1,.25)+'"/></linearGradient>')}
+  if(F.s==='jelly'){const bell='M30 40 C28 14 44 6 60 6 C76 6 92 14 90 40 C86 37 82 41 78 38 C74 41 70 37 66 40 C62 37 58 41 54 38 C50 41 46 37 42 40 C38 37 34 41 30 40Z';
+    const tent=[34,42,50,58,66,74,82,86].map((x,i)=>'M'+x+' 39 C'+(x+(i%2?4:-4))+' 50 '+(x+(i%2?-4:4))+' 58 '+(x+(i%2?3:-3))+' 70').join(' '),arms='M52 40 C48 52 56 58 50 68 M60 40 C64 52 56 60 62 70 M68 40 C72 50 64 56 70 66';
+    if(sil)return wrap('<path d="'+bell+'" fill="currentColor"/><path d="'+tent+' '+arms+'" stroke="currentColor" stroke-width="2.4" fill="none"/>');
+    const stars=has('cosmic')?Array.from({length:14},()=>'<circle cx="'+R1(38+rand()*44)+'" cy="'+R1(12+rand()*24)+'" r="'+R1(.4+rand()*.9)+'" fill="#fff" opacity="'+R1(.5+rand()*.5)+'"/>').join('')+'<circle cx="54" cy="20" r="2.2" fill="#fef9c3"/><g transform="translate(70 24) rotate(-20)" opacity=".85"><ellipse rx="6" ry="2" fill="#fde68a" opacity=".35"/><path d="M-5 0 Q0 -3 5 0 M-4 1 Q0 3 4 0" stroke="#fef3c7" stroke-width=".8" fill="none"/><circle r="1" fill="#fff"/></g>':'';
+    return wrap('<path d="'+tent+'" stroke="'+c2+'" stroke-width="1" fill="none" opacity=".75"/><path d="'+arms+'" stroke="'+c2+'" stroke-width="3.2" stroke-linecap="round" fill="none" opacity=".7"/>'
+      +'<path d="'+bell+'" fill="url(#'+id+'b)" stroke="'+shade(c1,.4)+'" stroke-width="1"/><ellipse cx="60" cy="26" rx="18" ry="11" fill="url(#'+id+'n)"/>'+stars
+      +'<path d="M40 16 Q50 9 62 9" stroke="#fff" stroke-width="2.2" fill="none" opacity=".55" stroke-linecap="round"/>'
+      +(mut==='d'?'<path d="M44 12 L60 30 L76 12 M60 30 L60 40" stroke="#fff" stroke-width=".8" fill="none" opacity=".7"/>':'')+sparkle(),
+      '<radialGradient id="'+id+'b" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="'+shade(c1,.45)+'" stop-opacity=".95"/><stop offset=".7" stop-color="'+c1+'" stop-opacity=".85"/><stop offset="1" stop-color="'+shade(c1,-.2)+'" stop-opacity=".8"/></radialGradient>'
+      +'<radialGradient id="'+id+'n"><stop offset="0" stop-color="'+c2+'" stop-opacity=".7"/><stop offset="1" stop-color="'+c2+'" stop-opacity="0"/></radialGradient>')}
+  if(F.s==='squid'){const mantle='M8 36 C12 27 30 23 64 25 C75 26 80 31 82 36 C80 41 75 46 64 47 C30 49 12 45 8 36Z',fins='M6 36 L20 20 C24 24 26 28 28 30Z M6 36 L20 52 C24 48 26 44 28 42Z',head='M80 28 C88 26 94 30 94 36 C94 42 88 46 80 44Z';
+    const arms=[-9,-6,-3,0,3,6,9].map((o,i)=>{const s=i%2?1:-1;return 'M92 '+R1(36+o*.5)+' C97 '+R1(36+o*.6+2.5*s)+' 101 '+R1(36+o*.8-2.5*s)+' 105 '+R1(36+o*1.1)+' S112 '+R1(36+o*1.4+2.5*s)+' 115 '+R1(36+o*1.6)}).join(' '),tents='M92 34 C104 26 110 22 118 18 M92 38 C104 46 110 50 118 54';
+    if(sil)return wrap('<path d="'+fins+' '+mantle+' '+head+'" fill="currentColor"/><path d="'+arms+' '+tents+'" stroke="currentColor" stroke-width="2.4" fill="none"/>');
+    const glass=has('glass'),spots=Array.from({length:16},()=>'<circle cx="'+R1(18+rand()*58)+'" cy="'+R1(28+rand()*16)+'" r="'+R1(.6+rand()*1.3)+'" fill="'+shade(c1,-.35)+'" opacity="'+(glass?.35:.55)+'"/>').join('');
+    return wrap('<path d="'+arms+'" stroke="'+shade(c1,-.1)+'" stroke-width="3" stroke-linecap="round" fill="none" opacity="'+(glass?.7:1)+'"/><path d="'+tents+'" stroke="'+shade(c1,-.1)+'" stroke-width="1.6" fill="none"/><circle cx="118" cy="18" r="2.4" fill="'+shade(c1,-.1)+'"/><circle cx="118" cy="54" r="2.4" fill="'+shade(c1,-.1)+'"/>'
+      +'<path d="'+fins+'" fill="'+shade(c1,.15)+'" stroke="'+shade(c1,-.35)+'" stroke-width=".7" opacity="'+(glass?.7:1)+'"/>'
+      +'<g clip-path="url(#'+id+'c)"><path d="'+mantle+'" fill="url(#'+id+'b)" opacity="'+(glass?.6:1)+'"/>'+spots
+      +(glass?'<path d="M12 36 L80 36" stroke="'+c2+'" stroke-width="1.4" opacity=".8"/><ellipse cx="52" cy="38" rx="10" ry="4" fill="'+c2+'" opacity=".35"/>':'')
+      +'<path d="M14 30 Q44 24 76 29" stroke="#fff" stroke-width="2" fill="none" opacity=".4"/>'+(mut==='d'?'<path d="M20 28 L40 40 L60 28 L76 40" stroke="#fff" stroke-width=".8" fill="none" opacity=".7"/>':'')+'</g>'
+      +'<path d="'+mantle+'" fill="none" stroke="'+shade(c1,-.4)+'" stroke-width=".8"/><path d="'+head+'" fill="url(#'+id+'b)" stroke="'+shade(c1,-.4)+'" stroke-width=".8" opacity="'+(glass?.75:1)+'"/>'
+      +'<circle cx="86" cy="34" r="4.6" fill="#fff" stroke="'+shade(c1,-.5)+'" stroke-width=".8"/><circle cx="86.8" cy="34" r="2.8" fill="#0b1020"/><circle cx="87.8" cy="32.8" r="1" fill="#fff"/>'+sparkle(),
+      '<clipPath id="'+id+'c"><path d="'+mantle+'"/></clipPath><linearGradient id="'+id+'b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c1,.3)+'"/><stop offset=".55" stop-color="'+c1+'"/><stop offset="1" stop-color="'+shade(c1,-.25)+'"/></linearGradient>')}
+
+  // ---- gewone vissen ----
+  const B=Object.assign({},BODY[F.b]);if(F.t==='fan'&&B.x0<35)B.x0=35; // lange waaierstaart moet in beeld passen
+  const{x0,x1,ht,hb,pk,nose=0}=B,L=x1-x0,px=x0+L*pk,ny=36+nose,cy=36;
+  const body=bodyPath(B),ts=F.t==='point'?ht*1.6:(ht+hb)/2*(F.t==='fan'?.95:.85);
+  const tail=tailPath(F.t,x0,ts),dorsal=F.df&&F.df!=='none'?finPath(F.df,B,F.dh||8,false):'',anal=F.af&&F.af!=='none'?finPath(F.af,B,F.af==='tallb'||F.af==='mola'?F.dh||8:(F.dh||8)*.7,true):'';
+  const pcx=x1-L*.3,pcy=cy+hb*.25,big=has('longfins')?1.6:1;
+  // borstvin als waaier (met lijntjes) en buikvin
+  const pec='M'+R1(pcx+1)+' '+R1(pcy-1)+' C'+R1(pcx-4*big)+' '+R1(pcy-3*big)+' '+R1(pcx-12*big)+' '+R1(pcy-1.5*big)+' '+R1(pcx-14.5*big)+' '+R1(pcy+3.5*big)+' C'+R1(pcx-11*big)+' '+R1(pcy+8*big)+' '+R1(pcx-5*big)+' '+R1(pcy+7.5*big)+' '+R1(pcx+1)+' '+R1(pcy+2)+'Z';
+  const pecRays=[[-13,0],[-14,3.5],[-11,6.5],[-6,7]].map(([dx,dy])=>'M'+R1(pcx)+' '+R1(pcy+.5)+' L'+R1(pcx+dx*big)+' '+R1(pcy+dy*big)).join(' ');
+  const pelv='M'+R1(px+2)+' '+(cy+hb-2)+' C'+R1(px-1)+' '+(cy+hb+5)+' '+R1(px-7)+' '+(cy+hb+8)+' '+R1(px-10)+' '+(cy+hb+7)+' C'+R1(px-7)+' '+(cy+hb+3)+' '+R1(px-3)+' '+(cy+hb)+' '+R1(px-2)+' '+(cy+hb-2)+'Z';
+  const adipose=has('adipose')?'M'+R1(x0+L*.14)+' '+R1(cy-ht*.55)+' q3 -5 7 -1Z':'';
+  const finlets=has('finlets')?[0,1,2,3,4].map(i=>{const x=x0+3+i*3.6,yy=cy-ht*.35+i*.2;return 'M'+R1(x)+' '+R1(yy)+' l1.6 -2.8 l1.6 2.6Z M'+R1(x)+' '+R1(cy+hb*.33-i*.2)+' l1.6 2.8 l1.6 -2.6Z'}).join(' '):'';
+  if(sil){let extra='';if(has('sword'))extra+='<path d="M'+(x1-2)+' '+(ny-1.6)+' L118 '+ny+' L'+(x1-2)+' '+(ny+1.6)+'Z" fill="currentColor"/>';if(has('spear'))extra+='<path d="M'+(x1-2)+' '+(ny-2.2)+' L'+(x1+16)+' '+(ny-.6)+' L'+(x1-2)+' '+(ny+1)+'Z" fill="currentColor"/>';
+    if(has('hammer'))extra+='<path d="M'+(x1-8)+' '+(cy-13)+' Q'+(x1+2)+' '+(cy-14)+' '+(x1+3)+' '+cy+' Q'+(x1+2)+' '+(cy+14)+' '+(x1-8)+' '+(cy+13)+' Q'+(x1-4)+' '+cy+' '+(x1-8)+' '+(cy-13)+'Z" fill="currentColor"/>';
+    if(has('lionspines'))extra+='<path d="'+Array.from({length:9},(_,i)=>'M'+R1(px-L*.3+i*4.5)+' '+(cy-ht+3)+' L'+R1(px-L*.3+i*4.5-6)+' '+R1(cy-ht-16-(i%2)*4)).join(' ')+'" stroke="currentColor" stroke-width="1.6"/>';
+    return wrap('<g fill="currentColor"><path d="'+tail+'"/><path d="'+dorsal+'"/><path d="'+anal+'"/><path d="'+body+'"/><path d="'+pec+'"/></g>'+extra)}
+
+  const finFill='url(#'+id+'f)',finStroke=shade(c2,-.35),scales=has('scales')||has('mirror');
+  const flame=has('flame'),glass=has('glass');
+  let defs='<clipPath id="'+id+'c"><path d="'+body+'"/></clipPath>'
+    +'<clipPath id="'+id+'t"><path d="'+tail+'"/></clipPath>'
+    +'<clipPath id="'+id+'d"><path d="'+dorsal+' '+anal+'"/></clipPath>'
+    +'<linearGradient id="'+id+'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+shade(c1,-.32)+'"/><stop offset=".42" stop-color="'+c1+'"/><stop offset=".72" stop-color="'+mix(c1,bel,.55)+'"/><stop offset="1" stop-color="'+bel+'"/></linearGradient>'
+    +'<linearGradient id="'+id+'f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="'+(flame?'#fde047':shade(c2,.3))+'" stop-opacity="'+(glass?.4:.6)+'"/><stop offset=".6" stop-color="'+(flame?'#f97316':c2)+'" stop-opacity="'+(glass?.55:.92)+'"/><stop offset="1" stop-color="'+(flame?'#dc2626':shade(c2,-.12))+'" stop-opacity="'+(glass?.6:.98)+'"/></linearGradient>'
+    +'<linearGradient id="'+id+'tf" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="'+(flame?'#dc2626':shade(tc,-.12))+'" stop-opacity="'+(glass?.6:.98)+'"/><stop offset=".55" stop-color="'+(flame?'#f97316':tc)+'" stop-opacity="'+(glass?.5:.9)+'"/><stop offset="1" stop-color="'+(flame?'#fde047':shade(tc,.3))+'" stop-opacity="'+(glass?.35:.55)+'"/></linearGradient>'
+    +'<radialGradient id="'+id+'h" cx=".62" cy=".28" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
+    +'<radialGradient id="'+id+'i" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="'+shade(F.ir||'#f5d27a',.35)+'"/><stop offset="1" stop-color="'+shade(F.ir||'#f5d27a',-.35)+'"/></radialGradient>'
+    +'<radialGradient id="'+id+'gl"><stop offset="0" stop-color="'+gl+'" stop-opacity=".95"/><stop offset=".35" stop-color="'+gl+'" stop-opacity=".55"/><stop offset="1" stop-color="'+gl+'" stop-opacity="0"/></radialGradient>'
+    +(scales?'<pattern id="'+id+'s" width="5" height="4" patternUnits="userSpaceOnUse"><path d="M0 4 Q2.5 -.2 5 4" fill="none" stroke="'+shade(c1,-.5)+'" stroke-width=".55"/><path d="M-2.5 2 Q0 -2.2 2.5 2 M2.5 2 Q5 -2.2 7.5 2" fill="none" stroke="'+shade(c1,-.5)+'" stroke-width=".55"/></pattern>':'');
+  if(has('rainbow')&&!M)defs+='<linearGradient id="'+id+'r" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f59e0b"/><stop offset=".25" stop-color="#ec4899"/><stop offset=".5" stop-color="#8b5cf6"/><stop offset=".75" stop-color="#06b6d4"/><stop offset="1" stop-color="#22c55e"/></linearGradient>';
+  let back='',front='',over='';
+  // achter het lichaam: staart, vinnen, extra's
+  if(flame)back+=['M'+R1(px-14)+' '+(cy-ht+2)+' q-6 -10 2 -18 q-1 9 5 10 q1 -6 6 -8 q-3 9 -1 16Z','M'+R1(px+6)+' '+(cy-ht+2)+' q-2 -8 4 -13 q0 7 4 8 q1 -4 4 -5 q-3 7 -2 11Z'].map(d=>'<path d="'+d+'" fill="url(#'+id+'tf)" opacity=".9"/>').join('');
+  if(has('horns'))back+='<path d="M'+(x1-14)+' '+(cy-ht+3)+' C'+(x1-16)+' '+(cy-ht-6)+' '+(x1-24)+' '+(cy-ht-10)+' '+(x1-30)+' '+(cy-ht-9)+' C'+(x1-22)+' '+(cy-ht-6)+' '+(x1-20)+' '+(cy-ht)+' '+(x1-19)+' '+(cy-ht+4)+'Z" fill="#fde68a" stroke="#a16207" stroke-width=".7"/>';
+  if(has('lionspines')){let sp='';for(let i=0;i<9;i++){const bx=px-L*.32+i*4.6,tx=bx-6-i*.3,ty=cy-ht-15-(i%2)*4;sp+='<path d="M'+R1(bx)+' '+(cy-ht+3)+' L'+R1(tx)+' '+R1(ty)+'" stroke="'+c2+'" stroke-width="1.7" stroke-linecap="round"/><path d="M'+R1(bx)+' '+(cy-ht+3)+' L'+R1(tx)+' '+R1(ty)+'" stroke="'+c1+'" stroke-width="1.7" stroke-dasharray="2.2 2.2" stroke-linecap="round"/>'}
+    back+='<path d="M'+R1(px-L*.32)+' '+(cy-ht+3)+' Q'+R1(px-L*.1)+' '+(cy-ht-6)+' '+R1(px+L*.12)+' '+(cy-ht+3)+'Z" fill="'+c2+'" opacity=".35"/>'+sp}
+  back+='<path d="'+tail+'" fill="url(#'+id+'tf)" stroke="'+shade(tc,-.35)+'" stroke-width=".7" stroke-linejoin="round"/>';
+  back+='<g clip-path="url(#'+id+'t)" stroke="'+shade(tc,-.4)+'" stroke-width=".5" opacity=".55">'+Array.from({length:11},(_,i)=>{const a=(-62+i*12.4)*Math.PI/180,r=36;return '<line x1="'+(x0+2)+'" y1="36" x2="'+R1(x0+2-r*Math.cos(a))+'" y2="'+R1(36+r*Math.sin(a))+'"/>'}).join('')+'</g>';
+  if(dorsal||anal){back+='<path d="'+dorsal+' '+anal+'" fill="'+finFill+'" stroke="'+finStroke+'" stroke-width=".7" stroke-linejoin="round"/>';
+    back+='<g clip-path="url(#'+id+'d)" stroke="'+finStroke+'" stroke-width=".45" opacity=".55">'+Array.from({length:22},(_,i)=>{const x=x0+i*(L/18);return '<line x1="'+R1(x)+'" y1="0" x2="'+R1(x-5)+'" y2="72"/>'}).join('')+'</g>'}
+  if(adipose)back+='<path d="'+adipose+'" fill="'+shade(c1,-.15)+'"/>';
+  if(finlets)back+='<path d="'+finlets+'" fill="'+(F.c2==='#facc15'&&!M?'#facc15':shade(c2,.1))+'"/>';
+  back+='<path d="'+pelv+'" fill="'+finFill+'" stroke="'+finStroke+'" stroke-width=".6"/>';
+  if(has('pinkflush')&&!M)over+='<ellipse cx="'+R1(x0+L*.5)+'" cy="'+(cy+2)+'" rx="'+R1(L*.4)+'" ry="4" fill="#fb7185" opacity=".25"/>';
+  // lichaam
+  const bodyFill=has('rainbow')&&!M?'url(#'+id+'r)':'url(#'+id+'g)';
+  let inBody='';
+  if(has('rainbow')&&!M)inBody+='<rect x="0" y="0" width="120" height="72" fill="url(#'+id+'g)" opacity=".45" style="mix-blend-mode:multiply"/>';
+  inBody+=patternSVG(F,B,pc,c2,rand)+over;
+  if(scales)inBody+='<rect x="'+x0+'" y="'+(cy-ht)+'" width="'+L+'" height="'+(ht+hb)+'" fill="url(#'+id+'s)" opacity="'+(glass?.15:.2)+'"/>';
+  if(has('mirror'))for(let i=0;i<6;i++){const mx=R1(x0+L*(.22+i*.1+rand()*.03)),my=R1(i%2?cy-ht*.5:cy+1+rand()*3),mr=R1(2.6+rand()*2.4);
+    inBody+='<ellipse cx="'+mx+'" cy="'+my+'" rx="'+mr+'" ry="'+R1(mr*.85)+'" fill="#fff4cc" opacity=".38" stroke="'+shade(c1,-.4)+'" stroke-width=".5"/><path d="M'+R1(mx-mr*.5)+' '+R1(my-mr*.3)+' q'+R1(mr*.5)+' -'+R1(mr*.5)+' '+R1(mr)+' 0" stroke="#fff" stroke-width=".6" fill="none" opacity=".7"/>'}
+  if(has('speckle')&&F.p!=='speckle')for(let i=0;i<26;i++)inBody+='<circle cx="'+R1(x0+L*(.08+rand()*.85))+'" cy="'+R1(cy-ht+rand()*ht*1.5)+'" r=".6" fill="#111827" opacity=".7"/>';
+  if(has('headlines'))for(let i=0;i<4;i++)inBody+='<path d="M'+R1(x1-L*.3)+' '+(cy-6+i*4)+' q6 -3 '+R1(L*.28)+' 0" stroke="#38bdf8" stroke-width="1.2" fill="none" opacity=".85"/>';
+  if(has('mask'))inBody+='<path d="M'+R1(x1-L*.2)+' '+(cy-ht)+' L'+R1(x1-L*.12)+' '+(cy+hb)+' L'+R1(x1-L*.02)+' '+(cy+hb)+' L'+R1(x1-L*.1)+' '+(cy-ht)+'Z" fill="#0f172a" opacity=".85"/><path d="M'+R1(x1-L*.24)+' '+(cy-ht)+' L'+R1(x1-L*.16)+' '+(cy+hb)+'" stroke="#93c5fd" stroke-width="1.4"/>';
+  if(glass)inBody+='<path d="M'+(x0+2)+' '+cy+' Q'+R1(px)+' '+(cy-2)+' '+R1(x1-L*.22)+' '+(cy-1)+'" stroke="'+shade(c2,-.3)+'" stroke-width="1.3" fill="none" opacity=".8"/>'+Array.from({length:9},(_,i)=>{const x=x0+L*(.22+i*.06);return '<path d="M'+R1(x)+' '+(cy-1)+' q2 -'+R1(ht*.55)+' 4 -'+R1(ht*.7)+' M'+R1(x)+' '+(cy-1)+' q2 '+R1(hb*.55)+' 4 '+R1(hb*.7)+'" stroke="'+shade(c2,-.25)+'" stroke-width=".6" fill="none" opacity=".55"/>'}).join('')+'<ellipse cx="'+R1(px+4)+'" cy="'+(cy+4)+'" rx="6" ry="3.5" fill="'+shade(c2,-.1)+'" opacity=".35"/>';
+  if(has('crystal')||mut==='d')inBody+='<path d="M'+R1(x0+L*.1)+' '+(cy-ht)+' L'+R1(x0+L*.35)+' '+cy+' L'+R1(x0+L*.15)+' '+(cy+hb)+' M'+R1(x0+L*.35)+' '+cy+' L'+R1(x0+L*.6)+' '+(cy-ht)+' L'+R1(x0+L*.8)+' '+cy+' L'+R1(x0+L*.58)+' '+(cy+hb)+' L'+R1(x0+L*.35)+' '+cy+' M'+R1(x0+L*.8)+' '+cy+' L'+x1+' '+(cy-ht*.5)+'" stroke="#fff" stroke-width=".9" fill="none" opacity=".75"/>';
+  if(M&&mut!=='d')inBody+='<rect x="-20" y="0" width="14" height="72" fill="#fff" opacity="'+(mut==='b'?.2:.32)+'" transform="skewX(-25) translate('+R1(px+8)+' 0)"/>';
+  if(has('shimmer')||M)inBody+='<path d="M'+(x0+4)+' '+(cy-2)+' Q'+R1(px)+' '+R1(cy-ht*.55)+' '+R1(x1-6)+' '+R1(cy-ht*.4)+'" stroke="#fff" stroke-width="2.4" fill="none" opacity=".35" class="shim"/>';
+  // licht en details
+  inBody+='<ellipse cx="'+R1(px+L*.05)+'" cy="'+R1(cy+hb*.75)+'" rx="'+R1(L*.42)+'" ry="'+R1(hb*.35)+'" fill="#fff" opacity=".12"/>'
+    +'<rect x="'+x0+'" y="'+(cy-ht)+'" width="'+L+'" height="'+(ht*1.1)+'" fill="url(#'+id+'h)"/>';
+  if(!['eel','box','mola'].includes(F.b))inBody+='<path d="M'+(x0+6)+' '+R1(cy-1)+' Q'+R1(px)+' '+R1(cy-ht*.28)+' '+R1(x1-L*.26)+' '+R1(cy-ht*.2)+'" stroke="'+shade(c1,-.45)+'" stroke-width=".7" stroke-dasharray="1 1.6" fill="none" opacity=".45"/>';
+  const gx=x1-L*(F.b==='shark'||F.b==='chimaera'?.2:.26);
+  if(has('gillslits'))inBody+=[0,1,2,3,4].map(i=>'<path d="M'+R1(gx+i*2.2)+' '+R1(cy-ht*.4)+' q-1 '+R1(ht*.4)+' 0 '+R1(ht*.8)+'" stroke="'+shade(c1,-.45)+'" stroke-width=".8" fill="none" opacity=".7"/>').join('');
+  else if(!['eel','mola'].includes(F.b)){inBody+='<path d="M'+R1(gx)+' '+R1(cy-ht*.7)+' Q'+R1(gx-L*.06)+' '+cy+' '+R1(gx)+' '+R1(cy+hb*.7)+'" stroke="'+shade(c1,-.5)+'" stroke-width="1.1" fill="none" opacity=".55"/>'
+    +'<path d="M'+R1(gx)+' '+R1(cy-ht*.7)+' Q'+R1(gx-L*.06)+' '+cy+' '+R1(gx)+' '+R1(cy+hb*.7)+' L'+x1+' '+R1(cy+hb*.7)+' L'+x1+' '+R1(cy-ht*.7)+'Z" fill="#000" opacity=".06"/>'}
+  if(has('runes'))inBody+='<path d="M'+(x0+8)+' '+(cy+2)+' l6 -5 l6 5 l6 -5 l6 5 l6 -5 l6 5 l6 -5 l6 5" stroke="'+gl+'" stroke-width="1.2" fill="none" opacity=".9"/><path d="M'+(x0+8)+' '+(cy+2)+' l6 -5 l6 5 l6 -5 l6 5 l6 -5 l6 5 l6 -5 l6 5" stroke="'+gl+'" stroke-width="4" fill="none" opacity=".25"/><circle cx="'+R1(px)+'" cy="'+(cy-ht*.5)+'" r="1.4" fill="'+gl+'"/><circle cx="'+R1(px-10)+'" cy="'+(cy-ht*.45)+'" r="1.1" fill="'+gl+'"/>';
+  if(has('moon'))inBody+='<circle cx="'+R1(px-4)+'" cy="'+cy+'" r="13" fill="#fef9c3" opacity=".14"/><path d="M'+R1(px)+' '+(cy-8)+' A8 8 0 1 0 '+R1(px)+' '+(cy+8)+' A10.5 10.5 0 0 1 '+R1(px)+' '+(cy-8)+'Z" fill="#fef9c3" opacity=".95"/><circle cx="'+R1(px+9)+'" cy="'+(cy-6)+'" r=".8" fill="#fff"/><circle cx="'+R1(px-14)+'" cy="'+(cy+5)+'" r=".6" fill="#fff"/>';
+  // voor het lichaam
+  front+='<path d="'+pec+'" fill="'+finFill+'" stroke="'+finStroke+'" stroke-width=".6"/><path d="'+pecRays+'" stroke="'+finStroke+'" stroke-width=".45" opacity=".5" fill="none"/>';
+  if(has('lionspines'))front+=Array.from({length:7},(_,i)=>{const a=(20+i*15)*Math.PI/180,r=20+(i%2)*4;return '<path d="M'+R1(pcx)+' '+R1(pcy)+' L'+R1(pcx-r*Math.cos(a))+' '+R1(pcy+r*Math.sin(a))+'" stroke="'+c2+'" stroke-width="1.5" stroke-linecap="round" opacity=".9"/><path d="M'+R1(pcx)+' '+R1(pcy)+' L'+R1(pcx-r*Math.cos(a))+' '+R1(pcy+r*Math.sin(a))+'" stroke="'+c1+'" stroke-width="1.5" stroke-dasharray="2 2" opacity=".9"/>'}).join('');
+  if(has('scutes'))front+=Array.from({length:7},(_,i)=>{const x=x0+L*(.15+i*.1);return '<path d="M'+R1(x)+' '+R1(cy-ht*.92)+' l2.2 -1.8 l2.2 1.8 l-2.2 1.6Z M'+R1(x+2)+' '+R1(cy-ht*.1)+' l1.8 -1.5 l1.8 1.5 l-1.8 1.3Z" fill="'+shade(c1,.45)+'" stroke="'+shade(c1,-.45)+'" stroke-width=".5"/>'}).join('');
+  if(has('earspot'))front+='<ellipse cx="'+R1(gx-1)+'" cy="'+(cy-3)+'" rx="2.8" ry="2.2" fill="#111827"/><path d="M'+R1(gx+1.2)+' '+(cy-4.6)+' a2.8 2.2 0 0 1 0 3.2" stroke="#ef4444" stroke-width="1.2" fill="none"/>';
+  if(has('tailspine'))front+='<path d="M'+(x0+3)+' '+(cy-1.5)+' l5 1.5 l-5 1.5Z" fill="#facc15" stroke="#a16207" stroke-width=".4"/>';
+  if(has('finedge'))front+='<path d="'+tail+' '+dorsal+' '+anal+'" fill="none" stroke="#111827" stroke-width="1.1" opacity=".75"/>';
+  if(has('crown'))front+='<path d="M'+(x1-21)+' '+(cy-ht-1)+' l1.5 -7 l3 4 l2.5 -6 l2.5 6 l3 -4 l1.5 7Z" fill="#fbbf24" stroke="#b45309" stroke-width=".7"/><circle cx="'+(x1-14.5)+'" cy="'+(cy-ht-6.5)+'" r="1" fill="#ef4444"/>';
+  if(has('beak'))front+='<path d="M'+(x1-5)+' '+(ny-4)+' Q'+(x1+3)+' '+(ny-3)+' '+(x1+2)+' '+(ny+.5)+' Q'+(x1+3)+' '+(ny+4)+' '+(x1-5)+' '+(ny+4)+'Z" fill="#e2e8f0" stroke="#64748b" stroke-width=".6"/><path d="M'+(x1-4)+' '+(ny+.3)+' L'+(x1+2)+' '+(ny+.3)+'" stroke="#64748b" stroke-width=".6"/>';
+  if(has('sword'))front+='<path d="M'+(x1-3)+' '+(ny-1.8)+' L118 '+(ny-.3)+' L118 '+(ny+.3)+' L'+(x1-3)+' '+(ny+1.8)+'Z" fill="'+shade(c1,-.1)+'" stroke="'+shade(c1,-.45)+'" stroke-width=".5"/>';
+  if(has('spear'))front+='<path d="M'+(x1-3)+' '+(ny-2.4)+' L'+(x1+16)+' '+(ny-.8)+' L'+(x1-3)+' '+(ny+.8)+'Z" fill="'+shade(c1,-.15)+'" stroke="'+shade(c1,-.45)+'" stroke-width=".5"/>';
+  if(has('hammer')){const hx=x1-5;front+='<path d="M'+(hx-3)+' '+(cy-14)+' Q'+(hx+7)+' '+(cy-15)+' '+(hx+8)+' '+cy+' Q'+(hx+7)+' '+(cy+15)+' '+(hx-3)+' '+(cy+14)+' Q'+(hx+1)+' '+cy+' '+(hx-3)+' '+(cy-14)+'Z" fill="url(#'+id+'g)" stroke="'+shade(c1,-.45)+'" stroke-width=".8"/>'
+    +'<circle cx="'+(hx+2)+'" cy="'+(cy-12.5)+'" r="1.6" fill="#0b1020"/><circle cx="'+(hx+2)+'" cy="'+(cy+12.5)+'" r="1.6" fill="#0b1020"/>'}
+  if(has('barbels'))front+='<path d="M'+(x1-2)+' '+(ny+2)+' C'+(x1+2)+' '+(ny+6)+' '+(x1-2)+' '+(ny+10)+' '+(x1-6)+' '+(ny+12)+' M'+(x1-1)+' '+(ny+1)+' C'+(x1+5)+' '+(ny+3)+' '+(x1+6)+' '+(ny+7)+' '+(x1+3)+' '+(ny+10)+'" stroke="'+shade(c1,-.35)+'" stroke-width="1" fill="none" stroke-linecap="round"/>';
+  if(has('horns'))front+='<path d="M'+(x1-1)+' '+(ny+1)+' C'+(x1+8)+' '+(ny+2)+' '+(x1+10)+' '+(ny+10)+' '+(x1+4)+' '+(ny+16)+' M'+(x1-1)+' '+(ny)+' C'+(x1+8)+' '+(ny-3)+' '+(x1+12)+' '+(ny-8)+' '+(x1+9)+' '+(ny-14)+'" stroke="#fbbf24" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
+  if(has('chinbarbel'))front+='<path d="M'+(x1-4)+' '+(ny+3)+' q1 5 -2 8" stroke="'+shade(c1,-.35)+'" stroke-width="1" fill="none"/>';
+  if(has('bigmouth'))front+='<path d="M'+(x1-12)+' '+(ny-2)+' C'+(x1-2)+' '+(ny-8)+' '+(x1+8)+' '+(ny-12)+' '+(x1+14)+' '+(ny-13)+' C'+(x1+12)+' '+(ny-2)+' '+(x1+14)+' '+(ny+10)+' '+(x1+12)+' '+(ny+19)+' C'+(x1+4)+' '+(ny+14)+' '+(x1-4)+' '+(ny+6)+' '+(x1-12)+' '+(ny+2)+'Z" fill="'+shade(c1,.28)+'" stroke="'+shade(c1,.5)+'" stroke-width=".8"/>'
+    +'<path d="M'+(x1-8)+' '+(ny)+' C'+(x1)+' '+(ny-5)+' '+(x1+7)+' '+(ny-8)+' '+(x1+11)+' '+(ny-9)+' C'+(x1+10)+' '+(ny+1)+' '+(x1+11)+' '+(ny+9)+' '+(x1+10)+' '+(ny+15)+' C'+(x1+3)+' '+(ny+10)+' '+(x1-3)+' '+(ny+5)+' '+(x1-8)+' '+(ny+1)+'Z" fill="#3b0764" opacity=".9"/><path d="M'+(x1+11)+' '+(ny-9)+' C'+(x1+10)+' '+(ny+1)+' '+(x1+11)+' '+(ny+9)+' '+(x1+10)+' '+(ny+15)+'" stroke="'+gl+'" stroke-width=".8" fill="none" opacity=".7"/>';
+  if(has('fangs')||has('viperfangs')){const long=has('viperfangs');front+='<path d="M'+(x1-6)+' '+(ny+1)+' l1 '+(long?6:3)+' l1 -'+(long?6:3)+' M'+(x1-3)+' '+(ny+1)+' l1 '+(long?8:3)+' l1 -'+(long?8:3)+' M'+(x1-4.5)+' '+(ny+3)+' l1 -'+(long?6:3)+' l1 '+(long?6:3)+'" stroke="#f8fafc" stroke-width=".9" fill="#f8fafc"/>'}
+  if(has('lure'))front+='<path d="M'+(x1-14)+' '+(cy-ht+2)+' C'+(x1-10)+' '+(cy-ht-16)+' '+(x1+6)+' '+(cy-ht-16)+' '+(x1+8)+' '+(cy-ht-4)+'" stroke="'+shade(c1,.2)+'" stroke-width="1.2" fill="none"/><circle cx="'+(x1+8)+'" cy="'+(cy-ht-3)+'" r="7" fill="url(#'+id+'gl)" class="glowpulse"/><circle cx="'+(x1+8)+'" cy="'+(cy-ht-3)+'" r="2.4" fill="'+gl+'"/>';
+  if(has('photo'))front+=Array.from({length:8},(_,i)=>{const x=x0+L*(.16+i*.095),y=cy+hb*.62-Math.sin(i/7*Math.PI)*1.5;return '<circle cx="'+R1(x)+'" cy="'+R1(y)+'" r="3" fill="url(#'+id+'gl)"/><circle cx="'+R1(x)+'" cy="'+R1(y)+'" r=".9" fill="'+gl+'"/>'}).join('');
+  if(has('glowtip'))front+='<circle cx="'+(x0-27)+'" cy="36" r="7" fill="url(#'+id+'gl)" class="glowpulse"/><circle cx="'+(x0-27)+'" cy="36" r="1.8" fill="'+gl+'"/>';
+  // oog en mond
+  let ex=R1(x1-L*(F.b==='shark'?.1:F.b==='eel'?.06:.14)),ey=R1(cy-ht*.28+nose);const er=F.er||(ht>15?3.8:ht>10?3.3:2.8);
+  if(F.b==='hatchet'){ey=R1(cy-ht*.4)}
+  if(F.b==='angler'){ey=R1(cy-ht*.55)}
+  if(has('bigmouth')){ex=R1(x1-15);ey=R1(cy-4)}
+  const mouth=has('bigmouth')||has('beak')?'':'<path d="M'+R1(x1-.6)+' '+R1(ny+1.6)+' q-'+(F.b==='angler'?6:3)+' '+(F.b==='angler'?3:1.6)+' -'+(F.b==='angler'?11:6)+' '+(F.b==='angler'?2:1)+'" stroke="'+shade(c1,-.55)+'" stroke-width=".9" fill="none" stroke-linecap="round"/>';
+  const ring=has('runes')?'#ef4444':shade(c1,-.55);
+  const eye=has('hammer')?'':'<circle cx="'+ex+'" cy="'+ey+'" r="'+R1(er+.9)+'" fill="'+ring+'" opacity=".85"/><circle cx="'+ex+'" cy="'+ey+'" r="'+er+'" fill="url(#'+id+'i)"/>'
+    +'<circle cx="'+R1(+ex+er*.12)+'" cy="'+ey+'" r="'+R1(er*.58)+'" fill="'+(has('runes')?'#450a0a':'#0b1020')+'"/><circle cx="'+R1(+ex+er*.42)+'" cy="'+R1(ey-er*.38)+'" r="'+R1(er*.28)+'" fill="#fff"/><circle cx="'+R1(ex-er*.28)+'" cy="'+R1(+ey+er*.32)+'" r="'+R1(er*.12)+'" fill="#fff" opacity=".7"/>'
+    +(has('runes')?'<circle cx="'+ex+'" cy="'+ey+'" r="'+R1(er*2.2)+'" fill="#ef4444" opacity=".18"/>':'');
+  const glassOp=glass?' opacity=".72"':'';
+  return wrap(back+'<g'+glassOp+'><path d="'+body+'" fill="'+bodyFill+'"/><g clip-path="url(#'+id+'c)">'+inBody+'</g><path d="'+body+'" fill="none" stroke="'+shade(c1,-.45)+'" stroke-width=".9"/></g>'+front+mouth+eye+sparkle(),defs)}
 
 /* munten: verdiend (uit je voortgang) min uitgegeven */
 const COIN={gym:10,cardio:10,studie:5,overig:2};
@@ -1275,7 +1474,14 @@ function renderAqua(){
     +'<div class="tank" id="tank">'+[12,30,55,78,90].map((x,i)=>'<span class="bubble" style="left:'+x+'%;animation-delay:-'+i*1.3+'s"></span>').join('')
     +vis.map(({f,m})=>{const d=10+rnd()*14,dl=rnd()*d,w=f.r>=3?78:f.r>=2?66:56;
       return '<div class="swim" data-f="'+f.id+'" data-m="'+(m||'')+'" style="top:'+(6+rnd()*62)+'%;--d:'+d.toFixed(1)+'s;--w:'+w+'px;animation-delay:-'+dl.toFixed(1)+'s"><div class="flip" style="--d:'+d.toFixed(1)+'s;animation-delay:-'+dl.toFixed(1)+'s"><div class="bob" style="animation-delay:-'+(rnd()*3).toFixed(1)+'s">'+fishSVG(f,false,'',m)+'</div></div></div>'}).join('')
-    +'<svg class="plants" viewBox="0 0 400 80" preserveAspectRatio="none"><path d="M30 80 Q20 50 34 30 Q44 50 36 80Z M50 80 Q60 40 48 14 Q70 40 60 80Z M330 80 Q320 44 340 20 Q350 50 344 80Z M356 80 Q370 54 362 36 Q380 56 368 80Z" fill="#15803d"/><path d="M42 80 Q36 56 44 40 Q50 58 48 80Z M342 80 Q350 60 346 46 Q358 62 352 80Z" fill="#22c55e" opacity=".8"/><path d="M180 80 Q186 60 200 58 Q214 60 220 80Z" fill="#78716c"/><path d="M236 80 Q240 70 250 69 Q258 70 262 80Z" fill="#a8a29e"/></svg><div class="sand"></div>'
+    +'<div class="rays"></div>'
+    +'<svg class="plants" viewBox="0 0 400 90" preserveAspectRatio="xMidYMax slice">'
+      +'<g class="sway"><path d="M30 90 Q16 58 32 34 Q44 58 38 90Z M52 90 Q64 46 50 12 Q76 44 62 90Z" fill="#15803d"/><path d="M42 90 Q34 62 44 44 Q52 64 48 90Z" fill="#22c55e" opacity=".85"/></g>'
+      +'<g class="sway s2"><path d="M330 90 Q318 50 340 22 Q352 54 344 90Z M356 90 Q372 60 362 40 Q382 62 368 90Z" fill="#15803d"/><path d="M342 90 Q352 66 346 50 Q360 68 352 90Z" fill="#22c55e" opacity=".85"/></g>'
+      +'<path d="M250 90 C248 76 256 70 252 60 M252 72 C260 68 262 62 268 60 M250 80 C242 74 238 70 236 62" stroke="#fb7185" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="252" cy="60" r="3" fill="#fda4af"/><circle cx="268" cy="60" r="3" fill="#fda4af"/><circle cx="236" cy="62" r="3" fill="#fda4af"/>'
+      +'<path d="M150 90 Q156 66 176 64 Q198 66 204 90Z" fill="#6b7280"/><path d="M160 76 Q176 68 196 76" stroke="#9ca3af" stroke-width="2" fill="none" opacity=".6"/>'
+      +'<path d="M110 90 Q114 80 122 80 Q130 80 134 90Z" fill="#a8a29e"/><path d="M290 88 q6 -8 12 0Z" fill="#fde68a" stroke="#d97706" stroke-width="1"/><path d="M96 88 l4 -6 l4 6Z" fill="#fecaca" stroke="#f87171" stroke-width="1"/>'
+    +'</svg><div class="sand"></div>'
     +(own.length?'':'<div class="tankempty">Je aquarium is nog leeg.<br>Verdien munten en rol je eerste vis bij <b>🎲 Dobbelstenen</b>.</div>')+'</div>'
     +'<h2>🪙 Zo verdien je munten</h2><div class="card earn">'
     +[['🎯','Weekdoel gehaald (gym, cardio of school)','+50'],['🏋️','Training afgerond','+15'],['💪','Gym- of cardiotaak afgevinkt','+10'],['📝','Toets afgevinkt','+15'],['📚','Schooltaak afgevinkt','+5'],['🏅','Badge vrijgespeeld','+25'],['🎯','Focus (per 5 minuten)','+1'],['✨','Andere taak','+2']]
