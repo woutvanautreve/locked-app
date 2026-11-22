@@ -812,12 +812,13 @@ $('weekGoals').addEventListener('click',e=>{const b=e.target.closest('[data-act]
   if(b.dataset.act==='copyweek')copyLastWeek()});
 // Neemt de taken van vorige week over op dezelfde weekdagen (alleen dagen vanaf vandaag, geen dubbele)
 function copyLastWeek(){
-  const prev=ymd(addDays(weekStart,-7)),prevEnd=ymd(addDays(weekStart,-1));let n=0;
+  const prev=ymd(addDays(weekStart,-7)),prevEnd=ymd(addDays(weekStart,-1));let n=0,skip=0;
   for(const t of S.tasks.filter(t=>t.date>=prev&&t.date<=prevEnd&&t.kind!=='toets')){
     const date=ymd(addDays(parse(t.date),7));if(date<today())continue;
     if(S.tasks.some(x=>x.date===date&&x.title===t.title&&x.time===t.time))continue;
+    if(planRule(t.cat,t.kind,date,t.time,t.end||(t.time?fromMin(toMin(t.time)+t.dur):''))){skip++;continue}
     S.tasks.push(Object.assign({},t,{id:uid(),date,done:false}));n++}
-  save();render();toast(n?'📋 '+n+' taken overgenomen van vorige week':'Niets om over te nemen')}
+  save();render();toast((n?'📋 '+n+' taken overgenomen van vorige week':'Niets om over te nemen')+(skip?' · '+skip+' overgeslagen (school)':''))}
 function dropTarget(x,y){const el=document.elementFromPoint(x,y);if(!el)return null;
   const t=el.closest('.wday,#days .day');if(!t||t.dataset.day<today())return null;return t}
 function setDrop(t){document.querySelectorAll('.drop').forEach(e=>e!==t&&e.classList.remove('drop'));if(t)t.classList.add('drop')}
@@ -840,7 +841,9 @@ function dragLoop(){if(!drag)return;const pb=$('weekGoals').getBoundingClientRec
 function endDrag(ok){if(!drag)return;const d=drag;drag=null;d.g.remove();setDrop(null);
   document.querySelectorAll('.lifted').forEach(e=>e.classList.remove('lifted'));
   if(!ok||!d.target)return;selDay=d.target.dataset.day;
-  if(d.move){const t=S.tasks.find(x=>x.id===d.move);if(!t||t.date===selDay)return;t.date=selDay;save();render();
+  if(d.move){const t=S.tasks.find(x=>x.id===d.move);if(!t||t.date===selDay)return;
+    const err=planRule(t.cat,t.kind,selDay,t.time,t.end||(t.time?fromMin(toMin(t.time)+t.dur):''));if(err){toast('⛔ '+err);return}
+    t.date=selDay;save();render();
     const nd=parse(selDay);toast('Verplaatst naar '+DNL[nd.getDay()]);return}
   openSheet(null,{cat:d.cat,date:selDay})}
 document.addEventListener('pointerup',()=>endDrag(true));
@@ -861,7 +864,16 @@ let sub=null,autoTitle=true,kind='vak';
 // titel die automatisch ingevuld wordt, bv. "Wiskunde" of "Toets Wiskunde"
 const autoName=()=>sub&&sub!=='Ander'?(cat==='studie'&&kind==='toets'?'Toets '+sub:sub):'';
 function setKind(k){kind=k;document.querySelectorAll('#tKind button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
-  if(autoTitle&&autoName())$('tTitle').value=autoName()}
+  if(autoTitle&&autoName())$('tTitle').value=autoName();if(typeof sFrom!=='undefined')showTimes()}
+// Planregels (alleen als schooluren aan staan): een toets moet binnen je schooluren vallen, al de rest erbuiten.
+// Geeft een foutmelding terug, of '' als het mag.
+function planRule(c,k,date,from,to){
+  if(!S.school||!S.school.on||!from||!to)return '';const s=schoolOn(date),a=toMin(from),b=toMin(to);
+  if(c==='studie'&&k==='toets'){
+    if(!s)return vacOn(date)?'Een toets kan niet tijdens de vakantie':'Op deze dag heb je geen school, dus ook geen toets';
+    if(a<toMin(s.from)||b>toMin(s.to))return 'Een toets moet binnen je schooluren vallen ('+s.from+'–'+s.to+')';return ''}
+  if(s&&a<toMin(s.to)&&b>toMin(s.from))return 'Dit valt tijdens je schooluren ('+s.from+'–'+s.to+'). Plan het ervoor of erna.';
+  return ''}
 $('tKind').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setKind(b.dataset.k)});
 function markSub(){document.querySelectorAll('#tSub button').forEach(b=>b.classList.toggle('on',b.dataset.s===sub))}
 function setCat(c,keep){cat=c;document.querySelectorAll('#tCat button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
@@ -870,7 +882,7 @@ function setCat(c,keep){cat=c;document.querySelectorAll('#tCat button').forEach(
   $('kindWrap').style.display=c==='studie'?'':'none'; // vak/toets alleen bij school
   $('tSub').innerHTML=list?list.map(s=>'<button data-s="'+s+'">'+s+'</button>').join(''):'';if(list)$('subLbl').textContent=SUBL[c];
   if(!keep){sub=null;if(autoTitle)$('tTitle').value=''}markSub()}
-$('tCat').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setCat(b.dataset.c);if(!editing&&sFrom){sTo=fromMin(toMin(sFrom)+DEFDUR[cat]);showTimes()}}});
+$('tCat').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setCat(b.dataset.c);if(!editing&&sFrom)sTo=fromMin(toMin(sFrom)+DEFDUR[cat]);showTimes()}});
 $('tSub').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;sub=b.dataset.s;markSub();
   if(sub==='Ander'){if(autoTitle)$('tTitle').value='';$('tTitle').placeholder=cat==='studie'?'Welk vak?':'Wat ga je doen?';$('tTitle').focus()}
   else if(autoTitle||!$('tTitle').value.trim()){$('tTitle').value=autoName();autoTitle=true}});
@@ -882,9 +894,10 @@ $('tMins').innerHTML=['00','15','30','45'].map(m=>'<button type="button" data-m=
 function showTimes(){
   [['tFromBtn',sFrom,'from'],['tToBtn',sTo,'to']].forEach(([id,v,k])=>{const b=$(id);b.textContent=v||'--:--';b.classList.toggle('empty',!v);b.classList.toggle('open',pickT===k)});
   const d=sFrom&&sTo?toMin(sTo)-toMin(sFrom):null;
-  const sc=schoolOn($('tDate').value||today()),clash=sc&&d>0&&toMin(sFrom)<toMin(sc.to)&&toMin(sTo)>toMin(sc.from);
-  $('tDurTxt').textContent=(d===null?'Kies van hoe laat tot hoe laat':d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"')+(clash?' · ⚠️ valt tijdens school ('+sc.from+'–'+sc.to+')':'');
-  $('tDurTxt').style.color=d!==null&&d<=0?'var(--danger)':'';
+  const rule=d>0?planRule(cat,cat==='studie'?kind:null,$('tDate').value||today(),sFrom,sTo):'';
+  const sNow=S.school&&S.school.on?schoolOn($('tDate').value||today()):null,isToets=cat==='studie'&&kind==='toets';
+  $('tDurTxt').textContent=(d===null?(isToets&&sNow?'Kies een tijd tijdens school ('+sNow.from+'–'+sNow.to+')':'Kies van hoe laat tot hoe laat'):d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"')+(rule?' · ⛔ '+rule:'');
+  $('tDurTxt').style.color=(d!==null&&d<=0)||rule?'var(--danger)':'';
   const v=pickT==='from'?sFrom:sTo,[h,m]=v?v.split(':'):[null,null];
   document.querySelectorAll('#tHours button').forEach(x=>x.classList.toggle('on',x.dataset.h===h));
   document.querySelectorAll('#tMins button').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
@@ -919,8 +932,13 @@ $('tSave').onclick=()=>{
   if(!sFrom||!sTo){toast('Kies van hoe laat tot hoe laat');openPick(sFrom?'to':'from');return}
   if(toMin(sTo)<=toMin(sFrom)){toast('"Tot" moet later zijn dan "Van"');openPick('to');return}
   const date=$('tDate').value||today(),time=sFrom,end=sTo,dur=toMin(sTo)-toMin(sFrom),s=SUBS[cat]?sub:null;
+  const err=planRule(cat,k,date,time,end);if(err){toast('⛔ '+err);openPick('from');return}
+  let skipped=0;
   if(editing)Object.assign(editing,{title,cat,sub:s,kind:k,date,time,end,dur});
-  else{const n=$('tRep').checked?4:1;for(let i=0;i<n;i++)S.tasks.push({id:uid(),title,cat,sub:s,kind:k,date:ymd(addDays(parse(date),7*i)),time,end,dur,done:false})}
+  else{const n=$('tRep').checked?4:1;for(let i=0;i<n;i++){const dd=ymd(addDays(parse(date),7*i));
+    if(i&&planRule(cat,k,dd,time,end)){skipped++;continue} // herhaling valt bv. in een vakantie
+    S.tasks.push({id:uid(),title,cat,sub:s,kind:k,date:dd,time,end,dur,done:false})}}
+  if(skipped)setTimeout(()=>toast(skipped+'x overgeslagen: botst met school of vakantie'),1900);
   save();closeSheet();render();toast(editing?'Opgeslagen':'Ingepland 👍')
 };
 // Bevestigen zonder pop-up: eerste tik "wapent" de knop, tweede tik voert uit
