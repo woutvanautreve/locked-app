@@ -100,6 +100,11 @@ h2{font-size:18px;margin:22px 0 10px}
 .wday.drop{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:0 0 0 2px var(--accent)}
 .day.drop{box-shadow:0 0 0 3px var(--accent)}
 .planmode .fab{display:none}
+[hidden]{display:none!important}
+/* uitleg Focus-modus */
+.help{margin-top:12px;font-size:14px;line-height:1.45}
+.help p{margin:0 0 12px;background:var(--card2);border-radius:12px;padding:10px 12px}
+.help code{background:var(--card);padding:1px 6px;border-radius:6px;font-weight:700;user-select:all;-webkit-user-select:all}
 /* komende toetsen */
 .exam{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .exam:last-child{border-bottom:0}
@@ -227,6 +232,17 @@ nav button.on{color:var(--accent)}
   <div class="timer"><svg width="240" height="240"><circle cx="120" cy="120" r="108" stroke="var(--card2)" stroke-width="14" fill="none"/><circle id="fArc" cx="120" cy="120" r="108" stroke="var(--studie)" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="678.6" stroke-dashoffset="0"/></svg>
     <div class="tt"><div><b id="fTime">25:00</b><div class="sub" id="fState">Klaar om te starten</div></div></div></div>
   <div class="btns"><button class="btn" id="fStart">Start</button><button class="btn ghost" id="fStop" style="display:none">Stop</button></div>
+  <button class="btn ghost" id="fUnlock" style="margin-top:10px" hidden>🔓 Focus-modus uitzetten</button>
+  <div class="card" style="margin-top:18px">
+    <label class="toggle" style="margin:0 0 8px"><span>🔒 <b>Blokkeer afleiding</b></span><input type="checkbox" id="fBlock"></label>
+    <div class="sub" style="font-size:13px;line-height:1.4">Zet de Focus-modus van je iPhone aan als je op Start tikt, zodat afleidende apps en meldingen stil zijn. <button class="linkbtn" id="fHelpBtn">Hoe stel ik dit in?</button></div>
+    <div id="fHelp" class="help" hidden>
+      <p><b>Stap 1 – Focus-modus maken</b><br>Instellingen → <b>Focus</b> → <b>+</b> → <b>Aangepast</b>. Noem hem <b>Studeren</b>. Kies bij <b>Apps</b> welke apps je nog mogen storen (bv. alleen Telefoon).<br>💡 Extra sterk: kies bij <b>Beginscherm</b> een scherm met alleen LOCKED en je leerapps. Dan zie je de rest echt niet meer.</p>
+      <p><b>Stap 2 – Opdracht om aan te zetten</b><br>Open de app <b>Opdrachten</b> → <b>+</b> → <b>Voeg taak toe</b> → zoek <b>Stel focus in</b>. Tik op de blauwe focus en kies <b>Studeren</b>, laat het op <b>Zet aan</b> staan. Noem de opdracht exact: <code>LOCKED focus aan</code></p>
+      <p><b>Stap 3 – Opdracht om uit te zetten</b><br>Hetzelfde, maar tik op <b>Zet aan</b> en kies <b>Zet uit</b>. Noem hem exact: <code>LOCKED focus uit</code></p>
+      <p><b>Stap 4 – Testen</b><br>Zet hierboven de schakelaar aan en tik op <b>Start</b>. De eerste keer vraagt je iPhone of LOCKED de opdracht mag openen: tik op <b>Sta toe</b>. Ga daarna terug naar LOCKED (linksboven of door te vegen).</p>
+    </div>
+  </div>
   <div class="card row between" style="margin-top:18px"><div><div class="sub">Vandaag gefocust</div><div style="font-weight:700;font-size:20px" id="fToday">0 min</div></div><div style="text-align:right"><div class="sub">Deze week</div><div style="font-weight:700;font-size:20px" id="fWeek">0 min</div></div></div>
 </div></section>
 
@@ -631,7 +647,8 @@ let audio;
 function beep(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(t=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);g.gain.setValueAtTime(.25,audio.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+t+.3);o.start(audio.currentTime+t);o.stop(audio.currentTime+t+.3)})}catch(e){}}
 function remaining(){const T=S.timer;if(!T)return S.fDur*60;return T.end?Math.max(0,Math.round((T.end-Date.now())/1000)):T.left}
 function logFocus(min,subject){if(min>=1){S.focus.push({date:today(),min,subject:subject||''})}}
-function finishTimer(){const T=S.timer;logFocus(Math.round(T.total/60),T.subject);S.timer=null;save();beep();toast('🎯 Sessie klaar! +'+Math.round(T.total/60)+' XP');render()}
+function finishTimer(){const T=S.timer;logFocus(Math.round(T.total/60),T.subject);S.timer=null;save();beep();toast('🎯 Sessie klaar! +'+Math.round(T.total/60)+' XP');render();
+  if(S.focusLocked)setTimeout(()=>toast('Tik op 🔓 om je Focus-modus uit te zetten'),2200)}
 function renderFocus(){
   const T=S.timer,left=remaining(),total=T?T.total:S.fDur*60;
   document.querySelectorAll('#fDur button').forEach(b=>{b.classList.toggle('on',+b.dataset.d===(T?Math.round(T.total/60):S.fDur));b.style.opacity=T?.5:1});
@@ -641,6 +658,7 @@ function renderFocus(){
   $('fStop').style.display=T?'':'none';
   $('fState').textContent=!T?'Klaar om te starten':T.end?(T.subject?esc(T.subject):'Focus…'):'Gepauzeerd';
   $('fSubject').disabled=!!T;if(T&&document.activeElement!==$('fSubject'))$('fSubject').value=T.subject||'';
+  $('fBlock').checked=!!S.blockFocus;$('fUnlock').hidden=!(S.focusLocked&&!T);
   let td=0;for(const f of S.focus)if(f.date===today())td+=f.min;$('fToday').textContent=fmtMin(td);$('fWeek').textContent=fmtMin(weekFocus());
 }
 function weekFocus(){const st=ymd(monday(new Date()));let m=0;for(const f of S.focus)if(f.date>=st)m+=f.min;return m}
@@ -650,8 +668,14 @@ $('fStart').onclick=()=>{
   if(!T)S.timer={total:S.fDur*60,end:Date.now()+S.fDur*60000,left:null,subject:$('fSubject').value.trim()};
   else if(T.end){T.left=remaining();T.end=null}
   else{T.end=Date.now()+T.left*1000;T.left=null}
+  if(!T&&S.blockFocus){S.focusLocked=true;save();renderFocus();runShortcut('LOCKED focus aan');return}
   save();renderFocus()
 };
+/* iPhone Focus-modus via de app Opdrachten (Shortcuts) */
+function runShortcut(name){location.href='shortcuts://run-shortcut?name='+encodeURIComponent(name)}
+$('fBlock').onchange=e=>{S.blockFocus=e.target.checked;save();if(S.blockFocus&&!S.seenFocusHelp){S.seenFocusHelp=true;save();$('fHelp').hidden=false}};
+$('fHelpBtn').onclick=()=>{$('fHelp').hidden=!$('fHelp').hidden};
+$('fUnlock').onclick=()=>{S.focusLocked=false;save();renderFocus();runShortcut('LOCKED focus uit')};
 $('fStop').onclick=()=>armed($('fStop'),'Zeker stoppen?',()=>{const T=S.timer;if(!T)return;const done=Math.floor((T.total-remaining())/60);
   logFocus(done,T.subject);S.timer=null;save();render();toast(done>=1?'+'+done+' XP':'Sessie gestopt')});
 setInterval(()=>{if(S.timer&&S.timer.end){if(remaining()<=0)finishTimer();else if(view==='focus')renderFocus()}},500);
