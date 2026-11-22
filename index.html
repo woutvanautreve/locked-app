@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="Planner">
 <meta name="theme-color" content="#f4f3fb" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121218" media="(prefers-color-scheme: dark)">
-<link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-v2-180.png">
+<link rel="icon" href="icon-v2-512.png">
 <link rel="manifest" href="manifest.json">
 <title>Mijn Planner</title>
 <style>
@@ -1359,8 +1359,8 @@ async function askNotify(){try{if('Notification' in window&&Notification.permiss
 async function notify(title,body){try{
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
-  if(r)await r.showNotification(title,{body,icon:'icon-180.png',badge:'icon-180.png',tag:'rust',renotify:true});
-  else new Notification(title,{body,icon:'icon-180.png'})}catch(e){}}
+  if(r)await r.showNotification(title,{body,icon:'icon-v2-180.png',badge:'icon-v2-180.png',tag:'rust',renotify:true});
+  else new Notification(title,{body,icon:'icon-v2-180.png'})}catch(e){}}
 function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
   if(!('Notification' in window)){t.textContent='Meldingen werken pas als LOCKED op je beginscherm staat (iPhone). Je hoort wel altijd een piepje.';b.hidden=true;return}
   const p=Notification.permission;b.hidden=p!=='default';

@@ -1,6 +1,6 @@
-﻿// Zorgt dat de app ook zonder internet werkt, en opent de app als je op een melding tikt.
-const CACHE = 'planner-v6';
-const FILES = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
+// Zorgt dat de app ook zonder internet werkt, en opent de app als je op een melding tikt.
+const CACHE = 'planner-v7';
+const FILES = ['./', 'index.html', 'manifest.json', 'icon-v2-180.png', 'icon-v2-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -29,7 +29,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'LOCKED', {
-    body: d.body || '', icon: 'icon-180.png', badge: 'icon-180.png', tag: d.tag || 'locked', renotify: true
+    body: d.body || '', icon: 'icon-v2-180.png', badge: 'icon-v2-180.png', tag: d.tag || 'locked', renotify: true
   }));
 });
 
