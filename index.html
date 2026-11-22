@@ -137,6 +137,47 @@ h2{font-size:18px;margin:22px 0 10px}
 .bigstep{display:flex;align-items:center;justify-content:center;gap:24px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:14px}
 .bigstep button{width:48px;height:48px;border-radius:12px;background:var(--card2);font-size:24px;font-weight:700}
 .bigstep b{font-size:30px;min-width:40px;text-align:center}
+/* ===== aquarium ===== */
+.modebar .seg button{font-size:13px;padding:10px 2px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.coinchip{background:color-mix(in srgb,#f59e0b 18%,transparent);color:var(--text);font-weight:800;padding:7px 12px;border-radius:999px;font-size:15px;white-space:nowrap}
+.tank{position:relative;height:330px;margin-top:14px;border-radius:22px;overflow:hidden;background:linear-gradient(180deg,#7dd3fc 0%,#0ea5e9 45%,#075985 100%);box-shadow:inset 0 0 40px rgba(0,0,0,.25)}
+.tank .sand{position:absolute;left:0;right:0;bottom:0;height:30px;background:linear-gradient(#fde68a,#d4a35a)}
+.tank .plants{position:absolute;left:0;right:0;bottom:22px;width:100%;height:80px}
+.tankempty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;font-size:15px;padding:30px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.bubble{position:absolute;bottom:20px;width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,.7);animation:bubble 6s linear infinite}
+@keyframes bubble{from{transform:translateY(0);opacity:0}10%{opacity:1}to{transform:translateY(-320px);opacity:0}}
+.swim{position:absolute;left:2%;width:var(--w);animation:swimX var(--d) linear infinite alternate;cursor:pointer;z-index:2}
+@keyframes swimX{from{left:2%}to{left:calc(98% - var(--w))}}
+.flip{animation:flipX calc(var(--d) * 2) linear infinite}
+@keyframes flipX{0%,49.9%{transform:scaleX(1)}50%,100%{transform:scaleX(-1)}}
+.bob{animation:bob 3s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.fish{width:100%;height:auto;display:block;overflow:visible}
+.fish.sil{color:var(--text);opacity:.18}
+.fish.r3:not(.sil){filter:drop-shadow(0 0 4px #c084fc)}
+.fish.r4:not(.sil){filter:drop-shadow(0 0 6px #fbbf24);animation:legend 2.4s ease-in-out infinite}
+@keyframes legend{50%{filter:drop-shadow(0 0 12px #fde68a)}}
+.earn .row{padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}.earn .row:last-child{border-bottom:0}
+.odds{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin:10px 0 14px}
+.odds i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
+.dicecard{border-left:6px solid var(--dc)}
+.dicecard .price{font-weight:800;font-size:17px}
+.minifish{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}
+.minifish span{background:var(--card2);border-radius:10px;padding:5px;border-bottom:3px solid var(--rc)}
+.dex{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dexcard{background:var(--card);border-radius:14px;padding:10px 6px;text-align:center;box-shadow:var(--shadow);border-top:4px solid var(--rc)}
+.dexcard .fish{width:70%;margin:4px auto 6px}
+.dexcard b{display:block;font-size:12px;line-height:1.2;overflow-wrap:anywhere;hyphens:auto}
+.dexcard span{display:block;font-size:11px;color:var(--rc);font-weight:700;margin-top:2px}
+.dexcard.locked b{color:var(--muted)}
+.rollov{position:fixed;inset:0;background:rgba(5,10,30,.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:30;display:grid;place-items:center;padding:20px}
+.rollbox{background:var(--card);border-radius:24px;padding:26px 20px;width:100%;max-width:360px;text-align:center}
+.die{width:96px;height:96px;margin:10px auto;border-radius:22px;display:grid;place-items:center;font-size:56px;animation:shake 1.4s ease-in-out}
+@keyframes shake{0%{transform:rotate(0) scale(.8)}20%{transform:rotate(-25deg) scale(1.1)}40%{transform:rotate(30deg)}60%{transform:rotate(-20deg) scale(1.05)}80%{transform:rotate(15deg)}100%{transform:rotate(0) scale(1)}}
+.reveal{animation:pop .5s ease}
+.reveal .rar{display:inline-block;background:var(--rc);color:#fff;font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
+.reveal .fish.big{width:200px;margin:14px auto 4px}
 /* grafiek per oefening */
 .chwrap{touch-action:pan-y}
 .chart2{width:100%;height:auto;display:block;cursor:crosshair}
@@ -248,7 +289,7 @@ nav button.on{color:var(--accent)}
 </head>
 <body>
 
-<div class="modebar"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button></div></div>
+<div class="modebar"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button><button data-m="aqua">🐠 Aquarium</button></div></div>
 
 <!-- VANDAAG -->
 <section class="view on" id="v-today"><div class="wrap">
@@ -362,6 +403,12 @@ nav button.on{color:var(--accent)}
 
 <section class="view" id="v-progress"><div class="wrap" id="progWrap"></div></section>
 
+<!-- ===== AQUARIUM ===== -->
+<section class="view" id="v-aquarium"><div class="wrap" id="aqWrap"></div></section>
+<section class="view" id="v-dice"><div class="wrap" id="diceWrap"></div></section>
+<section class="view" id="v-dex"><div class="wrap" id="dexWrap"></div></section>
+<div class="rollov" id="rollOv" hidden><div class="rollbox" id="rollBox"></div></div>
+
 <!-- formulier: eigen oefening -->
 <div class="sheet" id="exSheet">
   <div class="grab"></div>
@@ -396,6 +443,11 @@ nav button.on{color:var(--accent)}
   <button data-v="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>Training</button>
   <button data-v="schemas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Instellingen</button>
   <button data-v="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Vooruitgang</button>
+ </div>
+ <div class="navgroup" id="navAqua" hidden>
+  <button data-v="aquarium"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c3-5 9-6 13-3l5-3v12l-5-3c-4 3-10 2-13-3z"/><circle cx="8" cy="11" r=".5" fill="currentColor"/></svg>Aquarium</button>
+  <button data-v="dice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r=".8" fill="currentColor"/><circle cx="15" cy="15" r=".8" fill="currentColor"/><circle cx="15" cy="9" r=".8" fill="currentColor"/><circle cx="9" cy="15" r=".8" fill="currentColor"/></svg>Dobbelstenen</button>
+  <button data-v="dex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Collectie</button>
  </div>
 </nav>
 
@@ -588,7 +640,7 @@ function renderBadges(){
   // nieuwe badge vrijgespeeld? (de eerste keer stil bijhouden)
   const fresh=S.badges?got.filter(b=>!S.badges.includes(b.id)):[];
   if(!S.badges||fresh.length){S.badges=got.map(b=>b.id);save()}
-  if(fresh.length)setTimeout(()=>toast('🏅 Badge: '+fresh[0].i+' '+fresh[0].n),900);
+  if(fresh.length)setTimeout(()=>toast('🏅 Badge: '+fresh[0].i+' '+fresh[0].n+' · +25 🪙'),900);
   $('badgeHead').textContent='Badges · '+got.length+'/'+BADGES.length;
   $('badges').innerHTML=BADGES.map(b=>{const[v,g]=b.p(s),ok=v>=g;
     return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')}
@@ -600,14 +652,16 @@ function render(){
   renderToday();renderWeek();renderGoals();renderFocus();renderBadges();
   // tijdens het typen in een set niet opnieuw tekenen (anders verlies je je cursor)
   const ae=document.activeElement;if(!(ae&&ae.tagName==='INPUT'&&ae.closest('#trainWrap')))renderTrain();
-  renderSchemas();renderProgress()}
+  renderSchemas();renderProgress();
+  checkWeeklyBonus();renderAqua();renderDice();renderDex()}
 
 /* ---------- navigatie ---------- */
 function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  const sp=SPORT_VIEWS.includes(v);if(sp)lastSport=v;else lastPlan=v;
-  $('navPlan').hidden=sp;$('navSport').hidden=!sp;document.body.classList.toggle('sporting',sp);
-  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',(b.dataset.m==='sport')===sp));
+  const mode=SPORT_VIEWS.includes(v)?'sport':AQ_VIEWS.includes(v)?'aqua':'plan';
+  if(mode==='sport')lastSport=v;else if(mode==='aqua')lastAqua=v;else lastPlan=v;
+  $('navPlan').hidden=mode!=='plan';$('navSport').hidden=mode!=='sport';$('navAqua').hidden=mode!=='aqua';
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   if(S.restEnd)tickRest();
   $('fab').style.display=(v==='today'||v==='week')?'':'none';window.scrollTo(0,0);render()}
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v)});
@@ -621,7 +675,7 @@ function onListClick(e){
   if(b.dataset.act==='move')return;
   if(b.dataset.act==='moveall'){for(const t of S.tasks)if(!t.done&&t.date<today())t.date=today();save();render();toast('Naar vandaag verplaatst');return}
   const el=b.closest('.task'),t=S.tasks.find(x=>x.id===el.dataset.id);if(!t)return;
-  if(b.dataset.act==='toggle'){t.done=!t.done;save();if(t.done)toast(CHEER[t.cat]+' +'+XP[t.cat]+' XP');
+  if(b.dataset.act==='toggle'){t.done=!t.done;save();if(t.done)toast(CHEER[t.cat]+' +'+XP[t.cat]+' XP · +'+coinFor(t)+' 🪙');
     render();const n=document.querySelector('.view.on [data-id="'+t.id+'"]');if(n)n.classList.add('pop')}
   else openSheet(t)
 }
@@ -945,7 +999,7 @@ function finishWorkout(){
   if(!t){const st=new Date(W.start),from=pad(st.getHours())+':'+pad(Math.floor(st.getMinutes()/15)*15);
     t={id:uid(),title:W.type,cat:'gym',sub:W.type,date:today(),time:from,end:fromMin(toMin(from)+mins),dur:mins,done:false};S.tasks.push(t)}
   t.done=true;S.workout=null;stopRest();save();render();
-  toast('💪 Training opgeslagen! +'+XP.gym+' XP');
+  toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
   if(prs.length)setTimeout(()=>toast('🏆 Nieuw PR: '+prs[0]),2000)}
 
 /* rusttimer + melding */
@@ -1059,10 +1113,133 @@ function pickPoint(e){const svg=e.target.closest('svg.chart2');if(!svg)return;co
 $('progWrap').addEventListener('pointerdown',pickPoint);
 $('progWrap').addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||e.buttons)pickPoint(e)});
 
+/* =====================================================================
+   AQUARIUM: munten verdienen, vissen rollen met dobbelstenen
+   ===================================================================== */
+const RAR=['Common','Uncommon','Rare','Epic','Legendary'];
+const RARC=['#94a3b8','#22c55e','#3b82f6','#a855f7','#f59e0b'];
+const ODDS=[45,28,15,9,3]; // kans in % per zeldzaamheid
+const DICE=[
+  {n:'Vijver',p:50,c:'#84cc16',e:'🪷'},{n:'Rivier',p:120,c:'#0ea5e9',e:'🏞️'},{n:'Rif',p:250,c:'#f97316',e:'🪸'},
+  {n:'Oceaan',p:500,c:'#2563eb',e:'🌊'},{n:'Diepzee',p:1000,c:'#7c3aed',e:'🌌'}];
+// [naam, dobbelsteen, zeldzaamheid, vorm, kleur1, kleur2, patroon]
+const FISH=[
+ ['Goudvisje',0,0,'oval','#f59e0b','#fbbf24',''],['Stekelbaars',0,0,'oval','#94a3b8','#475569','stripes'],
+ ['Rietvoorn',0,1,'oval','#cbd5e1','#ef4444',''],['Zonnebaars',0,1,'tall','#f97316','#0ea5e9','spots'],
+ ['Witte Koi',0,2,'long','#f8fafc','#ef4444','spots'],['Bittervoorn',0,2,'oval','#a78bfa','#f472b6','band'],
+ ['Spiegelkarper',0,3,'round','#a16207','#fde68a','spots'],['Glaskoi',0,3,'long','#bae6fd','#38bdf8','band'],
+ ['Gouden Koi',0,4,'long','#facc15','#fff7ae','spots'],['Maankarper',0,4,'round','#e2e8f0','#c4b5fd','band'],
+ ['Grondel',1,0,'oval','#a8a29e','#78716c','spots'],['Elrits',1,0,'long','#84cc16','#3f6212','band'],
+ ['Forel',1,1,'long','#a3a38a','#dc2626','spots'],['Kwabaal',1,1,'long','#57534e','#a8a29e','spots'],
+ ['Regenboogforel',1,2,'long','#94a3b8','#ec4899','band'],['Snoekbaars',1,2,'long','#65a30d','#1e293b','stripes'],
+ ['Steur',1,3,'shark','#64748b','#cbd5e1','spots'],['Zilverzalm',1,3,'oval','#e2e8f0','#fb7185','band'],
+ ['Rivierdraak',1,4,'long','#059669','#fbbf24','stripes'],['Kristalsnoek',1,4,'long','#a5f3fc','#e0e7ff','stripes'],
+ ['Clownvisje',2,0,'oval','#f97316','#ffffff','stripes'],['Juffertje',2,0,'oval','#2563eb','#60a5fa',''],
+ ['Doktersvis',2,1,'tall','#1d4ed8','#facc15','band'],['Keizersvis',2,1,'tall','#1e3a8a','#fde047','stripes'],
+ ['Koffervis',2,2,'round','#facc15','#1e293b','spots'],['Picassovis',2,2,'oval','#f1f5f9','#0f172a','stripes'],
+ ['Leeuwvis',2,3,'tall','#b91c1c','#fef2f2','stripes'],['Mandarijnvis',2,3,'oval','#0ea5e9','#f97316','stripes'],
+ ['Regenboogpapegaai',2,4,'oval','#22c55e','#ec4899','band'],['Koraalkoning',2,4,'tall','#fb7185','#fde68a','spots'],
+ ['Makreel',3,0,'long','#1e40af','#93c5fd','stripes'],['Sardientje',3,0,'long','#cbd5e1','#64748b',''],
+ ['Tonijn',3,1,'shark','#1e3a8a','#cbd5e1','band'],['Zeebaars',3,1,'oval','#475569','#94a3b8',''],
+ ['Zwaardvis',3,2,'long','#334155','#94a3b8',''],['Maanvis',3,2,'round','#9ca3af','#e5e7eb',''],
+ ['Hamerhaai',3,3,'shark','#6b7280','#d1d5db',''],['Manta',3,3,'ray','#1f2937','#e5e7eb','spots'],
+ ['Blauwe Marlijn',3,4,'long','#1d4ed8','#38bdf8','stripes'],['Oceaanfeniks',3,4,'tall','#f97316','#facc15','band'],
+ ['Lantaarnvis',4,0,'oval','#1e293b','#67e8f9','spots'],['Bijlvis',4,0,'tall','#9ca3af','#e5e7eb','band'],
+ ['Zeeduivel',4,1,'round','#3f3f46','#a3e635','spots'],['Addervis',4,1,'long','#111827','#22d3ee','spots'],
+ ['Pelikaanaal',4,2,'long','#0f172a','#a78bfa','band'],['Glasinktvis',4,2,'squid','#e0f2fe','#7dd3fc','spots'],
+ ['Reuzeninktvis',4,3,'squid','#b91c1c','#fca5a5','spots'],['Spookhaai',4,3,'shark','#e5e7eb','#a5b4fc',''],
+ ['Kosmische Kwal',4,4,'jelly','#a78bfa','#f0abfc','spots'],['Leviathan',4,4,'shark','#1e1b4b','#22d3ee','stripes']
+].map((a,i)=>({id:'f'+(i+1),n:a[0],d:a[1],r:a[2],s:a[3],c1:a[4],c2:a[5],p:a[6]}));
+
+// tekent een vis als SVG (naar rechts kijkend); sil = silhouet voor nog niet gevangen vissen
+let svgN=0;
+function fishSVG(f,sil,cls){
+  const id='fc'+(++svgN),c1=sil?'currentColor':f.c1,c2=sil?'currentColor':f.c2;let body,tail,fin='',ex=68,ey=26,eye=true;
+  switch(f.s){
+    case 'long':body='<ellipse cx="54" cy="30" rx="38" ry="9"/>';tail='<path d="M18 30 L4 20 L8 30 L4 40Z"/>';fin='<path d="M40 23 Q56 12 74 23Z"/>';ex=82;ey=28;break;
+    case 'round':body='<circle cx="52" cy="30" r="20"/>';tail='<path d="M34 30 L18 19 L18 41Z"/>';fin='<path d="M46 12 Q52 4 58 12Z"/>';ex=63;ey=24;break;
+    case 'tall':body='<ellipse cx="52" cy="30" rx="22" ry="19"/>';tail='<path d="M32 30 L16 19 L16 41Z"/>';fin='<path d="M42 14 L52 1 L61 14Z M42 46 L52 59 L61 46Z"/>';ex=64;ey=25;break;
+    case 'shark':body='<path d="M12 30 Q40 15 90 28 Q95 30 90 32 Q40 44 12 30Z"/>';tail='<path d="M17 30 L2 13 L8 30 L2 47Z"/>';fin='<path d="M44 22 L53 6 L61 21Z"/>';ex=80;ey=27;break;
+    case 'ray':body='<path d="M52 8 L94 30 L52 52 L16 30Z"/>';tail='<path d="M18 29 L0 30 L18 31Z"/>';ex=72;ey=27;break;
+    case 'jelly':body='<path d="M24 32 Q24 6 50 6 Q76 6 76 32Z"/>';tail='<path d="M30 32 q4 8 0 16 M42 32 q4 10 0 22 M58 32 q4 10 0 22 M70 32 q4 8 0 16" fill="none" stroke-width="3" stroke-linecap="round"/>';eye=false;break;
+    case 'squid':body='<path d="M6 30 L28 18 Q62 16 66 30 Q62 44 28 42Z"/>';tail='<path d="M64 24 q14 -6 28 -2 M66 28 q14 0 30 2 M66 32 q14 2 28 8 M64 36 q12 6 22 12" fill="none" stroke-width="3" stroke-linecap="round"/>';ex=56;ey=27;break;
+    default:body='<ellipse cx="50" cy="30" rx="30" ry="16"/>';tail='<path d="M22 30 L6 16 L10 30 L6 44Z"/>';fin='<path d="M38 16 Q52 4 64 16Z"/>'}
+  const pat=f.p==='stripes'?[30,44,58,72].map(x=>'<rect x="'+x+'" y="0" width="5" height="60"/>').join('')
+    :f.p==='spots'?[[42,24],[56,34],[34,33],[64,22],[50,16]].map(([x,y])=>'<circle cx="'+x+'" cy="'+y+'" r="3"/>').join('')
+    :f.p==='band'?'<rect x="0" y="28" width="100" height="5"/>':'';
+  return '<svg viewBox="0 0 100 60" class="fish r'+f.r+(sil?' sil':'')+(cls?' '+cls:'')+'" aria-hidden="true"><defs><clipPath id="'+id+'">'+body+'</clipPath></defs>'
+    +'<g fill="'+c2+'" stroke="'+c2+'">'+tail+fin+'</g><g fill="'+c1+'">'+body+'</g>'
+    +(sil?'':'<g clip-path="url(#'+id+')" fill="'+c2+'" opacity=".9">'+pat+'</g>'+(eye?'<circle cx="'+ex+'" cy="'+ey+'" r="3.4" fill="#fff"/><circle cx="'+(ex+.8)+'" cy="'+ey+'" r="1.8" fill="#0f172a"/>':''))+'</svg>'}
+
+/* munten: verdiend (uit je voortgang) min uitgegeven */
+const COIN={gym:10,cardio:10,studie:5,overig:2};
+const coinFor=t=>(COIN[t.cat]||0)+(t.kind==='toets'?10:0);
+function earned(){let c=0;
+  for(const t of S.tasks)if(t.done)c+=coinFor(t);
+  for(const f of S.focus)c+=Math.floor(f.min/5);
+  c+=(S.workouts||[]).length*15+(S.badges||[]).length*25;
+  for(const w in S.bonus||{})c+=Object.keys(S.bonus[w]).length*50;
+  return c}
+const coins=()=>Math.max(0,earned()-(S.spent||0));
+// weekdoel gehaald? eenmalige bonus per doel per week
+function checkWeeklyBonus(){
+  const wk=ymd(monday(new Date())),w=weekStats(monday(new Date())),g=S.goals;S.bonus=S.bonus||{};const b=S.bonus[wk]=S.bonus[wk]||{};
+  const got=[];if(w.gym>=g.gym&&!b.gym){b.gym=1;got.push('Gymdoel')}if(w.cardio>=g.cardio&&!b.cardio){b.cardio=1;got.push('Cardiodoel')}if(w.studie>=g.studie&&!b.studie){b.studie=1;got.push('Schooldoel')}
+  if(!Object.keys(b).length)delete S.bonus[wk];
+  if(got.length){save();setTimeout(()=>toast('🎉 '+got.join(' + ')+' gehaald! +'+got.length*50+' 🪙'),1500)}}
+
+/* rollen */
+function roll(d){const D=DICE[d];if(coins()<D.p){toast('Nog '+(D.p-coins())+' 🪙 nodig');return}
+  let x=Math.random()*100,r=0;while(r<4&&x>=ODDS[r]){x-=ODDS[r];r++}
+  const opts=FISH.filter(f=>f.d===d&&f.r===r),f=opts[Math.floor(Math.random()*opts.length)];
+  S.spent=(S.spent||0)+D.p;S.fish=S.fish||{};const isNew=!S.fish[f.id];S.fish[f.id]=(S.fish[f.id]||0)+1;S.rolls=(S.rolls||0)+1;save();
+  const ov=$('rollOv'),box=$('rollBox');ov.hidden=false;
+  box.innerHTML='<div class="die" style="background:'+D.c+'">🎲</div><div class="sub" style="margin-top:14px">'+D.e+' '+D.n+'dobbelsteen rollen…</div>';
+  setTimeout(()=>{box.innerHTML='<div class="reveal" style="--rc:'+RARC[f.r]+'"><div class="rar">'+RAR[f.r]+'</div>'+fishSVG(f,false,'big')
+    +'<h2 style="margin:6px 0 4px">'+esc(f.n)+'</h2><div class="sub">'+(isNew?'✨ Nieuw in je aquarium!':'Je hebt er nu '+S.fish[f.id]+' van')+'</div>'
+    +'<div class="btns" style="margin-top:18px"><button class="btn ghost" data-act="again" data-d="'+d+'">Nog eens ('+D.p+' 🪙)</button><button class="btn" data-act="close">Naar aquarium</button></div></div>';render()},1400)}
+$('rollOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
+  if(b.dataset.act==='again')roll(+b.dataset.d);else{$('rollOv').hidden=true;show('aquarium')}});
+
+/* schermen */
+const coinChip=()=>'<div class="coinchip">🪙 '+coins()+'</div>';
+function renderAqua(){
+  const own=FISH.filter(f=>S.fish&&S.fish[f.id]),list=[];
+  for(const f of own)for(let k=0;k<Math.min(3,S.fish[f.id]);k++)list.push(f);
+  const vis=list.sort((a,b)=>b.r-a.r).slice(0,24); // max 24 vissen tegelijk in de tank
+  let seed=7;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280; // vaste "toeval" zodat vissen niet verspringen
+  $('aqWrap').innerHTML='<div class="row between"><h1>Aquarium</h1>'+coinChip()+'</div><div class="sub">'+own.length+' van de 50 soorten · tik op een vis</div>'
+    +'<div class="tank" id="tank">'+[12,30,55,78,90].map((x,i)=>'<span class="bubble" style="left:'+x+'%;animation-delay:-'+i*1.3+'s"></span>').join('')
+    +vis.map(f=>{const d=10+rnd()*14,dl=rnd()*d,w=f.r>=3?78:f.r>=2?66:56;
+      return '<div class="swim" data-f="'+f.id+'" style="top:'+(6+rnd()*62)+'%;--d:'+d.toFixed(1)+'s;--w:'+w+'px;animation-delay:-'+dl.toFixed(1)+'s"><div class="flip" style="--d:'+d.toFixed(1)+'s;animation-delay:-'+dl.toFixed(1)+'s"><div class="bob" style="animation-delay:-'+(rnd()*3).toFixed(1)+'s">'+fishSVG(f)+'</div></div></div>'}).join('')
+    +'<svg class="plants" viewBox="0 0 400 80" preserveAspectRatio="none"><path d="M30 80 Q20 50 34 30 Q44 50 36 80Z M50 80 Q60 40 48 14 Q70 40 60 80Z M330 80 Q320 44 340 20 Q350 50 344 80Z M356 80 Q370 54 362 36 Q380 56 368 80Z" fill="#15803d"/><path d="M180 80 Q186 60 200 58 Q214 60 220 80Z" fill="#78716c"/></svg><div class="sand"></div>'
+    +(own.length?'':'<div class="tankempty">Je aquarium is nog leeg.<br>Verdien munten en rol je eerste vis bij <b>🎲 Dobbelstenen</b>.</div>')+'</div>'
+    +'<h2>🪙 Zo verdien je munten</h2><div class="card earn">'
+    +[['🎯','Weekdoel gehaald (gym, cardio of school)','+50'],['🏋️','Training afgerond','+15'],['💪','Gym- of cardiotaak afgevinkt','+10'],['📝','Toets afgevinkt','+15'],['📚','Schooltaak afgevinkt','+5'],['🏅','Badge vrijgespeeld','+25'],['🎯','Focus (per 5 minuten)','+1'],['✨','Andere taak','+2']]
+      .map(([i,t,v])=>'<div class="row between"><span>'+i+' '+t+'</span><b>'+v+'</b></div>').join('')+'</div>'}
+function renderDice(){
+  const c=coins();
+  $('diceWrap').innerHTML='<div class="row between"><h1>Dobbelstenen</h1>'+coinChip()+'</div><div class="sub">Elke dobbelsteen heeft 10 vissen: 2 per zeldzaamheid.</div>'
+    +'<div class="odds">'+RAR.map((r,i)=>'<span><i style="background:'+RARC[i]+'"></i>'+r+' '+ODDS[i]+'%</span>').join('')+'</div>'
+    +DICE.map((D,d)=>{const fs=FISH.filter(f=>f.d===d),got=fs.filter(f=>S.fish&&S.fish[f.id]).length;
+      return '<div class="card dicecard" style="--dc:'+D.c+'"><div class="row between"><div><b style="font-size:18px">'+D.e+' '+D.n+'</b><div class="sub" style="font-size:12px">'+got+'/10 gevangen</div></div><div class="price">'+D.p+' 🪙</div></div>'
+        +'<div class="minifish">'+fs.map(f=>'<span title="'+(S.fish&&S.fish[f.id]?esc(f.n):'???')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!(S.fish&&S.fish[f.id]))+'</span>').join('')+'</div>'
+        +'<button class="btn" data-d="'+d+'"'+(c<D.p?' disabled':'')+'>'+(c<D.p?'Nog '+(D.p-c)+' 🪙 nodig':'🎲 Rollen')+'</button></div>'}).join('')}
+function renderDex(){
+  const own=FISH.filter(f=>S.fish&&S.fish[f.id]).length;
+  $('dexWrap').innerHTML='<div class="row between"><h1>Collectie</h1>'+coinChip()+'</div><div class="sub">'+own+' van de 50 vissen gevangen · '+(S.rolls||0)+'x gerold</div>'
+    +'<div class="bar" style="margin:10px 0 4px"><i style="width:'+own/50*100+'%"></i></div>'
+    +DICE.map((D,d)=>{const fs=FISH.filter(f=>f.d===d);
+      return '<h2>'+D.e+' '+D.n+' <span class="sub" style="font-size:13px;font-weight:600">'+fs.filter(f=>S.fish&&S.fish[f.id]).length+'/10</span></h2><div class="dex">'
+        +fs.map(f=>{const n=S.fish&&S.fish[f.id];return '<div class="dexcard'+(n?'':' locked')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!n)+'<b>'+(n?esc(f.n):'???')+'</b><span>'+RAR[f.r]+(n>1?' · ×'+n:'')+'</span></div>'}).join('')+'</div>'}).join('')}
+$('diceWrap').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(b&&!b.disabled)roll(+b.dataset.d)});
+$('aqWrap').addEventListener('click',e=>{const s=e.target.closest('.swim');if(!s)return;const f=FISH.find(x=>x.id===s.dataset.f);toast(f.n+' · '+RAR[f.r])});
+const AQ_VIEWS=['aquarium','dice','dex'];let lastAqua='aquarium';
+
 /* wisselen tussen Plannen en Sporten */
 const SPORT_VIEWS=['train','schemas','progress'];
 let lastPlan='today',lastSport='train';
-$('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='sport'?lastSport:lastPlan)});
+$('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='sport'?lastSport:b.dataset.m==='aqua'?lastAqua:lastPlan)});
 
 /* ---------- algemeen ---------- */
 let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
