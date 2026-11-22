@@ -218,6 +218,16 @@ h2{font-size:18px;margin:22px 0 10px}
 .chart2 .pt{fill:var(--gym);stroke:var(--card);stroke-width:2}
 .chart2 .xhair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
 .chcap{font-size:13px;margin-top:4px}
+.chart2 .lnc{stroke:var(--cardio)}
+.chart2 .ptc{fill:var(--cardio)}
+.chlabel{font-size:13px;font-weight:700;margin-bottom:2px}
+.chlabel span{font-weight:500;color:var(--muted);font-size:12px;margin-left:4px}
+.unitfield{position:relative}
+.unitfield span{position:absolute;right:14px;top:13px;color:var(--muted);font-weight:600}
+.timefields{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto;gap:6px;align-items:center;margin-bottom:12px}
+.timefields .field{margin:0;text-align:center}
+.timefields span{color:var(--muted);font-size:13px;font-weight:600}
+.pacebox{background:color-mix(in srgb,var(--cardio) 14%,var(--card));border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:15px}
 .newcard{border-left-color:var(--accent);border:2px dashed var(--accent);background:transparent;box-shadow:none}
 .newcard b{color:var(--accent)}
 .editbtn{margin-top:8px;padding:7px 12px;border-radius:999px;background:var(--card2);font-size:14px;font-weight:700;color:var(--accent)}
@@ -452,6 +462,24 @@ nav button.on{color:var(--accent)}
   <label class="toggle" id="exSaveWrap"><span>Ook bewaren in workout <b id="exSchemaName"></b></span><input type="checkbox" id="exSaveSchema" checked></label>
   <button class="btn" id="exSave">Opslaan</button>
   <button class="btn danger" id="exDel" style="margin-top:6px">Verwijderen uit schema</button>
+</div>
+
+<!-- formulier: cardio-workout -->
+<div class="sheet" id="cdSheet">
+  <div class="grab"></div>
+  <h2 style="margin-top:0">🏃 Cardio-workout</h2>
+  <label class="l">Wat heb je gedaan?</label>
+  <div class="seg" id="cdType" style="margin-bottom:14px"><button type="button" data-t="Lopen">🏃 Lopen</button><button type="button" data-t="Fietsen">🚴 Fietsen</button><button type="button" data-t="Zwemmen">🏊 Zwemmen</button><button type="button" data-t="Ander">✨ Ander</button></div>
+  <input class="field" id="cdName" placeholder="Wat voor cardio? (bv. roeien)" maxlength="30" hidden>
+  <label class="l" for="cdDist">Afstand</label>
+  <div class="unitfield"><input class="field" id="cdDist" inputmode="decimal" placeholder="5,0"><span id="cdUnit">km</span></div>
+  <label class="l">Tijd</label>
+  <div class="timefields"><input class="field" id="cdH" inputmode="numeric" placeholder="0" maxlength="2"><span>u</span><input class="field" id="cdM" inputmode="numeric" placeholder="25" maxlength="2"><span>min</span><input class="field" id="cdS" inputmode="numeric" placeholder="00" maxlength="2"><span>sec</span></div>
+  <label class="l" for="cdDate">Dag</label>
+  <input class="field" type="date" id="cdDate">
+  <div class="pacebox" id="cdPace">Vul je afstand en tijd in</div>
+  <div class="sub" id="cdErr" style="color:var(--danger);font-size:13px;margin:-6px 0 10px" hidden></div>
+  <button class="btn" id="cdSave">Opslaan</button>
 </div>
 
 <div class="restbar" id="restBar" hidden>
@@ -814,7 +842,7 @@ function openSheet(t,pre){
   $('back').classList.add('on');$('sheet').classList.add('on');$('sheet').scrollTop=0;
 }
 function closeSheet(){$('back').classList.remove('on');$('sheet').classList.remove('on');document.activeElement&&document.activeElement.blur()}
-$('fab').onclick=()=>openSheet();$('back').onclick=()=>{closeSheet();closeEx()};
+$('fab').onclick=()=>openSheet();$('back').onclick=()=>{closeSheet();closeEx();closeCardio()};
 $('tSave').onclick=()=>{
   let title=$('tTitle').value.trim()||autoName();
   const k=cat==='studie'?kind:null;if(k==='toets'&&title&&!/^toets/i.test(title))title='Toets '+title;
@@ -929,6 +957,7 @@ function renderTrain(){
     +'<h2>Mijn workouts</h2><div class="types">'+wtypes().map(t=>'<button class="typecard" data-act="open" data-type="'+esc(t)+'"><b>'+esc(t)+'</b><span>'+S.schemas[t].length+' oefening'+(S.schemas[t].length===1?'':'en')+'</span></button>').join('')
     +'<button class="typecard newcard" data-act="neww"><b>＋ Nieuwe workout</b><span>begin met 0 oefeningen</span></button></div>'
     +(wNew?'<div class="card" style="margin-top:10px"><label class="l" for="wNewName">Naam van je nieuwe workout</label><input class="field" id="wNewName" placeholder="bv. Push day, Armen, Benen…" maxlength="30"><div class="btns"><button class="btn ghost" data-act="newcancel">Annuleren</button><button class="btn" data-act="newsave">Maken</button></div></div>':'')
+    +cardioListHTML()
     +'<h2>Vorige trainingen</h2>'+(hist.length?'<div class="card" style="padding:4px 14px">'+hist.map(w=>{const d=parse(w.date),sets=w.ex.reduce((a,e)=>a+e.sets.length,0),vol=w.ex.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.kg*s.reps,0),0);
       return '<div class="hist"><div><b>'+esc(w.type)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+Math.round((w.end-w.start)/60000)+' min</div></div><div class="sub" style="text-align:right;font-size:12px">'+sets+' sets<br>'+Math.round(vol)+' kg</div></div>'}).join('')+'</div>':'<div class="empty">Nog geen trainingen gelogd.</div>');
   if(wNew)setTimeout(()=>{const i=$('wNewName');if(i)i.focus()},50)}
@@ -973,6 +1002,8 @@ function tickWorkout(){const e=$('wElapsed');if(e&&S.workout)e.textContent=mmss(
 function trainNav(a,b,i){
   const L=wDetail&&S.schemas[wDetail];
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur(); // anders wordt het scherm niet ververst
+  if(a==='cardio'){openCardio();return}
+  if(a==='rmcardio'){armed(b,'Zeker? Tik nogmaals',()=>{S.cardio=(S.cardio||[]).filter(c=>c.id!==b.dataset.id);save();render();toast('Cardio-workout verwijderd')});return}
   if(a==='open'){if(!b.dataset.type)return;wDetail=b.dataset.type;wRename=false;wNew=false;renderTrain();window.scrollTo(0,0);return}
   if(a==='back'){wDetail=null;wRename=false;renderTrain();window.scrollTo(0,0);return}
   if(a==='neww'){wNew=true;renderTrain();return}
@@ -1031,6 +1062,47 @@ function finishWorkout(){
   t.done=true;S.workout=null;stopRest();save();render();
   toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
   if(prs.length)setTimeout(()=>toast('🏆 Nieuw PR: '+prs[0]),2000)}
+
+/* ===== cardio-workouts: afstand + tijd -> gemiddelde pace ===== */
+const CTYPE={Lopen:{e:'🏃',unit:'km'},Fietsen:{e:'🚴',unit:'km'},Zwemmen:{e:'🏊',unit:'m'},Ander:{e:'✨',unit:'km'}};
+let cdT='Lopen';
+const fmtDur=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':'+pad(m):m)+':'+pad(x)};
+const fmtKm=v=>String(+v.toFixed(v<10?2:1)).replace('.',',');
+// pace per soort: lopen/ander = min per km, fietsen = km/u, zwemmen = min per 100 m
+function paceOf(type,km,sec){if(type==='Fietsen')return{v:km/(sec/3600),txt:(km/(sec/3600)).toFixed(1).replace('.',',')+' km/u',higher:true};
+  if(type==='Zwemmen')return{v:sec/(km*10),txt:fmtDur(sec/(km*10))+' /100 m',higher:false};
+  return{v:sec/km,txt:fmtDur(sec/km)+' /km',higher:false}}
+function setCdType(t){cdT=t;document.querySelectorAll('#cdType button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('cdUnit').textContent=CTYPE[t].unit;$('cdDist').placeholder=t==='Zwemmen'?'1000':'5,0';$('cdName').hidden=t!=='Ander';cdPreview()}
+function cdRead(){const d=num($('cdDist').value),sec=(num($('cdH').value)||0)*3600+(num($('cdM').value)||0)*60+(num($('cdS').value)||0);
+  return{km:d?(cdT==='Zwemmen'?d/1000:d):0,sec}}
+function cdPreview(){const{km,sec}=cdRead();$('cdErr').hidden=true;
+  $('cdPace').innerHTML=km>0&&sec>0?'Gemiddelde pace: <b>'+paceOf(cdT,km,sec).txt+'</b>'+(cdT==='Lopen'||cdT==='Ander'?' · '+(km/(sec/3600)).toFixed(1).replace('.',',')+' km/u':''):'Vul je afstand en tijd in'}
+function openCardio(){setCdType(cdT);['cdDist','cdH','cdM','cdS','cdName'].forEach(i=>$(i).value='');$('cdDate').value=today();$('cdErr').hidden=true;cdPreview();
+  $('back').classList.add('on');$('cdSheet').classList.add('on');$('cdSheet').scrollTop=0}
+function closeCardio(){$('cdSheet').classList.remove('on');$('back').classList.remove('on');document.activeElement&&document.activeElement.blur()}
+$('cdType').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setCdType(b.dataset.t)});
+['cdDist','cdH','cdM','cdS'].forEach(i=>$(i).addEventListener('input',cdPreview));
+$('cdSave').onclick=()=>{const{km,sec}=cdRead(),err=$('cdErr');
+  if(!(km>0)){err.textContent='Vul je afstand in';err.hidden=false;$('cdDist').focus();return}
+  if(!(sec>0)){err.textContent='Vul je tijd in';err.hidden=false;$('cdM').focus();return}
+  const type=cdT,name=type==='Ander'?($('cdName').value.trim()||'Cardio'):type,date=$('cdDate').value||today(),p=paceOf(type,km,sec);
+  S.cardio=S.cardio||[];const prev=S.cardio.filter(c=>c.type===type);
+  const best=prev.length?prev.reduce((b,c)=>{const v=paceOf(type,c.km,c.sec).v;return p.higher?Math.max(b,v):Math.min(b,v)},p.higher?-1:Infinity):null;
+  const longest=prev.length?Math.max(...prev.map(c=>c.km)):null;
+  S.cardio.push({id:uid(),type,name,date,km,sec});
+  // geplande cardiotaak van die dag afvinken, of er een aanmaken (telt mee voor je cardiodoel)
+  const mins=Math.max(1,Math.round(sec/60));
+  let t=S.tasks.find(x=>x.cat==='cardio'&&x.date===date&&!x.done&&x.sub===type)||S.tasks.find(x=>x.cat==='cardio'&&x.date===date&&!x.done);
+  if(!t){const n=new Date(),from=pad(n.getHours())+':'+pad(Math.floor(n.getMinutes()/15)*15);t={id:uid(),title:name,cat:'cardio',sub:type==='Ander'?'Ander':type,date,time:from,end:fromMin(toMin(from)+mins),dur:mins,done:false};S.tasks.push(t)}
+  t.done=true;t.dur=mins;if(t.time)t.end=fromMin(toMin(t.time)+mins);
+  save();closeCardio();render();
+  toast(CTYPE[type].e+' '+fmtKm(type==='Zwemmen'?km*1000:km)+' '+CTYPE[type].unit+' in '+fmtDur(sec)+' · '+p.txt+' · +'+(15+COIN.cardio)+' 🪙');
+  const pr=best!==null&&(p.higher?p.v>best:p.v<best),far=longest!==null&&km>longest;
+  if(pr||far)setTimeout(()=>toast(pr?'🏆 Nieuw record: snelste '+type.toLowerCase()+' ooit!':'🏆 Nieuw record: verste afstand!'),2200)};
+function cardioListHTML(){const L=(S.cardio||[]).slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,6);
+  return '<h2>🏃 Cardio</h2><button class="btn ghost" data-act="cardio" style="margin-bottom:10px">+ Cardio-workout loggen</button>'
+    +(L.length?'<div class="card" style="padding:4px 14px">'+L.map(c=>{const d=parse(c.date);return '<div class="hist"><div><b>'+CTYPE[c.type].e+' '+esc(c.name)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+fmtKm(c.type==='Zwemmen'?c.km*1000:c.km)+' '+CTYPE[c.type].unit+' in '+fmtDur(c.sec)+'</div></div><div style="text-align:right"><b style="font-size:14px">'+paceOf(c.type,c.km,c.sec).txt+'</b><div><button class="linkbtn" data-act="rmcardio" data-id="'+c.id+'" style="font-size:12px;color:var(--muted)">verwijderen</button></div></div></div>'}).join('')+'</div>':'<div class="empty" style="padding:10px">Nog geen cardio gelogd.</div>')}
 
 /* rusttimer + melding */
 function startRest(sec,next){S.restTotal=sec;S.restEnd=Date.now()+sec*1000;S.restNext=next||'';save();tickRest()}
@@ -1128,15 +1200,50 @@ function renderProgress(){
   const names=[...new Set(W.flatMap(w=>w.ex.map(e=>e.n)))];
   const rows=names.map(n=>{const h=history(n),tops=h.map(x=>bestSet(x.sets).kg),pr=prOf(n);return{n,h,tops,pr,last:h[h.length-1].date}}).sort((a,b)=>a.last<b.last?1:-1);
   $('progWrap').innerHTML='<h1>Vooruitgang</h1><div class="sub">Je records en hoe je sterker wordt. Tik op een punt in de grafiek voor details.</div>'
-    +'<div class="row" style="gap:8px;margin-top:14px"><div class="stat"><b>'+W.length+'</b><span>trainingen</span></div><div class="stat"><b>'+W.filter(w=>w.date>=wk).length+'</b><span>deze week</span></div><div class="stat"><b>'+(vol>=1000?fmtKg((vol/1000).toFixed(1))+'t':Math.round(vol)+' kg')+'</b><span>totaal gelift</span></div></div>'
-    +'<h2>📈 Per oefening</h2>'
+    +'<div class="row" style="gap:8px;margin-top:14px"><div class="stat"><b>'+(W.length+(S.cardio||[]).length)+'</b><span>workouts</span></div><div class="stat"><b>'+(W.filter(w=>w.date>=wk).length+(S.cardio||[]).filter(c=>c.date>=wk).length)+'</b><span>deze week</span></div><div class="stat"><b>'+(vol>=1000?fmtKg((vol/1000).toFixed(1))+'t':Math.round(vol)+' kg')+'</b><span>totaal gelift</span></div></div>'
+    +cardioProgressHTML()
+    +'<h2>🏋️ Kracht: per oefening</h2>'
     +(rows.length?rows.map(r=>{const diff=r.tops[r.tops.length-1]-r.tops[0],sel=Math.min(chartSel[r.n]??r.h.length-1,r.h.length-1);
       return '<div class="card"><div class="row between"><b>'+esc(r.n)+'</b><span class="chip">🏆 '+fmtKg(r.pr.kg)+' kg × '+r.pr.reps+'</span></div>'
         +'<div class="sub" style="font-size:12px;margin:3px 0 6px">'+r.h.length+'x getraind'+(r.h.length>1?' · '+(diff>0?'📈 +'+fmtKg(diff)+' kg sinds je begon':diff<0?fmtKg(diff)+' kg sinds je begon':'zelfde gewicht als de eerste keer'):'')+'</div>'
         +'<div class="chwrap">'+chartSVG(r.n,sel)+'</div></div>'}).join('')
      :'<div class="empty">Nog geen trainingen.<br>Start je eerste training bij <b>Training</b>.</div>')}
+/* algemene lijngrafiek (cardio): pts=[{v,cap}], opts.fmt = as-label, opts.invert = laagste waarde bovenaan */
+const chartMeta={};
+function lineChart(key,pts,opts,sel){
+  chartMeta[key]=i=>lineChart(key,pts,opts,i);if(sel==null)sel=chartSel[key]??pts.length-1;sel=Math.min(sel,pts.length-1);
+  const W=320,H=160,pl=50,pr=14,pt=12,pb=28,pw=W-pl-pr,ph=H-pt-pb,vs=pts.map(p=>p.v);
+  let lo=Math.min(...vs),hi=Math.max(...vs);const sp=hi-lo||Math.abs(hi)*.2||1;lo-=sp*.15;hi+=sp*.15;if(lo<0&&Math.min(...vs)>=0)lo=0;
+  const y=v=>{const t=(v-lo)/(hi-lo);return R1(opts.invert?pt+t*ph:pt+ph-t*ph)},x=i=>R1(pts.length===1?pl+pw/2:pl+i*(pw/(pts.length-1)));
+  let g='';for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4,yy=y(v);g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+yy+'" y2="'+yy+'" class="gmaj"/><text x="'+(pl-6)+'" y="'+R1(+yy+3.5)+'" text-anchor="end" class="axl">'+opts.fmt(v)+'</text>'}
+  const xe=Math.max(1,Math.ceil(pts.length/8));pts.forEach((p,i)=>{if(i%xe===0||i===pts.length-1)g+='<text x="'+x(i)+'" y="'+(H-pb+16)+'" text-anchor="middle" class="axl">'+(i+1)+'</text>'});
+  const line=pts.map((p,i)=>(i?'L':'M')+x(i)+' '+y(p.v)).join(' ');
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="chart2 chart3" data-key="'+key+'" data-n="'+pts.length+'" role="img" aria-label="grafiek">'+g
+    +'<line x1="'+x(sel)+'" x2="'+x(sel)+'" y1="'+pt+'" y2="'+(pt+ph)+'" class="xhair"/>'+(pts.length>1?'<path d="'+line+'" class="ln lnc"/>':'')
+    +pts.map((p,i)=>'<circle cx="'+x(i)+'" cy="'+y(p.v)+'" r="'+(i===sel?6:4.5)+'" class="pt ptc"/>').join('')+'</svg>'
+    +'<div class="chcap">'+pts[sel].cap+'</div>'}
+const dayLbl=s=>{const d=parse(s);return DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]};
+function cardioProgressHTML(){const C=S.cardio||[];
+  if(!C.length)return '<h2>🏃 Cardio</h2><div class="empty" style="padding:10px">Nog geen cardio gelogd.<br>Log je eerste bij <b>Training</b>.</div>';
+  let out='<h2>🏃 Cardio</h2>';
+  for(const type of Object.keys(CTYPE)){const L=C.filter(c=>c.type===type).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);if(!L.length)continue;
+    const P=L.map(c=>paceOf(type,c.km,c.sec)),hi=P[0].higher,u=CTYPE[type].unit,dist=c=>fmtKm(type==='Zwemmen'?c.km*1000:c.km)+' '+u;
+    const bestI=P.reduce((b,p,i)=>(hi?p.v>P[b].v:p.v<P[b].v)?i:b,0),longI=L.reduce((b,c,i)=>c.km>L[b].km?i:b,0),tot=L.reduce((a,c)=>a+c.km,0);
+    const cap=(c,i)=>'<b>Workout '+(i+1)+'</b> · '+dayLbl(c.date)+' · '+dist(c)+' in '+fmtDur(c.sec)+' · <b>'+P[i].txt+'</b>';
+    const paceFmt=type==='Fietsen'?v=>v.toFixed(1).replace('.',','):v=>fmtDur(v);
+    out+='<div class="card"><div class="row between"><b>'+CTYPE[type].e+' '+type+'</b><span class="chip">🏆 '+P[bestI].txt+'</span></div>'
+      +'<div class="row" style="gap:6px;margin:10px 0"><div class="stat"><b>'+L.length+'x</b><span>gedaan</span></div><div class="stat"><b>'+fmtKm(type==='Zwemmen'?tot*1000:tot)+'</b><span>'+u+' totaal</span></div><div class="stat"><b>'+dist(L[longI])+'</b><span>verste</span></div></div>'
+      +'<div class="chlabel">Gemiddelde pace <span>'+(hi?'km/u · hoger = sneller':(type==='Zwemmen'?'per 100 m':'per km')+' · hoger = sneller')+'</span></div>'
+      +'<div class="chwrap">'+lineChart('cp-'+type,L.map((c,i)=>({v:P[i].v,cap:cap(c,i)})),{fmt:paceFmt,invert:!hi})+'</div>'
+      +'<div class="chlabel" style="margin-top:14px">Afstand <span>'+u+'</span></div>'
+      +'<div class="chwrap">'+lineChart('cd-'+type,L.map((c,i)=>({v:type==='Zwemmen'?c.km*1000:c.km,cap:cap(c,i)})),{fmt:v=>fmtKm(v)})+'</div></div>'}
+  return out}
 // punt kiezen met tikken of muis (dichtstbijzijnde workout)
-function pickPoint(e){const svg=e.target.closest('svg.chart2');if(!svg)return;const name=svg.dataset.n,n=history(name).length;
+function pickPoint(e){
+  const c3=e.target.closest('svg.chart3');
+  if(c3){const k=c3.dataset.key,n=+c3.dataset.n,r=c3.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*320;
+    const i=n===1?0:Math.max(0,Math.min(n-1,Math.round((vx-50)/((320-50-14)/(n-1)))));if(chartSel[k]===i)return;chartSel[k]=i;c3.parentElement.innerHTML=chartMeta[k](i);return}
+  const svg=e.target.closest('svg.chart2');if(!svg)return;const name=svg.dataset.n,n=history(name).length;
   const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*320;
   const i=n===1?0:Math.max(0,Math.min(n-1,Math.round((vx-50)/((320-50-14)/(n-1)))));
   if(chartSel[name]===i)return;chartSel[name]=i;svg.parentElement.innerHTML=chartSVG(name,i)}
@@ -1427,7 +1534,7 @@ const coinFor=t=>(COIN[t.cat]||0)+(t.kind==='toets'?10:0);
 function earned(){let c=0;
   for(const t of S.tasks)if(t.done)c+=coinFor(t);
   for(const f of S.focus)c+=Math.floor(f.min/5);
-  c+=(S.workouts||[]).length*15+(S.badges||[]).length*25;
+  c+=(S.workouts||[]).length*15+(S.cardio||[]).length*15+(S.badges||[]).length*25;
   for(const w in S.bonus||{})c+=Object.keys(S.bonus[w]).length*50;
   return c}
 const coins=()=>Math.max(0,earned()-(S.spent||0));
@@ -1484,7 +1591,7 @@ function renderAqua(){
     +'</svg><div class="sand"></div>'
     +(own.length?'':'<div class="tankempty">Je aquarium is nog leeg.<br>Verdien munten en rol je eerste vis bij <b>🎲 Dobbelstenen</b>.</div>')+'</div>'
     +'<h2>🪙 Zo verdien je munten</h2><div class="card earn">'
-    +[['🎯','Weekdoel gehaald (gym, cardio of school)','+50'],['🏋️','Training afgerond','+15'],['💪','Gym- of cardiotaak afgevinkt','+10'],['📝','Toets afgevinkt','+15'],['📚','Schooltaak afgevinkt','+5'],['🏅','Badge vrijgespeeld','+25'],['🎯','Focus (per 5 minuten)','+1'],['✨','Andere taak','+2']]
+    +[['🎯','Weekdoel gehaald (gym, cardio of school)','+50'],['🏋️','Training afgerond','+15'],['🏃','Cardio-workout gelogd','+15'],['💪','Gym- of cardiotaak afgevinkt','+10'],['📝','Toets afgevinkt','+15'],['📚','Schooltaak afgevinkt','+5'],['🏅','Badge vrijgespeeld','+25'],['🎯','Focus (per 5 minuten)','+1'],['✨','Andere taak','+2']]
       .map(([i,t,v])=>'<div class="row between"><span>'+i+' '+t+'</span><b>'+v+'</b></div>').join('')+'</div>'}
 function renderDice(){
   const c=coins();
