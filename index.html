@@ -1386,7 +1386,10 @@ $('restAdj').addEventListener('click',e=>{const b=e.target.closest('button[data-
   S.restEnd+=d*1000;const left=Math.ceil((S.restEnd-Date.now())/1000);
   if(left<=0){stopRest();save();toast('⏩ Rust voorbij, volgende set!');return}
   S.restTotal=Math.max(left,(S.restTotal||S.rest)+d);save();tickRest();
-  pushSchedule('rest',left,'⏱ Rust voorbij!',restPushBody())});
+  pushSchedule('rest',left,'⏱ Rust voorbij!',restPushBody());
+  // automatische iPhone-timer: na het tikken één keer opnieuw zetten met de nieuwe tijd
+  if(S.iosTimer&&S.iosAuto){clearTimeout(iosAdjT);iosAdjT=setTimeout(()=>{if(S.restEnd)runShortcut('LOCKED rust',Math.max(1,Math.ceil((S.restEnd-Date.now())/1000)))},1500)}});
+let iosAdjT=null;
 $('restSkip').onclick=()=>{stopRest();save()};
 setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
 
@@ -2063,13 +2066,19 @@ async function pushDisable(){S.pushOn=false;save();
   try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
     if(sub){try{await sb('/rest/v1/push_subs?endpoint=eq.'+encodeURIComponent(sub.endpoint),{method:'DELETE'})}catch(e){}await sub.unsubscribe()}}catch(e){}}
 // een melding inplannen of schrappen; slot = 'rest' of 'focus' (per slot staat er max. 1 klaar)
-async function pushSchedule(slot,sec,title,body){if(!pushReady())return;
-  try{await pushCancel(slot);
-    const r=await sb('/rest/v1/push_queue?select=id',{method:'POST',headers:{Prefer:'return=representation'},
-      body:{user_id:auth.uid,send_at:new Date(Date.now()+Math.max(1,sec)*1000).toISOString(),title,body,tag:slot}});
-    S.pushIds=S.pushIds||{};S.pushIds[slot]=r&&r[0]&&r[0].id;save()}catch(e){}}
-async function pushCancel(slot){const id=S.pushIds&&S.pushIds[slot];if(!id)return;S.pushIds[slot]=null;save();
-  try{await sb('/rest/v1/push_queue?id=eq.'+id,{method:'DELETE'})}catch(e){}}
+// Alles na elkaar (nooit twee tegelijk) en kort wachten bij snel tikken (−15s, +30s…),
+// zodat er nooit een oude melding blijft hangen. Schrappen gebeurt per soort (tag), dus ook "verweesde" meldingen verdwijnen.
+let pushChain=Promise.resolve();const pushWait={};
+const pushRun=fn=>(pushChain=pushChain.then(fn).catch(()=>{}));
+const pushDel=slot=>sb('/rest/v1/push_queue?user_id=eq.'+auth.uid+'&tag=eq.'+slot,{method:'DELETE'});
+function pushSchedule(slot,sec,title,body){if(!pushReady())return;const at=Date.now()+Math.max(1,sec)*1000;
+  clearTimeout(pushWait[slot]);
+  pushWait[slot]=setTimeout(()=>pushRun(async()=>{if(!pushReady())return;await pushDel(slot);
+    if(at-Date.now()<1500)return; // rust is (bijna) al voorbij: geen melding meer nodig
+    await sb('/rest/v1/push_queue',{method:'POST',headers:{Prefer:'return=minimal'},
+      body:{user_id:auth.uid,send_at:new Date(at).toISOString(),title,body,tag:slot}})}),600)}
+function pushCancel(slot){clearTimeout(pushWait[slot]);if(!pushReady())return Promise.resolve();
+  return pushRun(()=>pushDel(slot))}
 
 /* --- link uit een mail (bevestigen of wachtwoord vergeten) --- */
 (function(){const h=new URLSearchParams(location.hash.slice(1));
