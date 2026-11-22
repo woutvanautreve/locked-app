@@ -122,12 +122,23 @@ h2{font-size:18px;margin:22px 0 10px}
 .hist{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .hist:last-child{border-bottom:0}
 .restbar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;background:var(--text);color:var(--bg);border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:10px;z-index:7;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.restbar{flex-wrap:wrap;row-gap:8px}
+.restbar>div:first-child{flex:1;min-width:0}
+.restbar>div:first-child .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.restbar .bar{order:3;flex:1 1 100%!important}
 .restbar .sub{color:inherit;opacity:.7}
 .restbar b{font-size:22px;font-variant-numeric:tabular-nums}
 .restbar .bar{background:rgba(127,127,127,.35)}
 .restbar .chip{background:rgba(127,127,127,.3);color:inherit}
 .exrow{display:flex;align-items:center;gap:6px;background:var(--card);border-radius:14px;padding:10px 12px;margin-bottom:6px;box-shadow:var(--shadow)}
-.exrow b{flex:1;font-weight:600}
+.exrow .exbody{flex:1;text-align:left;min-width:0}
+.exrow .exbody b{display:block;font-weight:600}
+.exrow .exbody span{font-size:12px;color:var(--muted)}
+.bigstep{display:flex;align-items:center;justify-content:center;gap:24px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:14px}
+.bigstep button{width:48px;height:48px;border-radius:12px;background:var(--card2);font-size:24px;font-weight:700}
+.bigstep b{font-size:30px;min-width:40px;text-align:center}
+.restbar.ring{animation:ringing .5s ease 3}
+@keyframes ringing{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .exrow button{width:32px;height:32px;border-radius:9px;background:var(--card2);font-weight:700}
 .pr{padding:12px 0;border-bottom:1px solid var(--line)}
 .pr:last-child{border-bottom:0}
@@ -328,16 +339,35 @@ nav button.on{color:var(--accent)}
   <h1>Schema's</h1>
   <div class="sub">Kies welke oefeningen bij elke training horen.</div>
   <div class="opts" id="schemaSeg" style="margin-top:14px"></div>
+  <div class="sub" style="font-size:13px;margin:-6px 0 10px">Tik op een oefening om sets of rusttijd te wijzigen.</div>
   <div id="schemaList"></div>
-  <div class="row" style="gap:8px;margin-top:10px"><input class="field" id="exNew" placeholder="Oefening toevoegen…" maxlength="40" style="margin:0"><button class="btn" id="exAdd" style="width:auto;padding:0 20px;align-self:stretch">+</button></div>
-  <h2>Rusttijd tussen sets</h2>
+  <button class="btn" id="exAdd" style="margin-top:10px">+ Eigen oefening maken</button>
+  <h2>Standaard rusttijd</h2>
+  <div class="sub" style="font-size:13px;margin:-6px 0 10px">Voor oefeningen zonder eigen rusttijd.</div>
   <div class="seg" id="restSeg"></div>
+  <h2>🔔 Melding als je rust voorbij is</h2>
+  <div class="card"><div class="row between"><div class="sub" id="notifTxt" style="font-size:14px">…</div><button class="addday" id="notifBtn">Aanzetten</button></div></div>
 </div></section>
 
 <section class="view" id="v-progress"><div class="wrap" id="progWrap"></div></section>
 
+<!-- formulier: eigen oefening -->
+<div class="sheet" id="exSheet">
+  <div class="grab"></div>
+  <h2 style="margin-top:0" id="exTitle">Nieuwe oefening</h2>
+  <label class="l" for="exName">Naam</label>
+  <input class="field" id="exName" placeholder="bv. Incline dumbbell press" maxlength="40">
+  <label class="l">Aantal sets</label>
+  <div class="bigstep"><button type="button" id="exSetsMin" aria-label="Minder sets">−</button><b id="exSetsVal">3</b><button type="button" id="exSetsPlus" aria-label="Meer sets">+</button></div>
+  <label class="l">Rusttijd tussen sets</label>
+  <div class="opts" id="exRest"></div>
+  <label class="toggle" id="exSaveWrap"><span>Ook bewaren in schema <b id="exSchemaName"></b></span><input type="checkbox" id="exSaveSchema" checked></label>
+  <button class="btn" id="exSave">Opslaan</button>
+  <button class="btn danger" id="exDel" style="margin-top:6px">Verwijderen uit schema</button>
+</div>
+
 <div class="restbar" id="restBar" hidden>
-  <div><div class="sub" style="font-size:12px">Rust</div><b id="restTime">1:30</b></div>
+  <div><div class="sub" style="font-size:12px" id="restLbl">Rust</div><b id="restTime">1:30</b></div>
   <div class="bar" style="flex:1"><i id="restProg"></i></div>
   <button class="chip" id="restPlus">+30s</button><button class="chip" id="restSkip">Klaar</button>
 </div>
@@ -553,6 +583,7 @@ function renderBadges(){
     return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')}
 function render(){
   if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));if(!S.workouts)S.workouts=[];if(!S.rest)S.rest=90; // ook na "Alles wissen"
+  for(const k in S.schemas)S.schemas[k]=S.schemas[k].map(x=>typeof x==='string'?{n:x,sets:3,rest:0}:x); // oud formaat omzetten
   renderToday();renderWeek();renderGoals();renderFocus();renderBadges();
   // tijdens het typen in een set niet opnieuw tekenen (anders verlies je je cursor)
   if(!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#trainWrap')))renderTrain();
@@ -686,7 +717,7 @@ function openSheet(t,pre){
   $('back').classList.add('on');$('sheet').classList.add('on');$('sheet').scrollTop=0;
 }
 function closeSheet(){$('back').classList.remove('on');$('sheet').classList.remove('on');document.activeElement&&document.activeElement.blur()}
-$('fab').onclick=()=>openSheet();$('back').onclick=closeSheet;
+$('fab').onclick=()=>openSheet();$('back').onclick=()=>{closeSheet();closeEx()};
 $('tSave').onclick=()=>{
   let title=$('tTitle').value.trim()||autoName();
   const k=cat==='studie'?kind:null;if(k==='toets'&&title&&!/^toets/i.test(title))title='Toets '+title;
@@ -778,8 +809,12 @@ function hint(ex,j,last){const p=j>0?ex.sets[j-1]:null;
   if(p&&(p.kg!==''||p.reps!==''))return{kg:p.kg,reps:p.reps};
   const l=last&&(last[j]||last[last.length-1]);return l?{kg:l.kg,reps:l.reps}:{kg:'',reps:''}}
 
+const newSets=n=>Array.from({length:n},()=>({kg:'',reps:'',done:false}));
+const restOf=ex=>ex.rest||S.rest;
+const fmtRest=s=>s<=90?s+' sec':s%60?Math.floor(s/60)+':'+pad(s%60)+' min':s/60+' min';
 function startWorkout(type){
-  S.workout={type,start:Date.now(),ex:(S.schemas[type]||[]).map(n=>{const l=lastOf(n);return{n,sets:Array.from({length:Math.max(3,l?l.length:3)},()=>({kg:'',reps:'',done:false}))}})};
+  askNotify(); // eerste keer: toestemming vragen voor meldingen (moet na een tik)
+  S.workout={type,start:Date.now(),ex:(S.schemas[type]||[]).map(x=>({n:x.n,rest:x.rest||0,sets:newSets(x.sets||3)}))};
   save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
 
 function renderTrain(){
@@ -796,14 +831,15 @@ function renderTrain(){
   el.innerHTML='<div class="row between" style="margin-top:8px"><div><div class="sub">Bezig met</div><h1 style="margin-top:0">'+esc(W.type)+'</h1></div><div class="chip" id="wElapsed">0:00</div></div>'
     +W.ex.map((ex,i)=>{const last=lastOf(ex.n),pr=prOf(ex.n);
       return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b><button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen">✕</button></div>'
-        +'<div class="sub">'+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
+        +'<div class="sub">⏱ '+fmtRest(restOf(ex))+' rust · '+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
         +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span></span></div>'
         +ex.sets.map((s,j)=>{const h=hint(ex,j,last);return '<div class="setrow'+(s.done?' done':'')+'"><span>'+(j+1)+'</span>'
           +'<input inputmode="decimal" data-i="'+i+'" data-j="'+j+'" data-f="kg" value="'+esc(s.kg)+'" placeholder="'+esc(h.kg)+'" aria-label="kilo">'
           +'<input inputmode="numeric" data-i="'+i+'" data-j="'+j+'" data-f="reps" value="'+esc(s.reps)+'" placeholder="'+esc(h.reps)+'" aria-label="herhalingen">'
           +'<button class="setchk" data-act="set" data-i="'+i+'" data-j="'+j+'" aria-label="Set klaar">✓</button></div>'}).join('')
-        +'<button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button></div>'}).join('')
-    +'<div class="row" style="gap:8px;margin:4px 0 16px"><input class="field" id="wAddEx" placeholder="Oefening toevoegen…" maxlength="40" style="margin:0"><button class="btn" data-act="addex" style="width:auto;padding:0 20px;align-self:stretch">+</button></div>'
+        +'<div class="row" style="gap:18px"><button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button>'
+        +(ex.sets.length>1?'<button class="linkbtn" data-act="rmset" data-i="'+i+'" style="color:var(--danger)">− Set</button>':'')+'</div></div>'}).join('')
+    +'<button class="btn ghost" data-act="addex" style="margin:4px 0 16px">+ Oefening toevoegen</button>'
     +'<button class="btn" data-act="finish">✅ Training afronden</button><button class="btn danger" data-act="cancel" style="margin-top:6px">Training annuleren</button>';
   tickWorkout()}
 function tickWorkout(){const e=$('wElapsed');if(e&&S.workout)e.textContent=mmss((Date.now()-S.workout.start)/1000)}
@@ -818,10 +854,13 @@ $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]
     const h=hint(ex,j,lastOf(ex.n));if(s.kg==='')s.kg=String(h.kg??'');if(s.reps==='')s.reps=String(h.reps??'');
     if(num(s.reps)===null||num(s.reps)<=0){s.reps='';toast('Vul je herhalingen in');renderTrain();return}
     if(s.kg===''||num(s.kg)===null)s.kg='0';
-    s.done=true;save();renderTrain();startRest();return}
-  if(a==='addset'){const l=W.ex[i].sets;l.push({kg:'',reps:'',done:false});save();renderTrain();return}
+    s.done=true;save();renderTrain();
+    // laatste set van de laatste oefening: geen rust meer nodig
+    if(!(i===W.ex.length-1&&ex.sets.every(x=>x.done)))startRest(restOf(ex),ex.sets.every(x=>x.done)?(W.ex[i+1]||{}).n:ex.n);return}
+  if(a==='addset'){W.ex[i].sets.push({kg:'',reps:'',done:false});save();renderTrain();return}
+  if(a==='rmset'){const l=W.ex[i].sets;if(l.length>1){l.pop();save();renderTrain()}return}
   if(a==='rmex'){armed(b,'Weg?',()=>{W.ex.splice(i,1);save();renderTrain()});return}
-  if(a==='addex'){const n=$('wAddEx').value.trim();if(!n){$('wAddEx').focus();return}W.ex.push({n,sets:[0,1,2].map(()=>({kg:'',reps:'',done:false}))});save();renderTrain();return}
+  if(a==='addex'){openEx({mode:'workout',type:W.type});return}
   if(a==='cancel'){armed(b,'Zeker? Tik nogmaals om te annuleren',()=>{S.workout=null;stopRest();save();render();toast('Training geannuleerd')});return}
   if(a==='finish')finishWorkout()});
 
@@ -840,15 +879,30 @@ function finishWorkout(){
   toast('💪 Training opgeslagen! +'+XP.gym+' XP');
   if(prs.length)setTimeout(()=>toast('🏆 Nieuw PR: '+prs[0]),2000)}
 
-/* rusttimer */
-let restTotal=S.rest;
-function startRest(){restTotal=S.rest;S.restEnd=Date.now()+S.rest*1000;save();tickRest()}
+/* rusttimer + melding */
+function startRest(sec,next){S.restTotal=sec;S.restEnd=Date.now()+sec*1000;S.restNext=next||'';save();tickRest()}
 function stopRest(){S.restEnd=null;$('restBar').hidden=true}
 function tickRest(){if(!S.restEnd){$('restBar').hidden=true;return}
   const left=Math.max(0,(S.restEnd-Date.now())/1000);
-  if(left<=0){stopRest();save();beep();toast('⏱ Rust voorbij, volgende set!');return}
-  $('restBar').hidden=!['train'].includes(view);$('restTime').textContent=mmss(Math.ceil(left));$('restProg').style.width=(100-left/restTotal*100)+'%'}
-$('restPlus').onclick=()=>{S.restEnd+=30000;restTotal+=30;save();tickRest()};
+  if(left<=0){const nx=S.restNext;stopRest();save();restDone(nx);return}
+  $('restBar').hidden=view!=='train';$('restLbl').textContent=S.restNext?'Rust · straks '+S.restNext:'Rust';
+  $('restTime').textContent=mmss(Math.ceil(left));$('restProg').style.width=(100-left/(S.restTotal||S.rest)*100)+'%'}
+function restDone(next){
+  beep();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}
+  toast('⏱ Rust voorbij! '+(next?next+' ':'')+'volgende set 💪');
+  notify('⏱ Rust voorbij!',next?'Tijd voor je volgende set: '+next:'Tijd voor je volgende set 💪')}
+async function askNotify(){try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}catch(e){}renderNotif()}
+async function notify(title,body){try{
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
+  if(r)await r.showNotification(title,{body,icon:'icon-180.png',badge:'icon-180.png',tag:'rust',renotify:true});
+  else new Notification(title,{body,icon:'icon-180.png'})}catch(e){}}
+function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
+  if(!('Notification' in window)){t.textContent='Meldingen werken pas als LOCKED op je beginscherm staat (iPhone). Je hoort wel altijd een piepje.';b.hidden=true;return}
+  const p=Notification.permission;b.hidden=p!=='default';
+  t.textContent=p==='granted'?'✅ Aan. Je krijgt een melding zodra je rust voorbij is (zolang LOCKED open staat).':p==='denied'?'🚫 Geblokkeerd. Zet meldingen aan via Instellingen → Meldingen → LOCKED.':'Uit. Tik op Aanzetten om een melding te krijgen als je rust voorbij is.'}
+$('notifBtn').onclick=askNotify;
+$('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30;save();tickRest()};
 $('restSkip').onclick=()=>{stopRest();save()};
 setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
 
@@ -856,14 +910,38 @@ setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkou
 function renderSchemas(){
   $('schemaSeg').innerHTML=TYPES.map(t=>'<button data-t="'+t+'" class="'+(t===schemaSel?'on':'')+'">'+t+'</button>').join('');
   const l=S.schemas[schemaSel]||[];
-  $('schemaList').innerHTML=l.length?l.map((n,i)=>'<div class="exrow"><b>'+esc(n)+'</b><button data-act="up" data-i="'+i+'" aria-label="Omhoog">↑</button><button data-act="down" data-i="'+i+'" aria-label="Omlaag">↓</button><button data-act="del" data-i="'+i+'" aria-label="Verwijderen">✕</button></div>').join(''):'<div class="empty">Nog geen oefeningen in dit schema.</div>';
-  $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+(s<120?s+' sec':s/60+' min')+'</button>').join('')}
+  $('schemaList').innerHTML=l.length?l.map((x,i)=>'<div class="exrow"><button class="exbody" data-act="edit" data-i="'+i+'"><b>'+esc(x.n)+'</b><span>'+(x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(x.rest?'':' (standaard)')+'</span></button><button data-act="up" data-i="'+i+'" aria-label="Omhoog">↑</button><button data-act="down" data-i="'+i+'" aria-label="Omlaag">↓</button></div>').join(''):'<div class="empty">Nog geen oefeningen in dit schema.</div>';
+  $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
+  renderNotif()}
 $('schemaSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){schemaSel=b.dataset.t;renderSchemas()}});
 $('schemaList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const l=S.schemas[schemaSel],i=+b.dataset.i;
   if(b.dataset.act==='up'&&i>0)[l[i-1],l[i]]=[l[i],l[i-1]];
   if(b.dataset.act==='down'&&i<l.length-1)[l[i+1],l[i]]=[l[i],l[i+1]];
-  if(b.dataset.act==='del')l.splice(i,1);save();renderSchemas()});
-$('exAdd').onclick=()=>{const n=$('exNew').value.trim();if(!n){$('exNew').focus();return}(S.schemas[schemaSel]=S.schemas[schemaSel]||[]).push(n);$('exNew').value='';save();renderSchemas();toast('Toegevoegd aan '+schemaSel)};
+  if(b.dataset.act==='edit'){openEx({mode:'schema',type:schemaSel,i});return}
+  save();renderSchemas()});
+$('exAdd').onclick=()=>openEx({mode:'schema',type:schemaSel,i:-1});
+
+/* formulier eigen oefening (voor schema of lopende training) */
+const RESTS=[30,45,60,90,120,150,180];
+let exCtx=null,exSets=3,exRestSel=0;
+function setExSets(n){exSets=Math.min(10,Math.max(1,n));$('exSetsVal').textContent=exSets}
+function setExRest(s){exRestSel=s;document.querySelectorAll('#exRest button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s))}
+$('exRest').innerHTML=RESTS.map(s=>'<button type="button" data-s="'+s+'">'+fmtRest(s)+'</button>').join('');
+$('exRest').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setExRest(+b.dataset.s)});
+$('exSetsMin').onclick=()=>setExSets(exSets-1);$('exSetsPlus').onclick=()=>setExSets(exSets+1);
+function openEx(ctx){exCtx=ctx;const x=ctx.mode==='schema'&&ctx.i>=0?S.schemas[ctx.type][ctx.i]:null;
+  $('exTitle').textContent=x?'Oefening bewerken':ctx.mode==='workout'?'Oefening toevoegen':'Eigen oefening maken';
+  $('exName').value=x?x.n:'';setExSets(x?x.sets||3:3);setExRest(x&&x.rest?x.rest:S.rest);
+  $('exSaveWrap').hidden=ctx.mode!=='workout';$('exSchemaName').textContent=ctx.type;$('exSaveSchema').checked=true;
+  $('exDel').hidden=!x;disarm($('exDel'));
+  $('back').classList.add('on');$('exSheet').classList.add('on');$('exSheet').scrollTop=0;if(!x)setTimeout(()=>$('exName').focus(),300)}
+function closeEx(){$('exSheet').classList.remove('on');$('back').classList.remove('on');document.activeElement&&document.activeElement.blur()}
+$('exSave').onclick=()=>{const n=$('exName').value.trim();if(!n){toast('Geef je oefening een naam');$('exName').focus();return}
+  const item={n,sets:exSets,rest:exRestSel===S.rest?0:exRestSel},l=S.schemas[exCtx.type]=S.schemas[exCtx.type]||[];
+  if(exCtx.mode==='workout'){S.workout.ex.push({n,rest:item.rest,sets:newSets(exSets)});if($('exSaveSchema').checked&&!l.some(x=>x.n===n))l.push(item)}
+  else if(exCtx.i>=0)l[exCtx.i]=item;else l.push(item);
+  save();closeEx();render();toast(exCtx.mode==='workout'?'➕ '+n+' toegevoegd':'Opgeslagen in '+exCtx.type)};
+$('exDel').onclick=()=>armed($('exDel'),'Tik nogmaals om te verwijderen',()=>{S.schemas[exCtx.type].splice(exCtx.i,1);save();closeEx();renderSchemas();toast('Verwijderd')});
 $('restSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.rest=+b.dataset.s;save();renderSchemas()}});
 
 /* vooruitgang */

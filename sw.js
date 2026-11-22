@@ -1,5 +1,5 @@
-// Zorgt dat de app ook zonder internet werkt.
-const CACHE = 'planner-v1';
+// Zorgt dat de app ook zonder internet werkt, en opent de app als je op een melding tikt.
+const CACHE = 'planner-v2';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -20,5 +20,16 @@ self.addEventListener('fetch', e => {
     fetch(e.request)
       .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
+  );
+});
+
+// Tik op de melding "Rust voorbij" -> terug naar LOCKED
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) if ('focus' in c) return c.focus();
+      return self.clients.openWindow('./');
+    })
   );
 });
