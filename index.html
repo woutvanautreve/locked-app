@@ -662,7 +662,7 @@ function renderWeek(){
   for(let i=0;i<7;i++){const d=addDays(weekStart,i),k=ymd(d),ts=tasksOn(k);
     html+='<button class="day'+(k===selDay?' sel':'')+(k===today()?' today':'')+'" data-day="'+k+'">'+DN[d.getDay()]+'<b>'+d.getDate()+'</b><div class="dots">'+(vacOn(k)&&!ts.length?'<span class="vdot">🏖</span>':ts.slice(0,4).map(t=>'<i class="c-'+t.cat+'"></i>').join(''))+'</div></button>'}
   $('days').innerHTML=html;
-  const p=weekStats(weekStart,false),g=S.goals,over=ymd(addDays(weekStart,6))<today();
+  const p=weekStats(weekStart,false),g=S.goals,over=ymd(addDays(weekStart,6))<today(),sgW=schoolGoal(weekStart);
   const line=(ico,name,have,goal,fmt,col)=>'<div class="gl"><div class="row between"><span>'+ico+' <b>'+name+'</b></span><span class="sub">'+fmt(have)+' / '+fmt(goal)+(have>=goal?' ✅':'')+'</span></div><div class="bar"><i style="width:'+Math.min(100,have/goal*100)+'%;background:'+col+'"></i></div></div>';
   const x=v=>v+'x',miss=[];
   if(p.gym<g.gym)miss.push('nog '+(g.gym-p.gym)+'x gym');if(p.cardio<g.cardio)miss.push('nog '+fmtMin(g.cardio-p.cardio)+' cardio');
@@ -672,9 +672,9 @@ function renderWeek(){
     const chip=(c,label,small)=>'<div class="drag c-'+c+'" data-cat="'+c+'"><span>'+label+'</span><small>'+small+'</small></div>';
     wg.innerHTML='<div class="row between"><b>Sleep een blok naar een dag</b><button class="linkbtn" data-act="plandone">Klaar</button></div>'
       +'<div class="sub" style="font-size:13px;margin-top:2px">Houd een blok vast en sleep het naar een dag. Met ⠿ verplaats je iets dat al gepland is.</div><div class="chips">'
-      +chip('gym','💪 Gym',left(g.gym-p.gym,x))+chip('cardio','🏃 Cardio',left(g.cardio-p.cardio,fmtMin))+chip('studie','📚 School',left(g.studie-p.studie,fmtMin))+chip('overig','✨ Overig','iets anders')+'</div>'
+      +chip('gym','💪 Gym',left(g.gym-p.gym,x))+chip('cardio','🏃 Cardio',left(g.cardio-p.cardio,fmtMin))+chip('studie','📚 School',sgW?left(sgW-p.studie,fmtMin):'🏖️ vakantie')+chip('overig','✨ Overig','iets anders')+'</div>'
       +'<button class="linkbtn" data-act="copyweek" style="margin-top:10px">📋 Kopieer vorige week</button>';
-  } else wg.innerHTML='<b>Ingepland deze week</b>'+line('💪','Gym',p.gym,g.gym,x,'var(--gym)')+line('🏃','Cardio',p.cardio,g.cardio,fmtMin,'var(--cardio)')+line('📚','School',p.studie,g.studie,fmtMin,'var(--studie)')
+  } else wg.innerHTML='<b>Ingepland deze week</b>'+line('💪','Gym',p.gym,g.gym,x,'var(--gym)')+line('🏃','Cardio',p.cardio,g.cardio,fmtMin,'var(--cardio)')+(sgW?line('📚','School'+(sgW<g.studie?' <span class="sub" style="font-size:12px">(vakantie, aangepast)</span>':''),p.studie,sgW,fmtMin,'var(--studie)'):'<div class="gl"><div class="row between"><span>📚 <b>School</b></span><span class="sub">🏖️ pauze: vakantie</span></div></div>')
     +(over?'':(miss.length?'<div class="sub" style="margin:14px 0 10px">⚠️ Om je doel te halen moet je '+miss.join(' en ')+' inplannen.</div>':'<div class="sub" style="margin:14px 0 10px">🎯 Je sportdoelen voor deze week staan erin!</div>')+'<button class="btn" data-act="planmode">✨ Plan mijn week</button>');
   let out='';
   for(let i=0;i<7;i++){const d=addDays(weekStart,i),k=ymd(d),l=tasksOn(k),tot=l.reduce((a,t)=>a+t.dur,0),dn=l.filter(t=>t.done).length;
@@ -688,7 +688,10 @@ function renderGoals(){
   const w=weekStats(monday(new Date())),g=S.goals;
   $('gGymVal').textContent=g.gym+'x';$('gGymTxt').textContent=w.gym+' van minstens '+g.gym+'x gedaan deze week';$('gGymBar').style.width=Math.min(100,w.gym/g.gym*100)+'%';
   $('gCardioVal').textContent=fmtMin(g.cardio);$('gCardioTxt').textContent=fmtMin(w.cardio)+' van minstens '+fmtMin(g.cardio)+' gedaan';$('gCardioBar').style.width=Math.min(100,w.cardio/g.cardio*100)+'%';
-  $('gStudieVal').textContent=fmtMin(g.studie);$('gStudieTxt').textContent=fmtMin(w.studie)+' van '+fmtMin(g.studie)+' deze week';$('gStudieBar').style.width=Math.min(100,w.studie/g.studie*100)+'%';
+  const sg=schoolGoal(monday(new Date()));
+  $('gStudieVal').textContent=fmtMin(g.studie);
+  $('gStudieTxt').textContent=sg===0?'🏖️ Pauze: deze week is het vakantie':fmtMin(w.studie)+' van '+fmtMin(sg)+' deze week'+(sg<g.studie?' (minder door vakantie)':'');
+  $('gStudieBar').style.width=sg?Math.min(100,w.studie/sg*100)+'%':'0%';
   const s=streak();S.best=Math.max(S.best||0,bestStreak());$('sStreak').textContent=s;$('sBest').textContent=S.best;$('sDone').textContent=S.tasks.filter(t=>t.done).length;
   const days=[];for(let i=6;i>=0;i--){const d=addDays(new Date(),-i);days.push({d,m:dayMinutes(ymd(d))})}
   const max=Math.max(60,...days.map(x=>x.m.sp+x.m.st));
@@ -728,6 +731,11 @@ function renderBadges(){
 /* ---------- schooluren en vakanties ---------- */
 const SDAYS=[1,2,3,4,5,6,0];
 function schoolDef(){const d={};for(const k of SDAYS)d[k]={on:k>=1&&k<=5,from:'08:30',to:k===3?'12:00':'15:30'};return{on:false,days:d}}
+// schooldoel van een week: evenredig minder per schooldag die in een vakantie valt (0 = hele week vakantie = pauze)
+function schoolGoal(ws){const sc=S.school&&S.school.on?S.school:null;let days=0,open=0;
+  for(let i=0;i<7;i++){const d=addDays(ws,i),dow=d.getDay(),isSchool=sc?sc.days[dow]&&sc.days[dow].on:dow>=1&&dow<=5;
+    if(!isSchool)continue;days++;if(!vacOn(ymd(d)))open++}
+  if(!days||open===days)return S.goals.studie;return Math.round(S.goals.studie*open/days/5)*5}
 function vacOn(ds){return (S.vac||[]).find(v=>v.from&&v.to&&ds>=v.from&&ds<=v.to)}
 function schoolOn(ds){const sc=S.school;if(!sc||!sc.on||vacOn(ds))return null;const d=sc.days[parse(ds).getDay()];return d&&d.on?d:null}
 const TIMES=[];for(let m=6*60;m<=19*60;m+=5)TIMES.push(fromMin(m));
@@ -1602,7 +1610,7 @@ const coins=()=>Math.max(0,earned()-(S.spent||0));
 // weekdoel gehaald? eenmalige bonus per doel per week
 function checkWeeklyBonus(){
   const wk=ymd(monday(new Date())),w=weekStats(monday(new Date())),g=S.goals;S.bonus=S.bonus||{};const b=S.bonus[wk]=S.bonus[wk]||{};
-  const got=[];if(w.gym>=g.gym&&!b.gym){b.gym=1;got.push('Gymdoel')}if(w.cardio>=g.cardio&&!b.cardio){b.cardio=1;got.push('Cardiodoel')}if(w.studie>=g.studie&&!b.studie){b.studie=1;got.push('Schooldoel')}
+  const got=[];if(w.gym>=g.gym&&!b.gym){b.gym=1;got.push('Gymdoel')}if(w.cardio>=g.cardio&&!b.cardio){b.cardio=1;got.push('Cardiodoel')}const sg=schoolGoal(monday(new Date()));if(sg>0&&w.studie>=sg&&!b.studie){b.studie=1;got.push('Schooldoel')}
   if(!Object.keys(b).length)delete S.bonus[wk];
   if(got.length){save();setTimeout(()=>toast('🎉 '+got.join(' + ')+' gehaald! +'+got.length*50+' 🪙'),1500)}}
 
