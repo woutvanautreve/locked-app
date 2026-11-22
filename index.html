@@ -122,6 +122,7 @@ nav button:active{transform:scale(.88)}
 .exc .sub{font-size:12px;margin:2px 0 8px}
 .setrow{display:grid;grid-template-columns:34px 1fr 1fr 56px 44px;gap:6px;align-items:center;margin-bottom:6px}
 .setrow>span.wu{color:#e8862a;font-size:12px}
+.setrow>span.norep{font-weight:700;color:var(--muted)}
 .setrow.wset input{border-style:dashed}
 .srest{width:100%;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;text-align:center;text-align-last:center;-webkit-appearance:none;appearance:none;padding:0 2px}
 .srest.own{color:var(--gym);border-color:var(--gym)}
@@ -506,6 +507,11 @@ nav button.on{color:var(--accent)}
   <h2>Standaard rusttijd</h2>
   <div class="sub" style="font-size:13px;margin:-6px 0 10px">Voor oefeningen zonder eigen rusttijd.</div>
   <div class="seg" id="restSeg"></div>
+  <h2>🔥 Opwarmsets</h2>
+  <div class="card">
+    <label class="toggle" style="margin:0 0 8px"><span>🔥 <b>Opwarmen met de helft van je gewicht</b></span><input type="checkbox" id="warmHalf"></label>
+    <div class="sub" style="font-size:13px;line-height:1.4">Je opwarmset krijgt automatisch <b>de helft van het gewicht van je eerste gewone set</b>, en je hoeft er <b>geen herhalingen</b> voor in te vullen.</div>
+  </div>
   <h2>🔔 Melding als je rust voorbij is</h2>
   <div class="card"><div class="row between"><div class="sub" id="notifTxt" style="font-size:14px">…</div><button class="addday" id="notifBtn">Aanzetten</button></div></div>
   <h2>📲 Pushmeldingen</h2>
@@ -1117,9 +1123,13 @@ function lastOf(name){const h=history(name);return h.length?h[h.length-1].sets:n
 function lastRaw(name){for(let k=S.workouts.length-1;k>=0;k--){const e=S.workouts[k].ex.find(e=>e.n===name);if(e)return e.sets}return null}
 // voorstel voor een set: vorige set van vandaag (zelfde soort), anders dezelfde set van vorige keer
 function hint(ex,j,last){const s=ex.sets[j],w=!!s.w,same=ex.sets.filter(x=>!!x.w===w),k=same.indexOf(s),p=k>0?same[k-1]:null;
+  if(w&&S.warmHalf)return{kg:halfKg(ex,last),reps:''}; // instelling: helft van je gewicht, geen herhalingen
   if(p&&(p.kg!==''||p.reps!==''))return{kg:p.kg,reps:p.reps};
   const L=(last||[]).filter(x=>!!x.w===w),l=L[k]||L[L.length-1];return l?{kg:l.kg,reps:l.reps}:{kg:'',reps:''}}
 
+// helft van het gewicht van je eerste gewone set (wat je invulde, anders het voorstel), afgerond op 0,5 kg
+function halfKg(ex,last){const j=ex.sets.findIndex(x=>!x.w);if(j<0)return '';const f=ex.sets[j];
+  const kg=num(f.kg!==''?f.kg:String(hint(ex,j,last).kg??''));return kg?String(Math.round(kg)/2):''}
 const newSets=n=>Array.from({length:n},()=>({kg:'',reps:'',done:false}));
 // sets voor een oefening uit je schema: eerst de opwarmsets, elk met hun eigen rust (0 = standaard)
 const buildSets=x=>Array.from({length:x.warm||0},(_,k)=>({kg:'',reps:'',done:false,w:true,rest:(x.wr||[])[k]||0}))
@@ -1186,7 +1196,8 @@ function renderActive(el,W){
             +'<option value="0">'+shortRest(restOf(ex))+'</option>'+RESTS.map(r=>'<option value="'+r+'"'+(s.rest===r?' selected':'')+'>'+shortRest(r)+'</option>').join('')+'</select>';
           return '<div class="setrow'+(s.done?' done':'')+(s.w?' wset':'')+'"><span'+(s.w?' class="wu" title="Opwarmset">🔥W':'>'+nr)+'</span>'
           +'<input inputmode="decimal" data-i="'+i+'" data-j="'+j+'" data-f="kg" value="'+esc(s.kg)+'" placeholder="'+esc(h.kg)+'" aria-label="kilo">'
-          +'<input inputmode="numeric" data-i="'+i+'" data-j="'+j+'" data-f="reps" value="'+esc(s.reps)+'" placeholder="'+esc(h.reps)+'" aria-label="herhalingen">'
+          +(s.w&&S.warmHalf?'<span class="norep" title="Geen herhalingen nodig">—</span>'
+            :'<input inputmode="numeric" data-i="'+i+'" data-j="'+j+'" data-f="reps" value="'+esc(s.reps)+'" placeholder="'+esc(h.reps)+'" aria-label="herhalingen">')
           +rs+'<button class="setchk" data-act="set" data-i="'+i+'" data-j="'+j+'" aria-label="Set klaar">✓</button></div>'}).join('')
         +(wEdit?'<div class="row" style="gap:16px;flex-wrap:wrap"><button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button>'
           +(nr>1?'<button class="linkbtn" data-act="rmset" data-i="'+i+'" style="color:var(--danger)">− Set</button>':'')
@@ -1228,7 +1239,10 @@ $('trainWrap').addEventListener('keydown',e=>{if(e.key!=='Enter')return;
   if(e.target.id==='wNewName')trainNav('newsave');if(e.target.id==='wRenameIn')trainNav('renamesave')});
 
 $('trainWrap').addEventListener('input',e=>{const f=e.target.dataset.f;if(!f||!S.workout)return;
-  S.workout.ex[+e.target.dataset.i].sets[+e.target.dataset.j][f]=e.target.value.trim();save()});
+  const i=+e.target.dataset.i,ex=S.workout.ex[i];ex.sets[+e.target.dataset.j][f]=e.target.value.trim();save();
+  // opwarmgewicht (helft) meteen bijwerken als je het gewicht van je eerste set verandert
+  if(S.warmHalf&&f==='kg'){const raw=lastRaw(ex.n);ex.sets.forEach((s,j)=>{if(!s.w)return;
+    const inp=document.querySelector('#trainWrap input[data-i="'+i+'"][data-j="'+j+'"][data-f="kg"]');if(inp)inp.placeholder=hint(ex,j,raw).kg})}});
 // eigen rusttijd voor één set (alleen in bewerkmodus)
 $('trainWrap').addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('srest')||!S.workout||!wEdit)return;
   const s=S.workout.ex[+t.dataset.i].sets[+t.dataset.j];s.rest=+t.value||0;save();renderTrain()});
@@ -1239,7 +1253,8 @@ $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]
   if(a==='set'){const ex=W.ex[i],j=+b.dataset.j,s=ex.sets[j];
     if(s.done){s.done=false;save();renderTrain();return}
     const h=hint(ex,j,lastRaw(ex.n));if(s.kg==='')s.kg=String(h.kg??'');if(s.reps==='')s.reps=String(h.reps??'');
-    if(num(s.reps)===null||num(s.reps)<=0){s.reps='';toast('Vul je herhalingen in');renderTrain();return}
+    if(s.w&&S.warmHalf){if(s.reps==='')s.reps='0'} // opwarmset: herhalingen niet nodig
+    else if(num(s.reps)===null||num(s.reps)<=0){s.reps='';toast('Vul je herhalingen in');renderTrain();return}
     if(s.kg===''||num(s.kg)===null)s.kg='0';
     s.done=true;save();renderTrain();
     // laatste set van de laatste oefening: geen rust meer nodig
@@ -1363,7 +1378,8 @@ setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkou
 /* instellingen (standaard rusttijd + meldingen) */
 function renderSchemas(){
   $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
-  renderNotif();renderPush();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer}
+  renderNotif();renderPush();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer;$('warmHalf').checked=!!S.warmHalf}
+$('warmHalf').onchange=e=>{S.warmHalf=e.target.checked;save();toast(S.warmHalf?'🔥 Opwarmsets: helft van je gewicht':'🔥 Opwarmsets: zelf invullen')};
 
 /* formulier eigen oefening (voor schema of lopende training) */
 let exCtx=null,exSets=3,exRestSel=0,exWarm=0,exWR=[],exSR=[];
