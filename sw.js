@@ -1,5 +1,5 @@
 // Zorgt dat de app ook zonder internet werkt, en opent de app als je op een melding tikt.
-const CACHE = 'planner-v4';
+const CACHE = 'planner-v5';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -22,6 +22,15 @@ self.addEventListener('fetch', e => {
       .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
   );
+});
+
+// Pushmelding van de server (Supabase) tonen, ook als LOCKED dicht is
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'LOCKED', {
+    body: d.body || '', icon: 'icon-180.png', badge: 'icon-180.png', tag: d.tag || 'locked', renotify: true
+  }));
 });
 
 // Tik op de melding "Rust voorbij" -> terug naar LOCKED

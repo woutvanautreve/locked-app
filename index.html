@@ -499,6 +499,11 @@ nav button.on{color:var(--accent)}
   <div class="seg" id="restSeg"></div>
   <h2>🔔 Melding als je rust voorbij is</h2>
   <div class="card"><div class="row between"><div class="sub" id="notifTxt" style="font-size:14px">…</div><button class="addday" id="notifBtn">Aanzetten</button></div></div>
+  <h2>📲 Pushmeldingen</h2>
+  <div class="card">
+    <div class="sub" style="font-size:14px;line-height:1.4" id="pushTxt">…</div>
+    <button class="btn" id="pushBtn" style="margin-top:10px">Aanzetten</button>
+  </div>
   <h2>⏰ iPhone-timer</h2>
   <div class="card">
     <label class="toggle" style="margin:0 0 8px"><span>⏰ <b>iPhone-timer gebruiken</b></span><input type="checkbox" id="iosTimer"></label>
@@ -1025,7 +1030,7 @@ let audio;
 function beep(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(t=>{const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=880;o.connect(g);g.connect(audio.destination);g.gain.setValueAtTime(.25,audio.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+t+.3);o.start(audio.currentTime+t);o.stop(audio.currentTime+t+.3)})}catch(e){}}
 function remaining(){const T=S.timer;if(!T)return S.fDur*60;return T.end?Math.max(0,Math.round((T.end-Date.now())/1000)):T.left}
 function logFocus(min,subject){if(min>=1){S.focus.push({date:today(),min,subject:subject||''})}}
-function finishTimer(){const T=S.timer;logFocus(Math.round(T.total/60),T.subject);S.timer=null;save();beep();toast('🎯 Sessie klaar! +'+Math.round(T.total/60)+' XP');render();
+function finishTimer(){const T=S.timer;logFocus(Math.round(T.total/60),T.subject);S.timer=null;save();pushCancel('focus');beep();toast('🎯 Sessie klaar! +'+Math.round(T.total/60)+' XP');render();
   if(S.focusLocked)setTimeout(()=>toast('Tik op 🔓 om je Focus-modus uit te zetten'),2200)}
 function renderFocus(){
   const T=S.timer,left=remaining(),total=T?T.total:S.fDur*60;
@@ -1046,6 +1051,8 @@ $('fStart').onclick=()=>{
   if(!T)S.timer={total:S.fDur*60,end:Date.now()+S.fDur*60000,left:null,subject:$('fSubject').value.trim()};
   else if(T.end){T.left=remaining();T.end=null}
   else{T.end=Date.now()+T.left*1000;T.left=null}
+  // pushmelding als de focustijd op is (ook met scherm op slot); bij pauze geschrapt
+  if(S.timer.end)pushSchedule('focus',remaining(),'🎯 Focussessie klaar!','Goed gewerkt'+(S.timer.subject?' aan '+S.timer.subject:'')+'! Tijd voor een pauze.');else pushCancel('focus');
   if(!T&&S.blockFocus){S.focusLocked=true;save();renderFocus();runShortcut('LOCKED focus aan',S.fDur*60);return}
   if(!T&&S.iosTimer){save();renderFocus();runShortcut('LOCKED rust',S.fDur*60);return} // iPhone-timer voor de focussessie
   save();renderFocus()
@@ -1056,7 +1063,7 @@ function runShortcut(name,input){location.href='shortcuts://run-shortcut?name='+
 $('fBlock').onchange=e=>{S.blockFocus=e.target.checked;save();if(S.blockFocus&&!S.seenFocusHelp){S.seenFocusHelp=true;save();$('fHelp').hidden=false}};
 $('fHelpBtn').onclick=()=>{$('fHelp').hidden=!$('fHelp').hidden};
 $('fUnlock').onclick=()=>{S.focusLocked=false;save();renderFocus();runShortcut('LOCKED focus uit')};
-$('fStop').onclick=()=>armed($('fStop'),'Zeker stoppen?',()=>{const T=S.timer;if(!T)return;const done=Math.floor((T.total-remaining())/60);
+$('fStop').onclick=()=>armed($('fStop'),'Zeker stoppen?',()=>{const T=S.timer;if(!T)return;pushCancel('focus');const done=Math.floor((T.total-remaining())/60);
   logFocus(done,T.subject);S.timer=null;save();render();toast(done>=1?'+'+done+' XP':'Sessie gestopt')});
 setInterval(()=>{if(S.timer&&S.timer.end){if(remaining()<=0)finishTimer();else if(view==='focus')renderFocus()}},500);
 
@@ -1266,9 +1273,11 @@ function cardioListHTML(){const L=(S.cardio||[]).slice().sort((a,b)=>a.date<b.da
     +(L.length?'<div class="card" style="padding:4px 14px">'+L.map(c=>{const d=parse(c.date);return '<div class="hist"><div><b>'+CTYPE[c.type].e+' '+esc(c.name)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+fmtKm(c.type==='Zwemmen'?c.km*1000:c.km)+' '+CTYPE[c.type].unit+' in '+fmtDur(c.sec)+'</div></div><div style="text-align:right"><b style="font-size:14px">'+paceOf(c.type,c.km,c.sec).txt+'</b><div><button class="linkbtn" data-act="rmcardio" data-id="'+c.id+'" style="font-size:12px;color:var(--muted)">verwijderen</button></div></div></div>'}).join('')+'</div>':'<div class="empty" style="padding:10px">Nog geen cardio gelogd.</div>')}
 
 /* rusttimer + melding */
+const restPushBody=()=>S.restNext?'Tijd voor je volgende set: '+S.restNext:'Tijd voor je volgende set 💪';
 function startRest(sec,next){S.restTotal=sec;S.restEnd=Date.now()+sec*1000;S.restNext=next||'';save();tickRest();
+  pushSchedule('rest',sec,'⏱ Rust voorbij!',restPushBody()); // pushmelding via Supabase (als je die aanzette)
   if(S.iosTimer&&S.iosAuto)runShortcut('LOCKED rust',sec)} // alleen automatisch als je dat zelf aanzet; anders via de ⏰-knop
-function stopRest(){S.restEnd=null;$('restBar').hidden=true}
+function stopRest(){S.restEnd=null;$('restBar').hidden=true;pushCancel('rest')}
 function tickRest(){if(!S.restEnd){$('restBar').hidden=true;return}
   const left=Math.max(0,(S.restEnd-Date.now())/1000);
   if(left<=0){const nx=S.restNext;stopRest();save();restDone(nx);return}
@@ -1291,17 +1300,28 @@ function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
 $('notifBtn').onclick=askNotify;
 $('iosTimer').onchange=e=>{S.iosTimer=e.target.checked;save();$('iosAutoWrap').hidden=!S.iosTimer;if(S.iosTimer&&!S.seenIosHelp){S.seenIosHelp=true;save();$('iosHelp').hidden=false}};
 $('iosAuto').onchange=e=>{S.iosAuto=e.target.checked;save()};
+// pushmeldingen aan/uit (Sporten -> Instellingen)
+let pushBusy=false,pushErr='';
+function renderPush(){const t=$('pushTxt'),b=$('pushBtn');if(!t)return;let logged=false;try{logged=!!(auth&&auth.uid)}catch(e){}
+  t.innerHTML=(S.pushOn?'✅ <b>Aan.</b> Je krijgt een melding als je rust of focustijd voorbij is, <b>ook met LOCKED dicht of je scherm op slot</b>. Geen sprong naar Opdrachten.'
+    :'Krijg een melding als je rust of focustijd voorbij is, <b>ook met LOCKED dicht of je scherm op slot</b>, zonder naar Opdrachten te springen.'+(logged?'':'<br>👉 Log hiervoor eerst in bij <b>Plannen → Vrienden</b>.'))
+    +(pushErr?'<div class="frmsg err">⚠️ '+esc(pushErr)+'</div>':'');
+  b.textContent=pushBusy?'Even geduld…':S.pushOn?'Uitzetten':'Aanzetten';b.disabled=pushBusy;b.className=S.pushOn?'btn ghost':'btn'}
+$('pushBtn').onclick=async()=>{pushBusy=true;pushErr='';renderPush();
+  try{if(S.pushOn){await pushDisable();toast('🔕 Pushmeldingen uit')}else{await pushEnable();toast('🔔 Pushmeldingen aan!')}}catch(e){pushErr=e.message}
+  pushBusy=false;renderPush()};
 // ⏰ in de rustbalk: iPhone-timer starten met de resterende rust (alleen als jij erop tikt)
 $('restIos').onclick=()=>{if(!S.restEnd)return;const left=Math.max(1,Math.ceil((S.restEnd-Date.now())/1000));runShortcut('LOCKED rust',left)};
 $('iosHelpBtn').onclick=()=>{$('iosHelp').hidden=!$('iosHelp').hidden};
-$('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30;save();tickRest()};
+$('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30;save();tickRest();
+  pushSchedule('rest',Math.ceil((S.restEnd-Date.now())/1000),'⏱ Rust voorbij!',restPushBody())};
 $('restSkip').onclick=()=>{stopRest();save()};
 setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
 
 /* instellingen (standaard rusttijd + meldingen) */
 function renderSchemas(){
   $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
-  renderNotif();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer}
+  renderNotif();renderPush();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer}
 
 /* formulier eigen oefening (voor schema of lopende training) */
 const RESTS=[30,45,60,90,120,150,180];
@@ -1905,6 +1925,34 @@ async function frLoadEx(){if(!auth||!fr.friends.length){fr.exStats=[];return}
   fr.exStats=await sb('/rest/v1/exercise_stats?select=user_id,ex,d,kg,reps&user_id=in.('+fr.friends.map(f=>f.id).join(',')+')&order=d')||[];fr.exLoaded=Date.now()}
 async function frRun(fn,okMsg){fr.busy=true;fr.err='';renderFriends();
   try{await fn();if(okMsg)fr.msg=okMsg}catch(e){fr.err=e.message}fr.busy=false;renderFriends()}
+
+/* --- pushmeldingen via Supabase (rust- en focustimer, ook met scherm op slot) --- */
+const b64u=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');const r=atob(s+'===='.slice(s.length%4||4));return Uint8Array.from(r,c=>c.charCodeAt(0))};
+const pushReady=()=>!!(S.pushOn&&auth&&auth.uid);
+async function pushEnable(){
+  if(!auth||!fr.profile)throw new Error('Log eerst in bij Plannen → Vrienden');
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw new Error('Pushmeldingen werken alleen als LOCKED op je beginscherm staat (iOS 16.4 of nieuwer). Open LOCKED via het icoon.');
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted')throw new Error('Meldingen zijn niet toegestaan. Zet ze aan via Instellingen → Meldingen → LOCKED.');
+  const key=await sb('/rest/v1/rpc/get_vapid_public',{method:'POST',body:{}});
+  if(!key)throw new Error('De server is nog niet klaar: de Edge Function "push" moet nog één keer draaien. Probeer het over een minuutje opnieuw.');
+  const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(sub&&S.pushKey&&S.pushKey!==key){await sub.unsubscribe();sub=null}
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
+  const j=sub.toJSON();
+  await sb('/rest/v1/push_subs',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:{endpoint:j.endpoint,user_id:auth.uid,p256dh:j.keys.p256dh,auth:j.keys.auth}});
+  S.pushOn=true;S.pushKey=key;save()}
+async function pushDisable(){S.pushOn=false;save();
+  try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(sub){try{await sb('/rest/v1/push_subs?endpoint=eq.'+encodeURIComponent(sub.endpoint),{method:'DELETE'})}catch(e){}await sub.unsubscribe()}}catch(e){}}
+// een melding inplannen of schrappen; slot = 'rest' of 'focus' (per slot staat er max. 1 klaar)
+async function pushSchedule(slot,sec,title,body){if(!pushReady())return;
+  try{await pushCancel(slot);
+    const r=await sb('/rest/v1/push_queue?select=id',{method:'POST',headers:{Prefer:'return=representation'},
+      body:{user_id:auth.uid,send_at:new Date(Date.now()+Math.max(1,sec)*1000).toISOString(),title,body,tag:slot}});
+    S.pushIds=S.pushIds||{};S.pushIds[slot]=r&&r[0]&&r[0].id;save()}catch(e){}}
+async function pushCancel(slot){const id=S.pushIds&&S.pushIds[slot];if(!id)return;S.pushIds[slot]=null;save();
+  try{await sb('/rest/v1/push_queue?id=eq.'+id,{method:'DELETE'})}catch(e){}}
 
 /* --- link uit een mail (bevestigen of wachtwoord vergeten) --- */
 (function(){const h=new URLSearchParams(location.hash.slice(1));
