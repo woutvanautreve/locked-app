@@ -137,6 +137,11 @@ h2{font-size:18px;margin:22px 0 10px}
 .bigstep{display:flex;align-items:center;justify-content:center;gap:24px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:14px}
 .bigstep button{width:48px;height:48px;border-radius:12px;background:var(--card2);font-size:24px;font-weight:700}
 .bigstep b{font-size:30px;min-width:40px;text-align:center}
+.newcard{border-left-color:var(--accent);border:2px dashed var(--accent);background:transparent;box-shadow:none}
+.newcard b{color:var(--accent)}
+.editbtn{margin-top:8px;padding:7px 12px;border-radius:999px;background:var(--card2);font-size:14px;font-weight:700;color:var(--accent)}
+.editbtn.on{background:var(--accent);color:#fff}
+.editnote{background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:14px;padding:10px 14px;font-size:13px;margin-bottom:12px}
 .restbar.ring{animation:ringing .5s ease 3}
 @keyframes ringing{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .exrow button{width:32px;height:32px;border-radius:9px;background:var(--card2);font-weight:700}
@@ -336,12 +341,8 @@ nav button.on{color:var(--accent)}
 <section class="view" id="v-train"><div class="wrap" id="trainWrap"></div></section>
 
 <section class="view" id="v-schemas"><div class="wrap">
-  <h1>Schema's</h1>
-  <div class="sub">Kies welke oefeningen bij elke training horen.</div>
-  <div class="opts" id="schemaSeg" style="margin-top:14px"></div>
-  <div class="sub" style="font-size:13px;margin:-6px 0 10px">Tik op een oefening om sets of rusttijd te wijzigen.</div>
-  <div id="schemaList"></div>
-  <button class="btn" id="exAdd" style="margin-top:10px">+ Eigen oefening maken</button>
+  <h1>Instellingen</h1>
+  <div class="sub">Voor al je trainingen. Je workouts pas je aan bij <b>Training</b>.</div>
   <h2>Standaard rusttijd</h2>
   <div class="sub" style="font-size:13px;margin:-6px 0 10px">Voor oefeningen zonder eigen rusttijd.</div>
   <div class="seg" id="restSeg"></div>
@@ -361,7 +362,7 @@ nav button.on{color:var(--accent)}
   <div class="bigstep"><button type="button" id="exSetsMin" aria-label="Minder sets">−</button><b id="exSetsVal">3</b><button type="button" id="exSetsPlus" aria-label="Meer sets">+</button></div>
   <label class="l">Rusttijd tussen sets</label>
   <div class="opts" id="exRest"></div>
-  <label class="toggle" id="exSaveWrap"><span>Ook bewaren in schema <b id="exSchemaName"></b></span><input type="checkbox" id="exSaveSchema" checked></label>
+  <label class="toggle" id="exSaveWrap"><span>Ook bewaren in workout <b id="exSchemaName"></b></span><input type="checkbox" id="exSaveSchema" checked></label>
   <button class="btn" id="exSave">Opslaan</button>
   <button class="btn danger" id="exDel" style="margin-top:6px">Verwijderen uit schema</button>
 </div>
@@ -383,7 +384,7 @@ nav button.on{color:var(--accent)}
  </div>
  <div class="navgroup" id="navSport" hidden>
   <button data-v="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>Training</button>
-  <button data-v="schemas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Schema's</button>
+  <button data-v="schemas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Instellingen</button>
   <button data-v="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Vooruitgang</button>
  </div>
 </nav>
@@ -584,6 +585,8 @@ function renderBadges(){
 function render(){
   if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));if(!S.workouts)S.workouts=[];if(!S.rest)S.rest=90; // ook na "Alles wissen"
   for(const k in S.schemas)S.schemas[k]=S.schemas[k].map(x=>typeof x==='string'?{n:x,sets:3,rest:0}:x); // oud formaat omzetten
+  if(!S.wtypes)S.wtypes=Object.keys(S.schemas); // volgorde van je workouts
+  S.wtypes=S.wtypes.filter(t=>S.schemas[t]);for(const k in S.schemas)if(!S.wtypes.includes(k))S.wtypes.push(k);
   renderToday();renderWeek();renderGoals();renderFocus();renderBadges();
   // tijdens het typen in een set niet opnieuw tekenen (anders verlies je je cursor)
   const ae=document.activeElement;if(!(ae&&ae.tagName==='INPUT'&&ae.closest('#trainWrap')))renderTrain();
@@ -674,7 +677,7 @@ function setKind(k){kind=k;document.querySelectorAll('#tKind button').forEach(b=
 $('tKind').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setKind(b.dataset.k)});
 function markSub(){document.querySelectorAll('#tSub button').forEach(b=>b.classList.toggle('on',b.dataset.s===sub))}
 function setCat(c,keep){cat=c;document.querySelectorAll('#tCat button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
-  const list=SUBS[c];$('subWrap').style.display=list?'':'none';$('kindWrap').style.display=c==='studie'?'':'none';
+  const list=c==='gym'?S.wtypes:SUBS[c];$('subWrap').style.display=list?'':'none'; // gym: je eigen workouts$('kindWrap').style.display=c==='studie'?'':'none';
   $('tSub').innerHTML=list?list.map(s=>'<button data-s="'+s+'">'+s+'</button>').join(''):'';if(list)$('subLbl').textContent=SUBL[c];
   if(!keep){sub=null;if(autoTitle)$('tTitle').value=''}markSub()}
 $('tCat').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setCat(b.dataset.c);if(!editing&&sFrom){sTo=fromMin(toMin(sFrom)+DEFDUR[cat]);showTimes()}}});
@@ -796,7 +799,6 @@ const DEF_SCHEMAS={
 if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));
 if(!S.workouts)S.workouts=[];
 if(!S.rest)S.rest=90;
-let schemaSel='Upper';
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n};
 const mmss=s=>Math.floor(s/60)+':'+pad(Math.floor(s%60));
 // alle gelogde sets van een oefening, per training (nieuwste laatst)
@@ -812,43 +814,100 @@ function hint(ex,j,last){const p=j>0?ex.sets[j-1]:null;
 const newSets=n=>Array.from({length:n},()=>({kg:'',reps:'',done:false}));
 const restOf=ex=>ex.rest||S.rest;
 const fmtRest=s=>s<=90?s+' sec':s%60?Math.floor(s/60)+':'+pad(s%60)+' min':s/60+' min';
+const wtypes=()=>S.wtypes;
+let wDetail=null,wNew=false,wRename=false,wEdit=false; // schermstatus van het Training-tabblad
 function startWorkout(type){
+  if(!(S.schemas[type]||[]).length){toast('Voeg eerst een oefening toe');return}
   askNotify(); // eerste keer: toestemming vragen voor meldingen (moet na een tik)
-  S.workout={type,start:Date.now(),ex:(S.schemas[type]||[]).map(x=>({n:x.n,rest:x.rest||0,sets:newSets(x.sets||3)}))};
-  save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
+  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>({n:x.n,rest:x.rest||0,sets:newSets(x.sets||3)}))};
+  wEdit=false;wDetail=null;save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
 
+function exInfo(x){return (x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(x.rest?'':' (standaard)')}
 function renderTrain(){
   const W=S.workout,el=$('trainWrap');
-  if(!W){
-    const planned=S.tasks.filter(t=>t.cat==='gym'&&t.date===today()&&!t.done);
-    const hist=S.workouts.slice(-8).reverse();
-    el.innerHTML='<h1>Training</h1><div class="sub">Kies je training en start. Je sets vul je in tijdens het sporten.</div>'
-      +(planned.length?'<h2>Vandaag gepland</h2>'+planned.map(t=>'<button class="typecard planned" style="width:100%;margin-bottom:8px" data-act="start" data-type="'+esc(TYPES.includes(t.sub)?t.sub:'Full body')+'"><b>▶ '+esc(t.title)+'</b><span>'+(t.time?t.time+'–'+(t.end||fromMin(toMin(t.time)+t.dur))+' · ':'')+'tik om te starten</span></button>').join(''):'')
-      +'<h2>Start een training</h2><div class="types">'+TYPES.map(t=>'<button class="typecard" data-act="start" data-type="'+t+'"><b>'+t+'</b><span>'+(S.schemas[t]||[]).length+' oefeningen</span></button>').join('')+'</div>'
-      +'<h2>Vorige trainingen</h2>'+(hist.length?'<div class="card" style="padding:4px 14px">'+hist.map(w=>{const d=parse(w.date),sets=w.ex.reduce((a,e)=>a+e.sets.length,0),vol=w.ex.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.kg*s.reps,0),0);
-        return '<div class="hist"><div><b>'+esc(w.type)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+Math.round((w.end-w.start)/60000)+' min</div></div><div class="sub" style="text-align:right;font-size:12px">'+sets+' sets<br>'+Math.round(vol)+' kg</div></div>'}).join('')+'</div>':'<div class="empty">Nog geen trainingen gelogd.</div>');
-    return}
-  el.innerHTML='<div class="row between" style="margin-top:8px"><div><div class="sub">Bezig met</div><h1 style="margin-top:0">'+esc(W.type)+'</h1></div><div class="chip" id="wElapsed">0:00</div></div>'
+  if(W){renderActive(el,W);return}
+  if(wDetail&&S.schemas[wDetail]){renderDetail(el,wDetail);return}
+  wDetail=null;
+  const planned=S.tasks.filter(t=>t.cat==='gym'&&t.date===today()&&!t.done);
+  const hist=S.workouts.slice(-8).reverse();
+  el.innerHTML='<h1>Training</h1><div class="sub">Tik op een workout om hem te bekijken, aan te passen en te starten.</div>'
+    +(planned.length?'<h2>Vandaag gepland</h2>'+planned.map(t=>'<button class="typecard planned" style="width:100%;margin-bottom:8px" data-act="open" data-type="'+esc(wtypes().includes(t.sub)?t.sub:wtypes()[0]||'')+'"><b>▶ '+esc(t.title)+'</b><span>'+(t.time?t.time+'–'+(t.end||fromMin(toMin(t.time)+t.dur))+' · ':'')+'tik om te openen</span></button>').join(''):'')
+    +'<h2>Mijn workouts</h2><div class="types">'+wtypes().map(t=>'<button class="typecard" data-act="open" data-type="'+esc(t)+'"><b>'+esc(t)+'</b><span>'+S.schemas[t].length+' oefening'+(S.schemas[t].length===1?'':'en')+'</span></button>').join('')
+    +'<button class="typecard newcard" data-act="neww"><b>＋ Nieuwe workout</b><span>begin met 0 oefeningen</span></button></div>'
+    +(wNew?'<div class="card" style="margin-top:10px"><label class="l" for="wNewName">Naam van je nieuwe workout</label><input class="field" id="wNewName" placeholder="bv. Push day, Armen, Benen…" maxlength="30"><div class="btns"><button class="btn ghost" data-act="newcancel">Annuleren</button><button class="btn" data-act="newsave">Maken</button></div></div>':'')
+    +'<h2>Vorige trainingen</h2>'+(hist.length?'<div class="card" style="padding:4px 14px">'+hist.map(w=>{const d=parse(w.date),sets=w.ex.reduce((a,e)=>a+e.sets.length,0),vol=w.ex.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.kg*s.reps,0),0);
+      return '<div class="hist"><div><b>'+esc(w.type)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+Math.round((w.end-w.start)/60000)+' min</div></div><div class="sub" style="text-align:right;font-size:12px">'+sets+' sets<br>'+Math.round(vol)+' kg</div></div>'}).join('')+'</div>':'<div class="empty">Nog geen trainingen gelogd.</div>');
+  if(wNew)setTimeout(()=>{const i=$('wNewName');if(i)i.focus()},50)}
+
+// overzichtsscherm van één workout: bekijken, aanpassen en starten
+function renderDetail(el,name){
+  const L=S.schemas[name],sets=L.reduce((a,x)=>a+(x.sets||3),0);
+  el.innerHTML='<button class="linkbtn" data-act="back" style="margin-top:6px">‹ Alle workouts</button>'
+    +(wRename?'<div class="row" style="gap:8px;margin:10px 0"><input class="field" id="wRenameIn" value="'+esc(name)+'" maxlength="30" style="margin:0"><button class="btn" data-act="renamesave" style="width:auto;padding:0 18px;align-self:stretch">OK</button></div>'
+      :'<div class="row between"><h1>'+esc(name)+'</h1><button class="linkbtn" data-act="rename">✏️ Naam</button></div>')
+    +'<div class="sub">'+L.length+' oefening'+(L.length===1?'':'en')+' · '+sets+' sets</div>'
+    +'<button class="btn" data-act="startw" style="margin:14px 0 4px">▶ Start training</button>'
+    +'<h2>Oefeningen</h2>'
+    +(L.length?'<div class="sub" style="font-size:13px;margin:-6px 0 10px">Tik op een oefening om sets of rusttijd te wijzigen. Met ↑ ↓ verander je de volgorde.</div>'
+      +L.map((x,i)=>'<div class="exrow"><button class="exbody" data-act="editex" data-i="'+i+'"><b>'+esc(x.n)+'</b><span>'+exInfo(x)+'</span></button><button data-act="up" data-i="'+i+'" aria-label="Omhoog">↑</button><button data-act="down" data-i="'+i+'" aria-label="Omlaag">↓</button></div>').join('')
+      :'<div class="empty">Nog geen oefeningen.<br>Voeg je eerste oefening toe.</div>')
+    +'<button class="btn ghost" data-act="newex" style="margin-top:8px">+ Oefening toevoegen</button>'
+    +'<button class="btn danger" data-act="delw" style="margin-top:22px">Workout verwijderen</button>';
+  if(wRename)setTimeout(()=>{const i=$('wRenameIn');if(i){i.focus();i.select()}},50)}
+
+// tijdens de training: alleen invullen en afvinken, tenzij je op Bewerken tikt
+function renderActive(el,W){
+  el.innerHTML='<div class="row between" style="margin-top:8px;align-items:flex-start"><div><div class="sub">Bezig met</div><h1 style="margin-top:0">'+esc(W.type)+'</h1></div>'
+    +'<div style="text-align:right"><div class="chip" id="wElapsed">0:00</div><div><button class="editbtn'+(wEdit?' on':'')+'" data-act="wedit">'+(wEdit?'✅ Klaar':'✏️ Bewerken')+'</button></div></div></div>'
+    +(wEdit?'<div class="editnote">✏️ Bewerkmodus: voeg oefeningen of sets toe of haal ze weg. Tik op <b>✅ Klaar</b> als je klaar bent.</div>':'')
     +W.ex.map((ex,i)=>{const last=lastOf(ex.n),pr=prOf(ex.n);
-      return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b><button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen">✕</button></div>'
+      return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b>'+(wEdit?'<button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen" style="color:var(--danger)">✕ Weg</button>':'')+'</div>'
         +'<div class="sub">⏱ '+fmtRest(restOf(ex))+' rust · '+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
         +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span></span></div>'
         +ex.sets.map((s,j)=>{const h=hint(ex,j,last);return '<div class="setrow'+(s.done?' done':'')+'"><span>'+(j+1)+'</span>'
           +'<input inputmode="decimal" data-i="'+i+'" data-j="'+j+'" data-f="kg" value="'+esc(s.kg)+'" placeholder="'+esc(h.kg)+'" aria-label="kilo">'
           +'<input inputmode="numeric" data-i="'+i+'" data-j="'+j+'" data-f="reps" value="'+esc(s.reps)+'" placeholder="'+esc(h.reps)+'" aria-label="herhalingen">'
           +'<button class="setchk" data-act="set" data-i="'+i+'" data-j="'+j+'" aria-label="Set klaar">✓</button></div>'}).join('')
-        +'<div class="row" style="gap:18px"><button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button>'
-        +(ex.sets.length>1?'<button class="linkbtn" data-act="rmset" data-i="'+i+'" style="color:var(--danger)">− Set</button>':'')+'</div></div>'}).join('')
-    +'<button class="btn ghost" data-act="addex" style="margin:4px 0 16px">+ Oefening toevoegen</button>'
+        +(wEdit?'<div class="row" style="gap:18px"><button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button>'
+          +(ex.sets.length>1?'<button class="linkbtn" data-act="rmset" data-i="'+i+'" style="color:var(--danger)">− Set</button>':'')+'</div>':'')+'</div>'}).join('')
+    +(wEdit?'<button class="btn ghost" data-act="addex" style="margin:4px 0 16px">+ Oefening toevoegen</button>':'<div style="height:6px"></div>')
     +'<button class="btn" data-act="finish">✅ Training afronden</button><button class="btn danger" data-act="cancel" style="margin-top:6px">Training annuleren</button>';
   tickWorkout()}
 function tickWorkout(){const e=$('wElapsed');if(e&&S.workout)e.textContent=mmss((Date.now()-S.workout.start)/1000)}
 
+// knoppen op het overzicht en het detailscherm (als er geen training bezig is)
+function trainNav(a,b,i){
+  const L=wDetail&&S.schemas[wDetail];
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur(); // anders wordt het scherm niet ververst
+  if(a==='open'){if(!b.dataset.type)return;wDetail=b.dataset.type;wRename=false;wNew=false;renderTrain();window.scrollTo(0,0);return}
+  if(a==='back'){wDetail=null;wRename=false;renderTrain();window.scrollTo(0,0);return}
+  if(a==='neww'){wNew=true;renderTrain();return}
+  if(a==='newcancel'){wNew=false;renderTrain();return}
+  if(a==='newsave'){const n=$('wNewName').value.trim();if(!n){toast('Geef je workout een naam');$('wNewName').focus();return}
+    if(S.schemas[n]){toast('Die naam bestaat al');return}
+    S.schemas[n]=[];S.wtypes.push(n);wNew=false;wDetail=n;save();render();window.scrollTo(0,0);toast('Workout "'+n+'" gemaakt');return}
+  if(!L)return;
+  if(a==='rename'){wRename=true;renderTrain();return}
+  if(a==='renamesave'){const n=$('wRenameIn').value.trim(),o=wDetail;
+    if(!n||n===o){wRename=false;renderTrain();return}if(S.schemas[n]){toast('Die naam bestaat al');return}
+    S.schemas[n]=S.schemas[o];delete S.schemas[o];S.wtypes=S.wtypes.map(x=>x===o?n:x);
+    for(const t of S.tasks)if(t.cat==='gym'&&t.sub===o){t.sub=n;if(t.title===o)t.title=n}
+    wDetail=n;wRename=false;save();render();toast('Naam gewijzigd');return}
+  if(a==='startw'){startWorkout(wDetail);return}
+  if(a==='newex'){openEx({mode:'schema',type:wDetail,i:-1});return}
+  if(a==='editex'){openEx({mode:'schema',type:wDetail,i});return}
+  if(a==='up'&&i>0){[L[i-1],L[i]]=[L[i],L[i-1]];save();renderTrain();return}
+  if(a==='down'&&i<L.length-1){[L[i+1],L[i]]=[L[i],L[i+1]];save();renderTrain();return}
+  if(a==='delw'){armed(b,'Tik nogmaals om te verwijderen',()=>{const o=wDetail;delete S.schemas[o];S.wtypes=S.wtypes.filter(x=>x!==o);wDetail=null;save();render();window.scrollTo(0,0);toast('Workout verwijderd')});return}}
+$('trainWrap').addEventListener('keydown',e=>{if(e.key!=='Enter')return;
+  if(e.target.id==='wNewName')trainNav('newsave');if(e.target.id==='wRenameIn')trainNav('renamesave')});
+
 $('trainWrap').addEventListener('input',e=>{const f=e.target.dataset.f;if(!f||!S.workout)return;
   S.workout.ex[+e.target.dataset.i].sets[+e.target.dataset.j][f]=e.target.value.trim();save()});
 $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,W=S.workout,i=+b.dataset.i;
-  if(a==='start'){if(W){toast('Rond eerst je huidige training af');return}startWorkout(b.dataset.type);return}
-  if(!W)return;
+  if(!W){trainNav(a,b,i);return}
+  if(a==='wedit'){wEdit=!wEdit;renderTrain();return}
+  if(['addset','rmset','rmex','addex'].includes(a)&&!wEdit)return; // vergrendeld zolang je niet op Bewerken tikt
   if(a==='set'){const ex=W.ex[i],j=+b.dataset.j,s=ex.sets[j];
     if(s.done){s.done=false;save();renderTrain();return}
     const h=hint(ex,j,lastOf(ex.n));if(s.kg==='')s.kg=String(h.kg??'');if(s.reps==='')s.reps=String(h.reps??'');
@@ -906,20 +965,10 @@ $('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30
 $('restSkip').onclick=()=>{stopRest();save()};
 setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
 
-/* schema's */
+/* instellingen (standaard rusttijd + meldingen) */
 function renderSchemas(){
-  $('schemaSeg').innerHTML=TYPES.map(t=>'<button data-t="'+t+'" class="'+(t===schemaSel?'on':'')+'">'+t+'</button>').join('');
-  const l=S.schemas[schemaSel]||[];
-  $('schemaList').innerHTML=l.length?l.map((x,i)=>'<div class="exrow"><button class="exbody" data-act="edit" data-i="'+i+'"><b>'+esc(x.n)+'</b><span>'+(x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(x.rest?'':' (standaard)')+'</span></button><button data-act="up" data-i="'+i+'" aria-label="Omhoog">↑</button><button data-act="down" data-i="'+i+'" aria-label="Omlaag">↓</button></div>').join(''):'<div class="empty">Nog geen oefeningen in dit schema.</div>';
   $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
   renderNotif()}
-$('schemaSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){schemaSel=b.dataset.t;renderSchemas()}});
-$('schemaList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const l=S.schemas[schemaSel],i=+b.dataset.i;
-  if(b.dataset.act==='up'&&i>0)[l[i-1],l[i]]=[l[i],l[i-1]];
-  if(b.dataset.act==='down'&&i<l.length-1)[l[i+1],l[i]]=[l[i],l[i+1]];
-  if(b.dataset.act==='edit'){openEx({mode:'schema',type:schemaSel,i});return}
-  save();renderSchemas()});
-$('exAdd').onclick=()=>openEx({mode:'schema',type:schemaSel,i:-1});
 
 /* formulier eigen oefening (voor schema of lopende training) */
 const RESTS=[30,45,60,90,120,150,180];
@@ -941,7 +990,7 @@ $('exSave').onclick=()=>{const n=$('exName').value.trim();if(!n){toast('Geef je 
   if(exCtx.mode==='workout'){S.workout.ex.push({n,rest:item.rest,sets:newSets(exSets)});if($('exSaveSchema').checked&&!l.some(x=>x.n===n))l.push(item)}
   else if(exCtx.i>=0)l[exCtx.i]=item;else l.push(item);
   save();closeEx();render();toast(exCtx.mode==='workout'?'➕ '+n+' toegevoegd':'Opgeslagen in '+exCtx.type)};
-$('exDel').onclick=()=>armed($('exDel'),'Tik nogmaals om te verwijderen',()=>{S.schemas[exCtx.type].splice(exCtx.i,1);save();closeEx();renderSchemas();toast('Verwijderd')});
+$('exDel').onclick=()=>armed($('exDel'),'Tik nogmaals om te verwijderen',()=>{S.schemas[exCtx.type].splice(exCtx.i,1);save();closeEx();render();toast('Verwijderd')});
 $('restSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.rest=+b.dataset.s;save();renderSchemas()}});
 
 /* vooruitgang */
