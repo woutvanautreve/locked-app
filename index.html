@@ -403,7 +403,7 @@ nav button.on{color:var(--accent)}
     <div class="sub" style="font-size:13px;line-height:1.4">Zet de Focus-modus van je iPhone aan als je op Start tikt, zodat afleidende apps en meldingen stil zijn. <button class="linkbtn" id="fHelpBtn">Hoe stel ik dit in?</button></div>
     <div id="fHelp" class="help" hidden>
       <p><b>Stap 1 – Focus-modus maken</b><br>Instellingen → <b>Focus</b> → <b>+</b> → <b>Aangepast</b>. Noem hem <b>Studeren</b>. Kies bij <b>Apps</b> welke apps je nog mogen storen (bv. alleen Telefoon).<br>💡 Extra sterk: kies bij <b>Beginscherm</b> een scherm met alleen LOCKED en je leerapps. Dan zie je de rest echt niet meer.</p>
-      <p><b>Stap 2 – Opdracht om aan te zetten</b><br>Open de app <b>Opdrachten</b> → <b>+</b> → <b>Voeg taak toe</b> → zoek <b>Stel focus in</b>. Tik op de blauwe focus en kies <b>Studeren</b>, laat het op <b>Zet aan</b> staan. Noem de opdracht exact: <code>LOCKED focus aan</code></p>
+      <p><b>Stap 2 – Opdracht om aan te zetten</b><br>Open de app <b>Opdrachten</b> → <b>+</b> → <b>Voeg taak toe</b> → zoek <b>Stel focus in</b>. Tik op de blauwe focus en kies <b>Studeren</b>, laat het op <b>Zet aan</b> staan. Noem de opdracht exact: <code>LOCKED focus aan</code><br>💡 Extra: voeg in deze opdracht ook <b>Start timer</b> toe met <b>Opdrachtinvoer</b> en <b>seconden</b>. Dan loopt je focustijd ook als iPhone-timer (gaat af met scherm op slot).</p>
       <p><b>Stap 3 – Opdracht om uit te zetten</b><br>Hetzelfde, maar tik op <b>Zet aan</b> en kies <b>Zet uit</b>. Noem hem exact: <code>LOCKED focus uit</code></p>
       <p><b>Stap 4 – Testen</b><br>Zet hierboven de schakelaar aan en tik op <b>Start</b>. De eerste keer vraagt je iPhone of LOCKED de opdracht mag openen: tik op <b>Sta toe</b>. Ga daarna terug naar LOCKED (linksboven of door te vegen).</p>
     </div>
@@ -466,6 +466,18 @@ nav button.on{color:var(--accent)}
   <div class="seg" id="restSeg"></div>
   <h2>🔔 Melding als je rust voorbij is</h2>
   <div class="card"><div class="row between"><div class="sub" id="notifTxt" style="font-size:14px">…</div><button class="addday" id="notifBtn">Aanzetten</button></div></div>
+  <h2>⏰ iPhone-timer</h2>
+  <div class="card">
+    <label class="toggle" style="margin:0 0 8px"><span>⏰ <b>iPhone-timer gebruiken</b></span><input type="checkbox" id="iosTimer"></label>
+    <div class="sub" style="font-size:13px;line-height:1.4">Start bij elke rustpauze en focussessie de Klok-timer van je iPhone. Die gaat <b>ook af met je scherm op slot</b>. <button class="linkbtn" id="iosHelpBtn">Hoe stel ik dit in?</button></div>
+    <div id="iosHelp" class="help" hidden>
+      <p><b>Stap 1 – Opdracht maken</b><br>Open de app <b>Opdrachten</b> → <b>+</b> (rechtsboven) → <b>Voeg taak toe</b> → zoek <b>Start timer</b> en tik erop.</p>
+      <p><b>Stap 2 – Tijd instellen</b><br>In de taak staat <i>"Start timer voor 30 minuten"</i>.<br>• Tik op <b>30</b> en kies <b>Opdrachtinvoer</b> (bovenaan de lijst).<br>• Tik op <b>minuten</b> en kies <b>seconden</b>.</p>
+      <p><b>Stap 3 – Naam</b><br>Tik bovenaan op de naam van de opdracht en noem hem exact: <code>LOCKED rust</code>. Tik op <b>Gereed</b>.</p>
+      <p><b>Stap 4 – Testen</b><br>Zet hierboven de schakelaar aan en start een training. Na je eerste set vraagt je iPhone of LOCKED de opdracht mag openen: tik op <b>Sta toe</b>. Je iPhone toont even Opdrachten; veeg terug naar LOCKED. De timer loopt nu in je Klok-app en op je vergrendelscherm.</p>
+      <p><b>Tip</b><br>Tik je in LOCKED op <b>Klaar</b> om je rust over te slaan, dan loopt de iPhone-timer nog door. Stop hem dan via je vergrendelscherm of de Dynamic Island.</p>
+    </div>
+  </div>
 </div></section>
 
 <section class="view" id="v-progress"><div class="wrap" id="progWrap"></div></section>
@@ -992,11 +1004,13 @@ $('fStart').onclick=()=>{
   if(!T)S.timer={total:S.fDur*60,end:Date.now()+S.fDur*60000,left:null,subject:$('fSubject').value.trim()};
   else if(T.end){T.left=remaining();T.end=null}
   else{T.end=Date.now()+T.left*1000;T.left=null}
-  if(!T&&S.blockFocus){S.focusLocked=true;save();renderFocus();runShortcut('LOCKED focus aan');return}
+  if(!T&&S.blockFocus){S.focusLocked=true;save();renderFocus();runShortcut('LOCKED focus aan',S.fDur*60);return}
+  if(!T&&S.iosTimer){save();renderFocus();runShortcut('LOCKED rust',S.fDur*60);return} // iPhone-timer voor de focussessie
   save();renderFocus()
 };
 /* iPhone Focus-modus via de app Opdrachten (Shortcuts) */
-function runShortcut(name){location.href='shortcuts://run-shortcut?name='+encodeURIComponent(name)}
+// opdracht in de app Opdrachten starten; input wordt doorgegeven als "Opdrachtinvoer" (bv. aantal seconden)
+function runShortcut(name,input){location.href='shortcuts://run-shortcut?name='+encodeURIComponent(name)+(input!=null?'&input=text&text='+encodeURIComponent(input):'')}
 $('fBlock').onchange=e=>{S.blockFocus=e.target.checked;save();if(S.blockFocus&&!S.seenFocusHelp){S.seenFocusHelp=true;save();$('fHelp').hidden=false}};
 $('fHelpBtn').onclick=()=>{$('fHelp').hidden=!$('fHelp').hidden};
 $('fUnlock').onclick=()=>{S.focusLocked=false;save();renderFocus();runShortcut('LOCKED focus uit')};
@@ -1201,7 +1215,8 @@ function cardioListHTML(){const L=(S.cardio||[]).slice().sort((a,b)=>a.date<b.da
     +(L.length?'<div class="card" style="padding:4px 14px">'+L.map(c=>{const d=parse(c.date);return '<div class="hist"><div><b>'+CTYPE[c.type].e+' '+esc(c.name)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+fmtKm(c.type==='Zwemmen'?c.km*1000:c.km)+' '+CTYPE[c.type].unit+' in '+fmtDur(c.sec)+'</div></div><div style="text-align:right"><b style="font-size:14px">'+paceOf(c.type,c.km,c.sec).txt+'</b><div><button class="linkbtn" data-act="rmcardio" data-id="'+c.id+'" style="font-size:12px;color:var(--muted)">verwijderen</button></div></div></div>'}).join('')+'</div>':'<div class="empty" style="padding:10px">Nog geen cardio gelogd.</div>')}
 
 /* rusttimer + melding */
-function startRest(sec,next){S.restTotal=sec;S.restEnd=Date.now()+sec*1000;S.restNext=next||'';save();tickRest()}
+function startRest(sec,next){S.restTotal=sec;S.restEnd=Date.now()+sec*1000;S.restNext=next||'';save();tickRest();
+  if(S.iosTimer)runShortcut('LOCKED rust',sec)} // Klok-timer van je iPhone: gaat ook af met scherm op slot
 function stopRest(){S.restEnd=null;$('restBar').hidden=true}
 function tickRest(){if(!S.restEnd){$('restBar').hidden=true;return}
   const left=Math.max(0,(S.restEnd-Date.now())/1000);
@@ -1223,6 +1238,8 @@ function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
   const p=Notification.permission;b.hidden=p!=='default';
   t.textContent=p==='granted'?'✅ Aan. Je krijgt een melding zodra je rust voorbij is (zolang LOCKED open staat).':p==='denied'?'🚫 Geblokkeerd. Zet meldingen aan via Instellingen → Meldingen → LOCKED.':'Uit. Tik op Aanzetten om een melding te krijgen als je rust voorbij is.'}
 $('notifBtn').onclick=askNotify;
+$('iosTimer').onchange=e=>{S.iosTimer=e.target.checked;save();if(S.iosTimer&&!S.seenIosHelp){S.seenIosHelp=true;save();$('iosHelp').hidden=false}};
+$('iosHelpBtn').onclick=()=>{$('iosHelp').hidden=!$('iosHelp').hidden};
 $('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30;save();tickRest()};
 $('restSkip').onclick=()=>{stopRest();save()};
 setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
@@ -1230,7 +1247,7 @@ setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkou
 /* instellingen (standaard rusttijd + meldingen) */
 function renderSchemas(){
   $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
-  renderNotif()}
+  renderNotif();$('iosTimer').checked=!!S.iosTimer}
 
 /* formulier eigen oefening (voor schema of lopende training) */
 const RESTS=[30,45,60,90,120,150,180];
