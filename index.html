@@ -135,6 +135,8 @@ nav button:active{transform:scale(.88)}
 .restbar>div:first-child{flex:1;min-width:0}
 .restbar>div:first-child .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restbar .bar{order:3;flex:1 1 100%!important}
+.restadj{order:2;flex:1 1 100%;display:flex;gap:6px}
+.restadj button{flex:1;padding:8px 0;border-radius:10px;background:rgba(127,127,127,.3);color:inherit;font-weight:700;font-size:14px}
 .restbar .sub{color:inherit;opacity:.7}
 .restbar b{font-size:22px;font-variant-numeric:tabular-nums}
 .restbar .bar{background:rgba(127,127,127,.35)}
@@ -563,8 +565,9 @@ nav button.on{color:var(--accent)}
 
 <div class="restbar" id="restBar" hidden>
   <div><div class="sub" style="font-size:12px" id="restLbl">Rust</div><b id="restTime">1:30</b></div>
+  <button class="chip" id="restIos" aria-label="Zet de iPhone-timer voor de resterende rust" hidden>⏰</button><button class="chip" id="restSkip">Klaar</button>
+  <div class="restadj" id="restAdj"><button data-adj="-30" aria-label="30 seconden minder">−30s</button><button data-adj="-15" aria-label="15 seconden minder">−15s</button><button data-adj="15" aria-label="15 seconden meer">+15s</button><button data-adj="30" aria-label="30 seconden meer">+30s</button></div>
   <div class="bar" style="flex:1"><i id="restProg"></i></div>
-  <button class="chip" id="restIos" aria-label="Zet de iPhone-timer voor de resterende rust" hidden>⏰</button><button class="chip" id="restPlus">+30s</button><button class="chip" id="restSkip">Klaar</button>
 </div>
 
 <button class="fab" id="fab" aria-label="Taak plannen">Plan</button>
@@ -1316,8 +1319,12 @@ $('pushBtn').onclick=async()=>{pushBusy=true;pushErr='';renderPush();
 // ⏰ in de rustbalk: iPhone-timer starten met de resterende rust (alleen als jij erop tikt)
 $('restIos').onclick=()=>{if(!S.restEnd)return;const left=Math.max(1,Math.ceil((S.restEnd-Date.now())/1000));runShortcut('LOCKED rust',left)};
 $('iosHelpBtn').onclick=()=>{$('iosHelp').hidden=!$('iosHelp').hidden};
-$('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30;save();tickRest();
-  pushSchedule('rest',Math.ceil((S.restEnd-Date.now())/1000),'⏱ Rust voorbij!',restPushBody())};
+// rust aanpassen terwijl hij loopt: −30s, −15s, +15s, +30s (pushmelding schuift mee)
+$('restAdj').addEventListener('click',e=>{const b=e.target.closest('button[data-adj]');if(!b||!S.restEnd)return;const d=+b.dataset.adj;
+  S.restEnd+=d*1000;const left=Math.ceil((S.restEnd-Date.now())/1000);
+  if(left<=0){stopRest();save();toast('⏩ Rust voorbij, volgende set!');return}
+  S.restTotal=Math.max(left,(S.restTotal||S.rest)+d);save();tickRest();
+  pushSchedule('rest',left,'⏱ Rust voorbij!',restPushBody())});
 $('restSkip').onclick=()=>{stopRest();save()};
 setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
 
