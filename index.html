@@ -101,6 +101,15 @@ h2{font-size:18px;margin:22px 0 10px}
 .day.drop{box-shadow:0 0 0 3px var(--accent)}
 .planmode .fab{display:none}
 [hidden]{display:none!important}
+/* tik-animatie: alles wat je kunt indrukken veert even in */
+button,.task,.typecard,.dexcard,.drag,.exrow,.hist,.dicecard .btn{transition:transform .14s cubic-bezier(.3,1.4,.6,1),filter .14s ease}
+button:active:not(:disabled),.typecard:active,.dexcard:active,.drag:active{transform:scale(.94);filter:brightness(.9)}
+.task:active,.exrow:active{transform:scale(.98)}
+nav button:active{transform:scale(.88)}
+.task .chk:active{transform:scale(.8)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.task.pop .chk{animation:chkpop .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes chkpop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
 /* ===== Plannen / Sporten ===== */
 .modebar{max-width:560px;margin:0 auto;padding:12px 16px 0}
 .modebar .seg button{font-size:15px;padding:10px 4px}
