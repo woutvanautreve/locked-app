@@ -101,6 +101,39 @@ h2{font-size:18px;margin:22px 0 10px}
 .day.drop{box-shadow:0 0 0 3px var(--accent)}
 .planmode .fab{display:none}
 [hidden]{display:none!important}
+/* ===== Plannen / Sporten ===== */
+.modebar{max-width:560px;margin:0 auto;padding:12px 16px 0}
+.modebar .seg button{font-size:15px;padding:10px 4px}
+.navgroup{display:flex;justify-content:space-around;width:100%}
+.types{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.typecard{background:var(--card);border-radius:16px;padding:16px 14px;text-align:left;box-shadow:var(--shadow);border-left:5px solid var(--gym)}
+.typecard b{display:block;font-size:17px}.typecard span{font-size:13px;color:var(--muted)}
+.planned{border:2px solid var(--gym)}
+.exc{padding:14px}
+.exc .sub{font-size:12px;margin:2px 0 8px}
+.setrow{display:grid;grid-template-columns:34px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:6px}
+.setrow.head{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.setrow.head span{text-align:center}
+.setrow>span{text-align:center;font-weight:700;color:var(--muted)}
+.setrow input{width:100%;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--card2);text-align:center;font-weight:700}
+.setrow.done input{background:color-mix(in srgb,var(--overig) 14%,transparent);border-color:transparent}
+.setchk{height:40px;border-radius:10px;background:var(--card2);font-size:18px;font-weight:800;color:var(--muted)}
+.setrow.done .setchk{background:var(--overig);color:#fff}
+.hist{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.hist:last-child{border-bottom:0}
+.restbar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;background:var(--text);color:var(--bg);border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:10px;z-index:7;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.restbar .sub{color:inherit;opacity:.7}
+.restbar b{font-size:22px;font-variant-numeric:tabular-nums}
+.restbar .bar{background:rgba(127,127,127,.35)}
+.restbar .chip{background:rgba(127,127,127,.3);color:inherit}
+.exrow{display:flex;align-items:center;gap:6px;background:var(--card);border-radius:14px;padding:10px 12px;margin-bottom:6px;box-shadow:var(--shadow)}
+.exrow b{flex:1;font-weight:600}
+.exrow button{width:32px;height:32px;border-radius:9px;background:var(--card2);font-weight:700}
+.pr{padding:12px 0;border-bottom:1px solid var(--line)}
+.pr:last-child{border-bottom:0}
+.spark{display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:8px}
+.spark i{flex:0 1 22px;background:var(--gym);border-radius:3px 3px 0 0;opacity:.85;min-height:3px}
+.spark i:last-child{opacity:1}
 /* uitleg Focus-modus */
 .help{margin-top:12px;font-size:14px;line-height:1.45}
 .help p{margin:0 0 12px;background:var(--card2);border-radius:12px;padding:10px 12px}
@@ -188,6 +221,8 @@ nav button.on{color:var(--accent)}
 </style>
 </head>
 <body>
+
+<div class="modebar"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button></div></div>
 
 <!-- VANDAAG -->
 <section class="view on" id="v-today"><div class="wrap">
@@ -286,13 +321,41 @@ nav button.on{color:var(--accent)}
   </div>
 </div></section>
 
+<!-- ===== SPORTEN ===== -->
+<section class="view" id="v-train"><div class="wrap" id="trainWrap"></div></section>
+
+<section class="view" id="v-schemas"><div class="wrap">
+  <h1>Schema's</h1>
+  <div class="sub">Kies welke oefeningen bij elke training horen.</div>
+  <div class="opts" id="schemaSeg" style="margin-top:14px"></div>
+  <div id="schemaList"></div>
+  <div class="row" style="gap:8px;margin-top:10px"><input class="field" id="exNew" placeholder="Oefening toevoegen…" maxlength="40" style="margin:0"><button class="btn" id="exAdd" style="width:auto;padding:0 20px;align-self:stretch">+</button></div>
+  <h2>Rusttijd tussen sets</h2>
+  <div class="seg" id="restSeg"></div>
+</div></section>
+
+<section class="view" id="v-progress"><div class="wrap" id="progWrap"></div></section>
+
+<div class="restbar" id="restBar" hidden>
+  <div><div class="sub" style="font-size:12px">Rust</div><b id="restTime">1:30</b></div>
+  <div class="bar" style="flex:1"><i id="restProg"></i></div>
+  <button class="chip" id="restPlus">+30s</button><button class="chip" id="restSkip">Klaar</button>
+</div>
+
 <button class="fab" id="fab" aria-label="Taak plannen">Plan</button>
 
 <nav>
+ <div class="navgroup" id="navPlan">
   <button data-v="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Vandaag</button>
   <button data-v="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Week</button>
   <button data-v="focus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Focus</button>
   <button data-v="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 21V4M6 4h11l-2 4 2 4H6"/></svg>Doelen</button>
+ </div>
+ <div class="navgroup" id="navSport" hidden>
+  <button data-v="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>Training</button>
+  <button data-v="schemas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Schema's</button>
+  <button data-v="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Vooruitgang</button>
+ </div>
 </nav>
 
 <!-- SHEET -->
@@ -488,11 +551,20 @@ function renderBadges(){
   $('badgeHead').textContent='Badges · '+got.length+'/'+BADGES.length;
   $('badges').innerHTML=BADGES.map(b=>{const[v,g]=b.p(s),ok=v>=g;
     return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')}
-function render(){renderToday();renderWeek();renderGoals();renderFocus();renderBadges()}
+function render(){
+  if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));if(!S.workouts)S.workouts=[];if(!S.rest)S.rest=90; // ook na "Alles wissen"
+  renderToday();renderWeek();renderGoals();renderFocus();renderBadges();
+  // tijdens het typen in een set niet opnieuw tekenen (anders verlies je je cursor)
+  if(!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#trainWrap')))renderTrain();
+  renderSchemas();renderProgress()}
 
 /* ---------- navigatie ---------- */
 function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  const sp=SPORT_VIEWS.includes(v);if(sp)lastSport=v;else lastPlan=v;
+  $('navPlan').hidden=sp;$('navSport').hidden=!sp;document.body.classList.toggle('sporting',sp);
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',(b.dataset.m==='sport')===sp));
+  if(S.restEnd)tickRest();
   $('fab').style.display=(v==='today'||v==='week')?'':'none';window.scrollTo(0,0);render()}
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v)});
 
@@ -679,6 +751,140 @@ $('fUnlock').onclick=()=>{S.focusLocked=false;save();renderFocus();runShortcut('
 $('fStop').onclick=()=>armed($('fStop'),'Zeker stoppen?',()=>{const T=S.timer;if(!T)return;const done=Math.floor((T.total-remaining())/60);
   logFocus(done,T.subject);S.timer=null;save();render();toast(done>=1?'+'+done+' XP':'Sessie gestopt')});
 setInterval(()=>{if(S.timer&&S.timer.end){if(remaining()<=0)finishTimer();else if(view==='focus')renderFocus()}},500);
+
+/* =====================================================================
+   SPORTEN: trainingen loggen, schema's, rusttimer en vooruitgang
+   ===================================================================== */
+const TYPES=['Full body','Upper','Lower','Anterior','Posterior'];
+const DEF_SCHEMAS={
+  'Full body':['Squat','Bench press','Barbell row','Overhead press','Romanian deadlift','Plank'],
+  'Upper':['Bench press','Barbell row','Overhead press','Lat pulldown','Biceps curl','Triceps pushdown'],
+  'Lower':['Squat','Romanian deadlift','Leg press','Leg curl','Calf raise'],
+  'Anterior':['Squat','Bench press','Overhead press','Leg extension','Biceps curl','Crunches'],
+  'Posterior':['Deadlift','Barbell row','Pull-ups','Hip thrust','Leg curl','Back extension']};
+if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));
+if(!S.workouts)S.workouts=[];
+if(!S.rest)S.rest=90;
+let schemaSel='Upper';
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?null:n};
+const mmss=s=>Math.floor(s/60)+':'+pad(Math.floor(s%60));
+// alle gelogde sets van een oefening, per training (nieuwste laatst)
+function history(name){return S.workouts.filter(w=>w.ex.some(e=>e.n===name)).map(w=>({date:w.date,sets:w.ex.find(e=>e.n===name).sets}))}
+function bestSet(sets){return sets.reduce((b,s)=>!b||s.kg>b.kg||(s.kg===b.kg&&s.reps>b.reps)?s:b,null)}
+function prOf(name){return bestSet(history(name).flatMap(h=>h.sets))}
+function lastOf(name){const h=history(name);return h.length?h[h.length-1].sets:null}
+// voorstel voor een set: vorige set van vandaag, anders dezelfde set van vorige keer
+function hint(ex,j,last){const p=j>0?ex.sets[j-1]:null;
+  if(p&&(p.kg!==''||p.reps!==''))return{kg:p.kg,reps:p.reps};
+  const l=last&&(last[j]||last[last.length-1]);return l?{kg:l.kg,reps:l.reps}:{kg:'',reps:''}}
+
+function startWorkout(type){
+  S.workout={type,start:Date.now(),ex:(S.schemas[type]||[]).map(n=>{const l=lastOf(n);return{n,sets:Array.from({length:Math.max(3,l?l.length:3)},()=>({kg:'',reps:'',done:false}))}})};
+  save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
+
+function renderTrain(){
+  const W=S.workout,el=$('trainWrap');
+  if(!W){
+    const planned=S.tasks.filter(t=>t.cat==='gym'&&t.date===today()&&!t.done);
+    const hist=S.workouts.slice(-8).reverse();
+    el.innerHTML='<h1>Training</h1><div class="sub">Kies je training en start. Je sets vul je in tijdens het sporten.</div>'
+      +(planned.length?'<h2>Vandaag gepland</h2>'+planned.map(t=>'<button class="typecard planned" style="width:100%;margin-bottom:8px" data-act="start" data-type="'+esc(TYPES.includes(t.sub)?t.sub:'Full body')+'"><b>▶ '+esc(t.title)+'</b><span>'+(t.time?t.time+'–'+(t.end||fromMin(toMin(t.time)+t.dur))+' · ':'')+'tik om te starten</span></button>').join(''):'')
+      +'<h2>Start een training</h2><div class="types">'+TYPES.map(t=>'<button class="typecard" data-act="start" data-type="'+t+'"><b>'+t+'</b><span>'+(S.schemas[t]||[]).length+' oefeningen</span></button>').join('')+'</div>'
+      +'<h2>Vorige trainingen</h2>'+(hist.length?'<div class="card" style="padding:4px 14px">'+hist.map(w=>{const d=parse(w.date),sets=w.ex.reduce((a,e)=>a+e.sets.length,0),vol=w.ex.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.kg*s.reps,0),0);
+        return '<div class="hist"><div><b>'+esc(w.type)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+Math.round((w.end-w.start)/60000)+' min</div></div><div class="sub" style="text-align:right;font-size:12px">'+sets+' sets<br>'+Math.round(vol)+' kg</div></div>'}).join('')+'</div>':'<div class="empty">Nog geen trainingen gelogd.</div>');
+    return}
+  el.innerHTML='<div class="row between" style="margin-top:8px"><div><div class="sub">Bezig met</div><h1 style="margin-top:0">'+esc(W.type)+'</h1></div><div class="chip" id="wElapsed">0:00</div></div>'
+    +W.ex.map((ex,i)=>{const last=lastOf(ex.n),pr=prOf(ex.n);
+      return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b><button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen">✕</button></div>'
+        +'<div class="sub">'+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
+        +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span></span></div>'
+        +ex.sets.map((s,j)=>{const h=hint(ex,j,last);return '<div class="setrow'+(s.done?' done':'')+'"><span>'+(j+1)+'</span>'
+          +'<input inputmode="decimal" data-i="'+i+'" data-j="'+j+'" data-f="kg" value="'+esc(s.kg)+'" placeholder="'+esc(h.kg)+'" aria-label="kilo">'
+          +'<input inputmode="numeric" data-i="'+i+'" data-j="'+j+'" data-f="reps" value="'+esc(s.reps)+'" placeholder="'+esc(h.reps)+'" aria-label="herhalingen">'
+          +'<button class="setchk" data-act="set" data-i="'+i+'" data-j="'+j+'" aria-label="Set klaar">✓</button></div>'}).join('')
+        +'<button class="linkbtn" data-act="addset" data-i="'+i+'">+ Set</button></div>'}).join('')
+    +'<div class="row" style="gap:8px;margin:4px 0 16px"><input class="field" id="wAddEx" placeholder="Oefening toevoegen…" maxlength="40" style="margin:0"><button class="btn" data-act="addex" style="width:auto;padding:0 20px;align-self:stretch">+</button></div>'
+    +'<button class="btn" data-act="finish">✅ Training afronden</button><button class="btn danger" data-act="cancel" style="margin-top:6px">Training annuleren</button>';
+  tickWorkout()}
+function tickWorkout(){const e=$('wElapsed');if(e&&S.workout)e.textContent=mmss((Date.now()-S.workout.start)/1000)}
+
+$('trainWrap').addEventListener('input',e=>{const f=e.target.dataset.f;if(!f||!S.workout)return;
+  S.workout.ex[+e.target.dataset.i].sets[+e.target.dataset.j][f]=e.target.value.trim();save()});
+$('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,W=S.workout,i=+b.dataset.i;
+  if(a==='start'){if(W){toast('Rond eerst je huidige training af');return}startWorkout(b.dataset.type);return}
+  if(!W)return;
+  if(a==='set'){const ex=W.ex[i],j=+b.dataset.j,s=ex.sets[j];
+    if(s.done){s.done=false;save();renderTrain();return}
+    const h=hint(ex,j,lastOf(ex.n));if(s.kg==='')s.kg=String(h.kg??'');if(s.reps==='')s.reps=String(h.reps??'');
+    if(num(s.reps)===null||num(s.reps)<=0){s.reps='';toast('Vul je herhalingen in');renderTrain();return}
+    if(s.kg===''||num(s.kg)===null)s.kg='0';
+    s.done=true;save();renderTrain();startRest();return}
+  if(a==='addset'){const l=W.ex[i].sets;l.push({kg:'',reps:'',done:false});save();renderTrain();return}
+  if(a==='rmex'){armed(b,'Weg?',()=>{W.ex.splice(i,1);save();renderTrain()});return}
+  if(a==='addex'){const n=$('wAddEx').value.trim();if(!n){$('wAddEx').focus();return}W.ex.push({n,sets:[0,1,2].map(()=>({kg:'',reps:'',done:false}))});save();renderTrain();return}
+  if(a==='cancel'){armed(b,'Zeker? Tik nogmaals om te annuleren',()=>{S.workout=null;stopRest();save();render();toast('Training geannuleerd')});return}
+  if(a==='finish')finishWorkout()});
+
+function finishWorkout(){
+  const W=S.workout,ex=W.ex.map(e=>({n:e.n,sets:e.sets.filter(s=>s.done).map(s=>({kg:num(s.kg)||0,reps:num(s.reps)||0}))})).filter(e=>e.sets.length);
+  if(!ex.length){toast('Vink minstens 1 set af met ✓');return}
+  // nieuwe PR's zoeken (vóór het opslaan vergelijken met de geschiedenis)
+  const prs=ex.map(e=>{const old=prOf(e.n),nw=bestSet(e.sets);return old&&(nw.kg>old.kg||(nw.kg===old.kg&&nw.reps>old.reps))?e.n+' '+nw.kg+' kg':null}).filter(Boolean);
+  const end=Date.now(),mins=Math.max(15,Math.round((end-W.start)/60000));
+  S.workouts.push({id:uid(),type:W.type,date:today(),start:W.start,end,ex});
+  // geplande gymtaak van vandaag afvinken, of er een aanmaken zodat het meetelt voor je doelen
+  let t=S.tasks.find(t=>t.cat==='gym'&&t.date===today()&&!t.done&&t.sub===W.type)||S.tasks.find(t=>t.cat==='gym'&&t.date===today()&&!t.done);
+  if(!t){const st=new Date(W.start),from=pad(st.getHours())+':'+pad(Math.floor(st.getMinutes()/15)*15);
+    t={id:uid(),title:W.type,cat:'gym',sub:W.type,date:today(),time:from,end:fromMin(toMin(from)+mins),dur:mins,done:false};S.tasks.push(t)}
+  t.done=true;S.workout=null;stopRest();save();render();
+  toast('💪 Training opgeslagen! +'+XP.gym+' XP');
+  if(prs.length)setTimeout(()=>toast('🏆 Nieuw PR: '+prs[0]),2000)}
+
+/* rusttimer */
+let restTotal=S.rest;
+function startRest(){restTotal=S.rest;S.restEnd=Date.now()+S.rest*1000;save();tickRest()}
+function stopRest(){S.restEnd=null;$('restBar').hidden=true}
+function tickRest(){if(!S.restEnd){$('restBar').hidden=true;return}
+  const left=Math.max(0,(S.restEnd-Date.now())/1000);
+  if(left<=0){stopRest();save();beep();toast('⏱ Rust voorbij, volgende set!');return}
+  $('restBar').hidden=!['train'].includes(view);$('restTime').textContent=mmss(Math.ceil(left));$('restProg').style.width=(100-left/restTotal*100)+'%'}
+$('restPlus').onclick=()=>{S.restEnd+=30000;restTotal+=30;save();tickRest()};
+$('restSkip').onclick=()=>{stopRest();save()};
+setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkout()},250);
+
+/* schema's */
+function renderSchemas(){
+  $('schemaSeg').innerHTML=TYPES.map(t=>'<button data-t="'+t+'" class="'+(t===schemaSel?'on':'')+'">'+t+'</button>').join('');
+  const l=S.schemas[schemaSel]||[];
+  $('schemaList').innerHTML=l.length?l.map((n,i)=>'<div class="exrow"><b>'+esc(n)+'</b><button data-act="up" data-i="'+i+'" aria-label="Omhoog">↑</button><button data-act="down" data-i="'+i+'" aria-label="Omlaag">↓</button><button data-act="del" data-i="'+i+'" aria-label="Verwijderen">✕</button></div>').join(''):'<div class="empty">Nog geen oefeningen in dit schema.</div>';
+  $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+(s<120?s+' sec':s/60+' min')+'</button>').join('')}
+$('schemaSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){schemaSel=b.dataset.t;renderSchemas()}});
+$('schemaList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const l=S.schemas[schemaSel],i=+b.dataset.i;
+  if(b.dataset.act==='up'&&i>0)[l[i-1],l[i]]=[l[i],l[i-1]];
+  if(b.dataset.act==='down'&&i<l.length-1)[l[i+1],l[i]]=[l[i],l[i+1]];
+  if(b.dataset.act==='del')l.splice(i,1);save();renderSchemas()});
+$('exAdd').onclick=()=>{const n=$('exNew').value.trim();if(!n){$('exNew').focus();return}(S.schemas[schemaSel]=S.schemas[schemaSel]||[]).push(n);$('exNew').value='';save();renderSchemas();toast('Toegevoegd aan '+schemaSel)};
+$('restSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.rest=+b.dataset.s;save();renderSchemas()}});
+
+/* vooruitgang */
+function renderProgress(){
+  const W=S.workouts,wk=ymd(monday(new Date()));
+  const vol=W.reduce((a,w)=>a+w.ex.reduce((b,e)=>b+e.sets.reduce((c,s)=>c+s.kg*s.reps,0),0),0);
+  const names=[...new Set(W.flatMap(w=>w.ex.map(e=>e.n)))];
+  const rows=names.map(n=>{const h=history(n),tops=h.map(x=>bestSet(x.sets).kg),pr=prOf(n);return{n,h,tops,pr,last:h[h.length-1].date}}).sort((a,b)=>a.last<b.last?1:-1);
+  $('progWrap').innerHTML='<h1>Vooruitgang</h1><div class="sub">Je records en hoe je sterker wordt.</div>'
+    +'<div class="row" style="gap:8px;margin-top:14px"><div class="stat"><b>'+W.length+'</b><span>trainingen</span></div><div class="stat"><b>'+W.filter(w=>w.date>=wk).length+'</b><span>deze week</span></div><div class="stat"><b>'+(vol>=1000?(vol/1000).toFixed(1)+'t':Math.round(vol)+' kg')+'</b><span>totaal gelift</span></div></div>'
+    +'<h2>🏆 Persoonlijke records</h2>'
+    +(rows.length?'<div class="card" style="padding:4px 14px">'+rows.map(r=>{const t=r.tops.slice(-10),mx=Math.max(...t,1),mn=Math.min(...t),h=v=>mx===mn?70:25+(v-mn)/(mx-mn)*75,diff=r.tops[r.tops.length-1]-r.tops[0];
+      return '<div class="pr"><div class="row between"><b>'+esc(r.n)+'</b><span class="chip">'+r.pr.kg+' kg × '+r.pr.reps+'</span></div>'
+        +'<div class="sub" style="font-size:12px;margin-top:3px">'+r.h.length+'x getraind'+(r.h.length>1?' · '+(diff>0?'📈 +'+diff+' kg sinds je begon':diff<0?diff+' kg sinds je begon':'zelfde gewicht als de eerste keer'):'')+'</div>'
+        +'<div class="spark">'+t.map(v=>'<i style="height:'+h(v)+'%" title="'+v+' kg"></i>').join('')+'</div></div>'}).join('')+'</div>'
+     :'<div class="empty">Nog geen trainingen.<br>Start je eerste training bij <b>Training</b>.</div>')}
+
+/* wisselen tussen Plannen en Sporten */
+const SPORT_VIEWS=['train','schemas','progress'];
+let lastPlan='today',lastSport='train';
+$('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='sport'?lastSport:lastPlan)});
 
 /* ---------- algemeen ---------- */
 let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
