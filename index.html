@@ -586,7 +586,7 @@ function render(){
   for(const k in S.schemas)S.schemas[k]=S.schemas[k].map(x=>typeof x==='string'?{n:x,sets:3,rest:0}:x); // oud formaat omzetten
   renderToday();renderWeek();renderGoals();renderFocus();renderBadges();
   // tijdens het typen in een set niet opnieuw tekenen (anders verlies je je cursor)
-  if(!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#trainWrap')))renderTrain();
+  const ae=document.activeElement;if(!(ae&&ae.tagName==='INPUT'&&ae.closest('#trainWrap')))renderTrain();
   renderSchemas();renderProgress()}
 
 /* ---------- navigatie ---------- */
