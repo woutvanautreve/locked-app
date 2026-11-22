@@ -2066,19 +2066,21 @@ async function pushDisable(){S.pushOn=false;save();
   try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
     if(sub){try{await sb('/rest/v1/push_subs?endpoint=eq.'+encodeURIComponent(sub.endpoint),{method:'DELETE'})}catch(e){}await sub.unsubscribe()}}catch(e){}}
 // een melding inplannen of schrappen; slot = 'rest' of 'focus' (per slot staat er max. 1 klaar)
-// Alles na elkaar (nooit twee tegelijk) en kort wachten bij snel tikken (−15s, +30s…),
-// zodat er nooit een oude melding blijft hangen. Schrappen gebeurt per soort (tag), dus ook "verweesde" meldingen verdwijnen.
-let pushChain=Promise.resolve();const pushWait={};
-const pushRun=fn=>(pushChain=pushChain.then(fn).catch(()=>{}));
+// Per soort (rust / focus) staat er in de database maar 1 melding. Een nieuwe tijd OVERSCHRIJFT de oude
+// in één stap (upsert), zodat er nooit een oude melding kan blijven hangen. Alles gebeurt na elkaar, en meteen
+// (geen wachttijd), zodat het ook lukt als je meteen je scherm op slot zet.
+let pushChain=Promise.resolve(),pushWarned=0;
+const pushRun=fn=>(pushChain=pushChain.then(fn).catch(e=>{ // fouten niet meer verbergen
+  if(Date.now()-pushWarned>20000){pushWarned=Date.now();toast('⚠️ Pushmelding aanpassen lukte niet: '+e.message)}}));
 const pushDel=slot=>sb('/rest/v1/push_queue?user_id=eq.'+auth.uid+'&tag=eq.'+slot,{method:'DELETE'});
 function pushSchedule(slot,sec,title,body){if(!pushReady())return;const at=Date.now()+Math.max(1,sec)*1000;
-  clearTimeout(pushWait[slot]);
-  pushWait[slot]=setTimeout(()=>pushRun(async()=>{if(!pushReady())return;await pushDel(slot);
-    if(at-Date.now()<1500)return; // rust is (bijna) al voorbij: geen melding meer nodig
-    await sb('/rest/v1/push_queue',{method:'POST',headers:{Prefer:'return=minimal'},
-      body:{user_id:auth.uid,send_at:new Date(at).toISOString(),title,body,tag:slot}})}),600)}
-function pushCancel(slot){clearTimeout(pushWait[slot]);if(!pushReady())return Promise.resolve();
-  return pushRun(()=>pushDel(slot))}
+  pushRun(async()=>{if(!pushReady())return;
+    const row={user_id:auth.uid,send_at:new Date(at).toISOString(),title,body,tag:slot};
+    try{await sb('/rest/v1/push_queue?on_conflict=user_id,tag',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:row})}
+    catch(e){ // database nog zonder "1 melding per soort" (SQL stap 9 niet uitgevoerd): oude manier
+      if(!/conflict|constraint|unique/i.test(e.message))throw e;
+      await pushDel(slot);await sb('/rest/v1/push_queue',{method:'POST',headers:{Prefer:'return=minimal'},body:row})}})}
+function pushCancel(slot){if(!pushReady())return Promise.resolve();return pushRun(()=>pushDel(slot))}
 
 /* --- link uit een mail (bevestigen of wachtwoord vergeten) --- */
 (function(){const h=new URLSearchParams(location.hash.slice(1));
