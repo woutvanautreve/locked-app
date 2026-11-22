@@ -502,12 +502,13 @@ nav button.on{color:var(--accent)}
   <h2>⏰ iPhone-timer</h2>
   <div class="card">
     <label class="toggle" style="margin:0 0 8px"><span>⏰ <b>iPhone-timer gebruiken</b></span><input type="checkbox" id="iosTimer"></label>
+    <label class="toggle" id="iosAutoWrap" style="margin:0 0 8px"><span>Automatisch bij elke set<br><span class="sub" style="font-size:12px">Springt dan telkens even naar Opdrachten</span></span><input type="checkbox" id="iosAuto"></label>
     <div class="sub" style="font-size:13px;line-height:1.4">Start bij elke rustpauze en focussessie de Klok-timer van je iPhone. Die gaat <b>ook af met je scherm op slot</b>. <button class="linkbtn" id="iosHelpBtn">Hoe stel ik dit in?</button></div>
     <div id="iosHelp" class="help" hidden>
       <p><b>Stap 1 – Opdracht maken</b><br>Open de app <b>Opdrachten</b> → <b>+</b> (rechtsboven) → <b>Voeg taak toe</b> → zoek <b>Start timer</b> en tik erop.</p>
       <p><b>Stap 2 – Tijd instellen</b><br>In de taak staat <i>"Start timer voor 30 minuten"</i>.<br>• Tik op <b>30</b> en kies <b>Opdrachtinvoer</b> (bovenaan de lijst).<br>• Tik op <b>minuten</b> en kies <b>seconden</b>.</p>
       <p><b>Stap 3 – Naam</b><br>Tik bovenaan op de naam van de opdracht en noem hem exact: <code>LOCKED rust</code>. Tik op <b>Gereed</b>.</p>
-      <p><b>Stap 4 – Testen</b><br>Zet hierboven de schakelaar aan en start een training. Na je eerste set vraagt je iPhone of LOCKED de opdracht mag openen: tik op <b>Sta toe</b>. Je iPhone toont even Opdrachten; veeg terug naar LOCKED. De timer loopt nu in je Klok-app en op je vergrendelscherm.</p>
+      <p><b>Stap 4 – Gebruiken</b><br>Zet hierboven de schakelaar aan. Tijdens je rust staat in de rustbalk onderaan een knop <b>⏰</b>. Tik erop als je je iPhone op slot wilt zetten: de Klok-timer start dan met je <b>resterende</b> rusttijd. De eerste keer vraagt je iPhone of LOCKED de opdracht mag openen: tik op <b>Sta toe</b>. Veeg daarna terug naar LOCKED.<br>Liever bij elke set automatisch? Zet dan <b>Automatisch bij elke set</b> aan.</p>
       <p><b>Tip</b><br>Tik je in LOCKED op <b>Klaar</b> om je rust over te slaan, dan loopt de iPhone-timer nog door. Stop hem dan via je vergrendelscherm of de Dynamic Island.</p>
     </div>
   </div>
@@ -558,7 +559,7 @@ nav button.on{color:var(--accent)}
 <div class="restbar" id="restBar" hidden>
   <div><div class="sub" style="font-size:12px" id="restLbl">Rust</div><b id="restTime">1:30</b></div>
   <div class="bar" style="flex:1"><i id="restProg"></i></div>
-  <button class="chip" id="restPlus">+30s</button><button class="chip" id="restSkip">Klaar</button>
+  <button class="chip" id="restIos" aria-label="Zet de iPhone-timer voor de resterende rust" hidden>⏰</button><button class="chip" id="restPlus">+30s</button><button class="chip" id="restSkip">Klaar</button>
 </div>
 
 <button class="fab" id="fab" aria-label="Taak plannen">Plan</button>
@@ -1266,12 +1267,12 @@ function cardioListHTML(){const L=(S.cardio||[]).slice().sort((a,b)=>a.date<b.da
 
 /* rusttimer + melding */
 function startRest(sec,next){S.restTotal=sec;S.restEnd=Date.now()+sec*1000;S.restNext=next||'';save();tickRest();
-  if(S.iosTimer)runShortcut('LOCKED rust',sec)} // Klok-timer van je iPhone: gaat ook af met scherm op slot
+  if(S.iosTimer&&S.iosAuto)runShortcut('LOCKED rust',sec)} // alleen automatisch als je dat zelf aanzet; anders via de ⏰-knop
 function stopRest(){S.restEnd=null;$('restBar').hidden=true}
 function tickRest(){if(!S.restEnd){$('restBar').hidden=true;return}
   const left=Math.max(0,(S.restEnd-Date.now())/1000);
   if(left<=0){const nx=S.restNext;stopRest();save();restDone(nx);return}
-  $('restBar').hidden=view!=='train';$('restLbl').textContent=S.restNext?'Rust · straks '+S.restNext:'Rust';
+  $('restBar').hidden=view!=='train';$('restIos').hidden=!S.iosTimer;$('restLbl').textContent=S.restNext?'Rust · straks '+S.restNext:'Rust';
   $('restTime').textContent=mmss(Math.ceil(left));$('restProg').style.width=(100-left/(S.restTotal||S.rest)*100)+'%'}
 function restDone(next){
   beep();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}
@@ -1288,7 +1289,10 @@ function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
   const p=Notification.permission;b.hidden=p!=='default';
   t.textContent=p==='granted'?'✅ Aan. Je krijgt een melding zodra je rust voorbij is (zolang LOCKED open staat).':p==='denied'?'🚫 Geblokkeerd. Zet meldingen aan via Instellingen → Meldingen → LOCKED.':'Uit. Tik op Aanzetten om een melding te krijgen als je rust voorbij is.'}
 $('notifBtn').onclick=askNotify;
-$('iosTimer').onchange=e=>{S.iosTimer=e.target.checked;save();if(S.iosTimer&&!S.seenIosHelp){S.seenIosHelp=true;save();$('iosHelp').hidden=false}};
+$('iosTimer').onchange=e=>{S.iosTimer=e.target.checked;save();$('iosAutoWrap').hidden=!S.iosTimer;if(S.iosTimer&&!S.seenIosHelp){S.seenIosHelp=true;save();$('iosHelp').hidden=false}};
+$('iosAuto').onchange=e=>{S.iosAuto=e.target.checked;save()};
+// ⏰ in de rustbalk: iPhone-timer starten met de resterende rust (alleen als jij erop tikt)
+$('restIos').onclick=()=>{if(!S.restEnd)return;const left=Math.max(1,Math.ceil((S.restEnd-Date.now())/1000));runShortcut('LOCKED rust',left)};
 $('iosHelpBtn').onclick=()=>{$('iosHelp').hidden=!$('iosHelp').hidden};
 $('restPlus').onclick=()=>{S.restEnd+=30000;S.restTotal=(S.restTotal||S.rest)+30;save();tickRest()};
 $('restSkip').onclick=()=>{stopRest();save()};
@@ -1297,7 +1301,7 @@ setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkou
 /* instellingen (standaard rusttijd + meldingen) */
 function renderSchemas(){
   $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
-  renderNotif();$('iosTimer').checked=!!S.iosTimer}
+  renderNotif();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer}
 
 /* formulier eigen oefening (voor schema of lopende training) */
 const RESTS=[30,45,60,90,120,150,180];
