@@ -651,6 +651,9 @@ nav button.on{color:var(--accent)}
 'use strict';
 const KEY='mijn-planner-v1';
 const XP={gym:20,cardio:20,studie:15,overig:5};
+// beloning voor vooruitgang: per oefening waarop je beter deed dan je vorige record
+const PROG_COIN=3,PROG_XP=10;
+const progCount=W=>(W||[]).reduce((a,w)=>a+(w.prog||0),0);
 const CAT={gym:'Gym',cardio:'Cardio',studie:'School',overig:'Overig'};
 const CHEER={gym:'💪 Sterk bezig!',cardio:'🏃 Lekker gelopen!',studie:'🧠 Goed gedaan!',overig:'✅ Afgevinkt!'};
 const isSport=c=>c==='gym'||c==='cardio';
@@ -699,7 +702,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
 let view='today', weekStart=monday(new Date()), selDay=today(), editing=null, cat='studie';
 
 /* ---------- berekeningen ---------- */
-function totalXP(){let x=0;for(const t of S.tasks)if(t.done)x+=XP[t.cat]||0;for(const f of S.focus)x+=f.min;return x}
+function totalXP(){let x=0;for(const t of S.tasks)if(t.done)x+=XP[t.cat]||0;for(const f of S.focus)x+=f.min;return x+progCount(S.workouts)*PROG_XP}
 function activeDays(){const s=new Set();for(const t of S.tasks)if(t.done&&t.cat!=='overig')s.add(t.date);for(const f of S.focus)s.add(f.date);return s}
 function streak(){const a=activeDays();let d=new Date();if(!a.has(ymd(d)))d=addDays(d,-1);let n=0;while(a.has(ymd(d))){n++;d=addDays(d,-1)}return n}
 function bestStreak(){const a=[...activeDays()].sort();let best=0,cur=0,prev=null;for(const s of a){const d=parse(s);cur=(prev&&ymd(addDays(prev,1))===s)?cur+1:1;best=Math.max(best,cur);prev=d}return best}
@@ -1288,7 +1291,7 @@ function finishWorkout(){
   // nieuwe PR's zoeken (vóór het opslaan vergelijken met de geschiedenis)
   const prs=ex.map(e=>{const old=prOf(e.n),nw=bestSet(e.sets);return old&&nw&&(nw.kg>old.kg||(nw.kg===old.kg&&nw.reps>old.reps))?e.n+' '+nw.kg+' kg':null}).filter(Boolean);
   const end=Date.now(),mins=Math.max(15,Math.round((end-W.start)/60000));
-  S.workouts.push({id:uid(),type:W.type,date:today(),start:W.start,end,ex});
+  S.workouts.push(Object.assign({id:uid(),type:W.type,date:today(),start:W.start,end,ex},prs.length?{prog:prs.length}:{})); // prog = oefeningen met vooruitgang
   // geplande gymtaak van vandaag afvinken, of er een aanmaken zodat het meetelt voor je doelen
   let t=S.tasks.find(t=>t.cat==='gym'&&t.date===today()&&!t.done&&t.sub===W.type)||S.tasks.find(t=>t.cat==='gym'&&t.date===today()&&!t.done);
   if(!t){const st=new Date(W.start),from=pad(st.getHours())+':'+pad(Math.floor(st.getMinutes()/15)*15);
@@ -1296,7 +1299,7 @@ function finishWorkout(){
   t.done=true;S.workout=null;stopRest();save();render();
   try{frSyncEx().catch(()=>{});frSyncWo().catch(()=>{})}catch(e){} // nieuwe resultaten delen met vrienden
   toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
-  if(prs.length)setTimeout(()=>toast('🏆 Nieuw PR: '+prs[0]),2000)}
+  if(prs.length)setTimeout(()=>toast('🏆 Vooruitgang op '+(prs.length===1?prs[0]:prs.length+' oefeningen')+'! +'+prs.length*PROG_XP+' XP · +'+prs.length*PROG_COIN+' 🪙'),2400)}
 
 /* ===== cardio-workouts: afstand + tijd -> gemiddelde pace ===== */
 const CTYPE={Lopen:{e:'🏃',unit:'km'},Fietsen:{e:'🚴',unit:'km'},Zwemmen:{e:'🏊',unit:'m'},Ander:{e:'✨',unit:'km'}};
@@ -1354,12 +1357,14 @@ function tickRest(){if(!S.restEnd){$('restBar').hidden=true;return}
 function restDone(next){
   beep();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}
   toast('⏱ Rust voorbij! '+(next?next+' ':'')+'volgende set 💪');
-  notify('⏱ Rust voorbij!',next?'Tijd voor je volgende set: '+next:'Tijd voor je volgende set 💪')}
+  // met pushmeldingen aan stuurt de server al een melding: dan niet nog eens zelf (anders krijg je er 2)
+  let pr=false;try{pr=pushReady()}catch(e){} // (kan bij het opstarten nog niet bestaan)
+  if(!pr)notify('⏱ Rust voorbij!',next?'Tijd voor je volgende set: '+next:'Tijd voor je volgende set 💪')}
 async function askNotify(){try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}catch(e){}renderNotif()}
 async function notify(title,body){try{
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
-  if(r)await r.showNotification(title,{body,icon:'icon-v2-180.png',badge:'icon-v2-180.png',tag:'rust',renotify:true});
+  if(r)await r.showNotification(title,{body,icon:'icon-v2-180.png',badge:'icon-v2-180.png',tag:'rest',renotify:true}); // zelfde label als de pushmelding
   else new Notification(title,{body,icon:'icon-v2-180.png'})}catch(e){}}
 function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
   if(!('Notification' in window)){t.textContent='Meldingen werken pas als LOCKED op je beginscherm staat (iPhone). Je hoort wel altijd een piepje.';b.hidden=true;return}
@@ -1837,7 +1842,7 @@ const coinFor=t=>(COIN[t.cat]||0)+(t.kind==='toets'?10:0);
 function earned(){let c=0;
   for(const t of S.tasks)if(t.done)c+=coinFor(t);
   for(const f of S.focus)c+=Math.floor(f.min/5);
-  c+=(S.workouts||[]).length*15+(S.cardio||[]).length*15+(S.badges||[]).length*25;
+  c+=(S.workouts||[]).length*15+(S.cardio||[]).length*15+(S.badges||[]).length*25+progCount(S.workouts)*PROG_COIN;
   for(const w in S.bonus||{})c+=Object.keys(S.bonus[w]).length*50;
   return c}
 const coins=()=>Math.max(0,earned()-(S.spent||0));
@@ -1986,6 +1991,7 @@ async function frEnsureProfile(){
   fr.profile=n[0];fr.needNick=false;return true}
 function myScores(){const ws=monday(new Date()),wk=ymd(ws),we=ymd(addDays(ws,6)),inW=d=>d>=wk&&d<=we;
   let xp=0;for(const t of S.tasks)if(t.done&&inW(t.date))xp+=XP[t.cat]||0;for(const f of S.focus)if(inW(f.date))xp+=f.min;
+  xp+=progCount((S.workouts||[]).filter(w=>inW(w.date)))*PROG_XP;
   const w=weekStats(ws),g=S.goals,sg=schoolGoal(ws);
   const workouts=(S.workouts||[]).filter(x=>inW(x.date)).length+(S.cardio||[]).filter(x=>inW(x.date)).length;
   const cap=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
