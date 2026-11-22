@@ -799,7 +799,9 @@ function setKind(k){kind=k;document.querySelectorAll('#tKind button').forEach(b=
 $('tKind').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setKind(b.dataset.k)});
 function markSub(){document.querySelectorAll('#tSub button').forEach(b=>b.classList.toggle('on',b.dataset.s===sub))}
 function setCat(c,keep){cat=c;document.querySelectorAll('#tCat button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
-  const list=c==='gym'?S.wtypes:SUBS[c];$('subWrap').style.display=list?'':'none'; // gym: je eigen workouts$('kindWrap').style.display=c==='studie'?'':'none';
+  const list=c==='gym'?S.wtypes:SUBS[c]; // gym: je eigen workouts
+  $('subWrap').style.display=list?'':'none';
+  $('kindWrap').style.display=c==='studie'?'':'none'; // vak/toets alleen bij school
   $('tSub').innerHTML=list?list.map(s=>'<button data-s="'+s+'">'+s+'</button>').join(''):'';if(list)$('subLbl').textContent=SUBL[c];
   if(!keep){sub=null;if(autoTitle)$('tTitle').value=''}markSub()}
 $('tCat').addEventListener('click',e=>{const b=e.target.closest('button');if(b){setCat(b.dataset.c);if(!editing&&sFrom){sTo=fromMin(toMin(sFrom)+DEFDUR[cat]);showTimes()}}});
