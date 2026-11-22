@@ -227,6 +227,12 @@ nav button:active{transform:scale(.88)}
 .chart2 .pt{fill:var(--gym);stroke:var(--card);stroke-width:2}
 .chart2 .xhair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
 .chcap{font-size:13px;margin-top:4px}
+/* oefeningenbibliotheek */
+.libgrp{margin-bottom:8px}
+.libhead{font-size:12px;font-weight:700;color:var(--muted);margin:0 2px 5px}
+#exLib .opts{margin-bottom:4px}
+#exLib .opts button{font-size:13px;padding:7px 11px}
+#exLib .opts button:disabled{opacity:.45}
 /* vrienden */
 .frmsg{border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.4}
 .frmsg.err{background:color-mix(in srgb,var(--danger) 15%,var(--card));color:var(--text)}
@@ -509,7 +515,8 @@ nav button.on{color:var(--accent)}
 <div class="sheet" id="exSheet">
   <div class="grab"></div>
   <h2 style="margin-top:0" id="exTitle">Nieuwe oefening</h2>
-  <label class="l" for="exName">Naam</label>
+  <div id="exLibWrap"><label class="l">Kies een oefening</label><div id="exLib"></div></div>
+  <label class="l" for="exName" id="exNameLbl">Naam</label>
   <input class="field" id="exName" placeholder="bv. Incline dumbbell press" maxlength="40">
   <label class="l">Aantal sets</label>
   <div class="bigstep"><button type="button" id="exSetsMin" aria-label="Minder sets">−</button><b id="exSetsVal">3</b><button type="button" id="exSetsPlus" aria-label="Meer sets">+</button></div>
@@ -810,6 +817,10 @@ $('tDate').addEventListener('change',()=>showTimes());
 function render(){
   if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));if(!S.workouts)S.workouts=[];if(!S.rest)S.rest=90; // ook na "Alles wissen"
   for(const k in S.schemas)S.schemas[k]=S.schemas[k].map(x=>typeof x==='string'?{n:x,sets:3,rest:0}:x); // oud formaat omzetten
+  // oude standaardworkouts die je nooit aanpaste -> nieuwe basisoefeningen
+  if(!S.libV){const OLD={'Full body':'Squat,Bench press,Barbell row,Overhead press,Romanian deadlift,Plank','Upper':'Bench press,Barbell row,Overhead press,Lat pulldown,Biceps curl,Triceps pushdown','Lower':'Squat,Romanian deadlift,Leg press,Leg curl,Calf raise','Anterior':'Squat,Bench press,Overhead press,Leg extension,Biceps curl,Crunches','Posterior':'Deadlift,Barbell row,Pull-ups,Hip thrust,Leg curl,Back extension'};
+    for(const k in OLD){const l=S.schemas[k];if(l&&l.map(x=>x.n).join(',')===OLD[k]&&l.every(x=>(x.sets||3)===3&&!x.rest))S.schemas[k]=DEF_SCHEMAS[k].map(n=>({n,sets:3,rest:0}))}
+    S.libV=1}
   if(!S.wtypes)S.wtypes=Object.keys(S.schemas); // volgorde van je workouts
   S.wtypes=S.wtypes.filter(t=>S.schemas[t]);for(const k in S.schemas)if(!S.wtypes.includes(k))S.wtypes.push(k);
   renderToday();renderWeek();renderGoals();renderFocus();renderBadges();
@@ -1042,12 +1053,20 @@ setInterval(()=>{if(S.timer&&S.timer.end){if(remaining()<=0)finishTimer();else i
    SPORTEN: trainingen loggen, schema's, rusttimer en vooruitgang
    ===================================================================== */
 const TYPES=['Full body','Upper','Lower','Anterior','Posterior'];
+// basisoefeningen per spiergroep (kies je bij "+ Oefening toevoegen")
+const EX_LIB=[
+  ['💪 Biceps',['Preacher curl','Incline curl','Single arm cable curl','Cable curl','Single arm reverse curl']],
+  ['🫁 Borst',['Chest press','Chest fly','Bench press','Upper chest fly','Incline press']],
+  ['🔙 Rug',['Upper back row','Lat pulldown','Lat row','Reverse fly','Shrugs']],
+  ['🦾 Triceps',['Single arm tricep pushdown','Single arm tricep extension','Triceps pushdown']],
+  ['🏋️ Schouders',['Shoulder press','Shoulder press (smith)','Single arm lateral raise','Single arm Y-raise']],
+  ['🦵 Benen',['Squat','Deadlift','Leg curl','Leg extension','Calf raises']]];
 const DEF_SCHEMAS={
-  'Full body':['Squat','Bench press','Barbell row','Overhead press','Romanian deadlift','Plank'],
-  'Upper':['Bench press','Barbell row','Overhead press','Lat pulldown','Biceps curl','Triceps pushdown'],
-  'Lower':['Squat','Romanian deadlift','Leg press','Leg curl','Calf raise'],
-  'Anterior':['Squat','Bench press','Overhead press','Leg extension','Biceps curl','Crunches'],
-  'Posterior':['Deadlift','Barbell row','Pull-ups','Hip thrust','Leg curl','Back extension']};
+  'Full body':['Squat','Bench press','Lat pulldown','Shoulder press','Deadlift','Cable curl'],
+  'Upper':['Bench press','Upper back row','Shoulder press','Lat pulldown','Cable curl','Triceps pushdown'],
+  'Lower':['Squat','Deadlift','Leg curl','Leg extension','Calf raises'],
+  'Anterior':['Squat','Chest press','Incline press','Shoulder press','Leg extension','Preacher curl'],
+  'Posterior':['Deadlift','Upper back row','Lat row','Reverse fly','Leg curl','Shrugs']};
 if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));
 if(!S.workouts)S.workouts=[];
 if(!S.rest)S.rest=90;
@@ -1277,12 +1296,20 @@ function setExRest(s){exRestSel=s;document.querySelectorAll('#exRest button').fo
 $('exRest').innerHTML=RESTS.map(s=>'<button type="button" data-s="'+s+'">'+fmtRest(s)+'</button>').join('');
 $('exRest').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setExRest(+b.dataset.s)});
 $('exSetsMin').onclick=()=>setExSets(exSets-1);$('exSetsPlus').onclick=()=>setExSets(exSets+1);
+// bibliotheek tonen: oefeningen die al in deze workout zitten, zijn grijs
+function renderExLib(){const inW=new Set((exCtx.mode==='workout'?S.workout.ex:S.schemas[exCtx.type]||[]).map(x=>x.n)),cur=$('exName').value.trim();
+  $('exLib').innerHTML=EX_LIB.map(([g,l])=>'<div class="libgrp"><div class="libhead">'+g+'</div><div class="opts">'
+    +l.map(n=>'<button type="button" data-n="'+esc(n)+'" class="'+(n===cur?'on':'')+'"'+(inW.has(n)?' disabled title="Zit al in deze workout"':'')+'>'+(inW.has(n)?'✓ ':'')+esc(n)+'</button>').join('')+'</div></div>').join('')}
+$('exLib').addEventListener('click',e=>{const b=e.target.closest('button[data-n]');if(!b||b.disabled)return;$('exName').value=b.dataset.n;renderExLib()});
+$('exName').addEventListener('input',()=>{if($('exLibWrap').hidden)return;renderExLib()});
 function openEx(ctx){exCtx=ctx;const x=ctx.mode==='schema'&&ctx.i>=0?S.schemas[ctx.type][ctx.i]:null;
-  $('exTitle').textContent=x?'Oefening bewerken':ctx.mode==='workout'?'Oefening toevoegen':'Eigen oefening maken';
+  $('exTitle').textContent=x?'Oefening bewerken':'Oefening toevoegen';
+  $('exLibWrap').hidden=!!x;$('exNameLbl').textContent=x?'Naam':'Of typ zelf een oefening';
   $('exName').value=x?x.n:'';setExSets(x?x.sets||3:3);setExRest(x&&x.rest?x.rest:S.rest);
   $('exSaveWrap').hidden=ctx.mode!=='workout';$('exSchemaName').textContent=ctx.type;$('exSaveSchema').checked=true;
   $('exDel').hidden=!x;disarm($('exDel'));
-  $('back').classList.add('on');$('exSheet').classList.add('on');$('exSheet').scrollTop=0;if(!x)setTimeout(()=>$('exName').focus(),300)}
+  if(!x)renderExLib();
+  $('back').classList.add('on');$('exSheet').classList.add('on');$('exSheet').scrollTop=0}
 function closeEx(){$('exSheet').classList.remove('on');$('back').classList.remove('on');document.activeElement&&document.activeElement.blur()}
 $('exSave').onclick=()=>{const n=$('exName').value.trim();if(!n){toast('Geef je oefening een naam');$('exName').focus();return}
   const item={n,sets:exSets,rest:exRestSel===S.rest?0:exRestSel},l=S.schemas[exCtx.type]=S.schemas[exCtx.type]||[];
