@@ -137,6 +137,16 @@ h2{font-size:18px;margin:22px 0 10px}
 .bigstep{display:flex;align-items:center;justify-content:center;gap:24px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;margin-bottom:14px}
 .bigstep button{width:48px;height:48px;border-radius:12px;background:var(--card2);font-size:24px;font-weight:700}
 .bigstep b{font-size:30px;min-width:40px;text-align:center}
+/* grafiek per oefening */
+.chwrap{touch-action:pan-y}
+.chart2{width:100%;height:auto;display:block;cursor:crosshair}
+.chart2 .gmaj{stroke:var(--line);stroke-width:1}
+.chart2 .gmin{stroke:var(--line);stroke-width:1;stroke-dasharray:2 4;opacity:.55}
+.chart2 .axl{fill:var(--muted);font-size:10px;font-family:inherit}
+.chart2 .ln{fill:none;stroke:var(--gym);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart2 .pt{fill:var(--gym);stroke:var(--card);stroke-width:2}
+.chart2 .xhair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
+.chcap{font-size:13px;margin-top:4px}
 .newcard{border-left-color:var(--accent);border:2px dashed var(--accent);background:transparent;box-shadow:none}
 .newcard b{color:var(--accent)}
 .editbtn{margin-top:8px;padding:7px 12px;border-radius:999px;background:var(--card2);font-size:14px;font-weight:700;color:var(--accent)}
@@ -994,19 +1004,60 @@ $('exDel').onclick=()=>armed($('exDel'),'Tik nogmaals om te verwijderen',()=>{S.
 $('restSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(b){S.rest=+b.dataset.s;save();renderSchemas()}});
 
 /* vooruitgang */
+const fmtKg=v=>String(+(+v).toFixed(2)).replace('.',',');
+// Gegevens voor de grafiek van één oefening.
+// y = gewicht + herhalingen: tussen twee gewichtslijnen zitten 8 reps.
+// De afstand tussen de lijnen (stap) is de kleinste gewichtssprong die je zelf maakt.
+function chartData(name){
+  const h=history(name);
+  const kgs=[...new Set(h.flatMap(x=>x.sets.map(s=>s.kg)))].sort((a,b)=>a-b);
+  let step=Infinity;for(let i=1;i<kgs.length;i++)step=Math.min(step,kgs[i]-kgs[i-1]);
+  if(!isFinite(step)||step<0.5)step=2.5;step=Math.round(step*4)/4;
+  const pts=h.map((x,i)=>{const b=x.sets.reduce((m,s)=>{const sc=s.kg+s.reps/8*step;return !m||sc>m.sc?{kg:s.kg,reps:s.reps,sc}:m},null);return Object.assign({i,date:x.date},b)});
+  return{step,pts}}
+function chartSVG(name,sel){
+  const {step,pts}=chartData(name),W=320,H=190,pl=50,pr=14,pt=14,pb=30,pw=W-pl-pr,ph=H-pt-pb;
+  const lo=Math.floor(Math.min(...pts.map(p=>p.kg))/step)*step;
+  let hi=Math.ceil((Math.max(...pts.map(p=>p.sc))+0.001)/step)*step;if(hi-lo<step)hi=lo+step;
+  const n=Math.round((hi-lo)/step),pps=ph/n,y=v=>pt+ph-(v-lo)/(hi-lo)*ph;
+  const x=i=>pts.length===1?pl+pw/2:pl+i*(pw/(pts.length-1));
+  const every=Math.max(1,Math.ceil(18/pps)),minor=pps>=56?8:pps>=28?4:0;
+  let g='';
+  for(let k=0;k<=n;k++){const v=lo+k*step,yy=y(v);
+    if(minor&&k<n)for(let m=1;m<minor;m++){const ym=yy-m*pps/minor;g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+ym+'" y2="'+ym+'" class="gmin"/>'}
+    g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+yy+'" y2="'+yy+'" class="gmaj"/>';
+    if(k%every===0)g+='<text x="'+(pl-6)+'" y="'+(yy+4)+'" text-anchor="end" class="axl">'+fmtKg(v)+' kg</text>'}
+  const xe=Math.max(1,Math.ceil(pts.length/8));
+  pts.forEach((p,i)=>{if(i%xe===0||i===pts.length-1)g+='<text x="'+x(i)+'" y="'+(H-pb+16)+'" text-anchor="middle" class="axl">'+(i+1)+'</text>'});
+  const s=pts[sel],line=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.sc).toFixed(1)).join(' ');
+  return '<svg viewBox="0 0 '+W+' '+H+'" class="chart2" data-n="'+esc(name)+'" role="img" aria-label="Grafiek '+esc(name)+'">'+g
+    +'<line x1="'+x(sel)+'" x2="'+x(sel)+'" y1="'+pt+'" y2="'+(pt+ph)+'" class="xhair"/>'
+    +(pts.length>1?'<path d="'+line+'" class="ln"/>':'')
+    +pts.map((p,i)=>'<circle cx="'+x(i)+'" cy="'+y(p.sc)+'" r="'+(i===sel?6:4.5)+'" class="pt'+(i===sel?' on':'')+'"/>').join('')
+    +'</svg>'
+    +'<div class="chcap"><b>Workout '+(sel+1)+'</b> · '+DN[parse(s.date).getDay()]+' '+parse(s.date).getDate()+' '+MN[parse(s.date).getMonth()]+' · <b>'+fmtKg(s.kg)+' kg × '+s.reps+'</b></div>'
+    +'<div class="sub" style="font-size:11px;margin-top:4px">Elke lijn = +'+fmtKg(step)+' kg · tussen twee lijnen = 8 herhalingen · onderaan: aantal workouts</div>'}
+const chartSel={}; // welk punt is aangetikt per oefening
 function renderProgress(){
   const W=S.workouts,wk=ymd(monday(new Date()));
   const vol=W.reduce((a,w)=>a+w.ex.reduce((b,e)=>b+e.sets.reduce((c,s)=>c+s.kg*s.reps,0),0),0);
   const names=[...new Set(W.flatMap(w=>w.ex.map(e=>e.n)))];
   const rows=names.map(n=>{const h=history(n),tops=h.map(x=>bestSet(x.sets).kg),pr=prOf(n);return{n,h,tops,pr,last:h[h.length-1].date}}).sort((a,b)=>a.last<b.last?1:-1);
-  $('progWrap').innerHTML='<h1>Vooruitgang</h1><div class="sub">Je records en hoe je sterker wordt.</div>'
-    +'<div class="row" style="gap:8px;margin-top:14px"><div class="stat"><b>'+W.length+'</b><span>trainingen</span></div><div class="stat"><b>'+W.filter(w=>w.date>=wk).length+'</b><span>deze week</span></div><div class="stat"><b>'+(vol>=1000?(vol/1000).toFixed(1)+'t':Math.round(vol)+' kg')+'</b><span>totaal gelift</span></div></div>'
-    +'<h2>🏆 Persoonlijke records</h2>'
-    +(rows.length?'<div class="card" style="padding:4px 14px">'+rows.map(r=>{const t=r.tops.slice(-10),mx=Math.max(...t,1),mn=Math.min(...t),h=v=>mx===mn?70:25+(v-mn)/(mx-mn)*75,diff=r.tops[r.tops.length-1]-r.tops[0];
-      return '<div class="pr"><div class="row between"><b>'+esc(r.n)+'</b><span class="chip">'+r.pr.kg+' kg × '+r.pr.reps+'</span></div>'
-        +'<div class="sub" style="font-size:12px;margin-top:3px">'+r.h.length+'x getraind'+(r.h.length>1?' · '+(diff>0?'📈 +'+diff+' kg sinds je begon':diff<0?diff+' kg sinds je begon':'zelfde gewicht als de eerste keer'):'')+'</div>'
-        +'<div class="spark">'+t.map(v=>'<i style="height:'+h(v)+'%" title="'+v+' kg"></i>').join('')+'</div></div>'}).join('')+'</div>'
+  $('progWrap').innerHTML='<h1>Vooruitgang</h1><div class="sub">Je records en hoe je sterker wordt. Tik op een punt in de grafiek voor details.</div>'
+    +'<div class="row" style="gap:8px;margin-top:14px"><div class="stat"><b>'+W.length+'</b><span>trainingen</span></div><div class="stat"><b>'+W.filter(w=>w.date>=wk).length+'</b><span>deze week</span></div><div class="stat"><b>'+(vol>=1000?fmtKg((vol/1000).toFixed(1))+'t':Math.round(vol)+' kg')+'</b><span>totaal gelift</span></div></div>'
+    +'<h2>📈 Per oefening</h2>'
+    +(rows.length?rows.map(r=>{const diff=r.tops[r.tops.length-1]-r.tops[0],sel=Math.min(chartSel[r.n]??r.h.length-1,r.h.length-1);
+      return '<div class="card"><div class="row between"><b>'+esc(r.n)+'</b><span class="chip">🏆 '+fmtKg(r.pr.kg)+' kg × '+r.pr.reps+'</span></div>'
+        +'<div class="sub" style="font-size:12px;margin:3px 0 6px">'+r.h.length+'x getraind'+(r.h.length>1?' · '+(diff>0?'📈 +'+fmtKg(diff)+' kg sinds je begon':diff<0?fmtKg(diff)+' kg sinds je begon':'zelfde gewicht als de eerste keer'):'')+'</div>'
+        +'<div class="chwrap">'+chartSVG(r.n,sel)+'</div></div>'}).join('')
      :'<div class="empty">Nog geen trainingen.<br>Start je eerste training bij <b>Training</b>.</div>')}
+// punt kiezen met tikken of muis (dichtstbijzijnde workout)
+function pickPoint(e){const svg=e.target.closest('svg.chart2');if(!svg)return;const name=svg.dataset.n,n=history(name).length;
+  const r=svg.getBoundingClientRect(),vx=(e.clientX-r.left)/r.width*320;
+  const i=n===1?0:Math.max(0,Math.min(n-1,Math.round((vx-50)/((320-50-14)/(n-1)))));
+  if(chartSel[name]===i)return;chartSel[name]=i;svg.parentElement.innerHTML=chartSVG(name,i)}
+$('progWrap').addEventListener('pointerdown',pickPoint);
+$('progWrap').addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||e.buttons)pickPoint(e)});
 
 /* wisselen tussen Plannen en Sporten */
 const SPORT_VIEWS=['train','schemas','progress'];
