@@ -940,8 +940,10 @@ function planRule(c,k,date,from,to){
   if(c==='studie'&&k==='toets'){
     if(!s)return vacOn(date)?'Een toets kan niet tijdens de vakantie':'Op deze dag heb je geen school, dus ook geen toets';
     if(a<toMin(s.from)||b>toMin(s.to))return 'Een toets moet binnen je schooluren vallen ('+s.from+'–'+s.to+')';return ''}
-  if(s&&a<toMin(s.to)&&b>toMin(s.from))return 'Dit valt tijdens je schooluren ('+s.from+'–'+s.to+'). Plan het ervoor of erna.';
-  return ''}
+  return ''} // al de rest mag ook tijdens school (je krijgt alleen een hint)
+// hint (blokkeert niets): valt dit tijdens je schooluren?
+function schoolHint(c,k,date,from,to){if(!S.school||!S.school.on||!from||!to||(c==='studie'&&k==='toets'))return '';
+  const s=schoolOn(date);return s&&toMin(from)<toMin(s.to)&&toMin(to)>toMin(s.from)?'ℹ️ valt tijdens school ('+s.from+'–'+s.to+')':''}
 $('tKind').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setKind(b.dataset.k)});
 function markSub(){document.querySelectorAll('#tSub button').forEach(b=>b.classList.toggle('on',b.dataset.s===sub))}
 function setCat(c,keep){cat=c;document.querySelectorAll('#tCat button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
@@ -964,7 +966,8 @@ function showTimes(){
   const d=sFrom&&sTo?toMin(sTo)-toMin(sFrom):null;
   const rule=d>0?planRule(cat,cat==='studie'?kind:null,$('tDate').value||today(),sFrom,sTo):'';
   const sNow=S.school&&S.school.on?schoolOn($('tDate').value||today()):null,isToets=cat==='studie'&&kind==='toets';
-  $('tDurTxt').textContent=(d===null?(isToets&&sNow?'Kies een tijd tijdens school ('+sNow.from+'–'+sNow.to+')':'Kies van hoe laat tot hoe laat'):d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"')+(rule?' · ⛔ '+rule:'');
+  const hint=d>0&&!rule?schoolHint(cat,cat==='studie'?kind:null,$('tDate').value||today(),sFrom,sTo):'';
+  $('tDurTxt').textContent=(d===null?(isToets&&sNow?'Kies een tijd tijdens school ('+sNow.from+'–'+sNow.to+')':'Kies van hoe laat tot hoe laat'):d>0?'⏱ '+fmtMin(d):'⚠️ "Tot" moet later zijn dan "Van"')+(rule?' · ⛔ '+rule:'')+(hint?' · '+hint:'');
   $('tDurTxt').style.color=(d!==null&&d<=0)||rule?'var(--danger)':'';
   const v=pickT==='from'?sFrom:sTo,[h,m]=v?v.split(':'):[null,null];
   document.querySelectorAll('#tHours button').forEach(x=>x.classList.toggle('on',x.dataset.h===h));
