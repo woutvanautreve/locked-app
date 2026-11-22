@@ -227,6 +227,20 @@ nav button:active{transform:scale(.88)}
 .chart2 .pt{fill:var(--gym);stroke:var(--card);stroke-width:2}
 .chart2 .xhair{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
 .chcap{font-size:13px;margin-top:4px}
+/* vrienden */
+.frmsg{border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px;line-height:1.4}
+.frmsg.err{background:color-mix(in srgb,var(--danger) 15%,var(--card));color:var(--text)}
+.frmsg.ok{background:color-mix(in srgb,var(--overig) 15%,var(--card))}
+.frme{margin-top:14px;background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+.frcode{font-size:20px;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.frrow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.frrow:last-child{border-bottom:0}
+.frrow.me b{color:var(--accent)}
+.frrank{width:32px;text-align:center;font-size:20px;font-weight:800;color:var(--muted)}
+.frval{text-align:right;line-height:1.1}
+.frval b{display:block;font-size:20px}
+.frval span{font-size:11px;color:var(--muted)}
+#frMetric button{font-size:12px;padding:8px 2px}
 /* schooluren en vakanties */
 .schoolcard{background:color-mix(in srgb,var(--studie) 14%,var(--card));border-radius:14px;padding:11px 14px;margin-bottom:12px;font-size:14px}
 .schoolcard.vac{background:color-mix(in srgb,#f59e0b 18%,var(--card))}
@@ -455,6 +469,9 @@ nav button.on{color:var(--accent)}
   </div>
 </div></section>
 
+<!-- ===== VRIENDEN ===== -->
+<section class="view" id="v-friends"><div class="wrap" id="frWrap"></div></section>
+
 <!-- ===== SPORTEN ===== -->
 <section class="view" id="v-train"><div class="wrap" id="trainWrap"></div></section>
 
@@ -535,6 +552,7 @@ nav button.on{color:var(--accent)}
   <button data-v="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Week</button>
   <button data-v="focus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Focus</button>
   <button data-v="goals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 21V4M6 4h11l-2 4 2 4H6"/></svg>Doelen</button>
+  <button data-v="friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Vrienden</button>
  </div>
  <div class="navgroup" id="navSport" hidden>
   <button data-v="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>Training</button>
@@ -626,7 +644,8 @@ function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s){const x=
   x.goals=Object.assign({gym:2,cardio:60,studie:300},x.goals);delete x.goals.sport;
   for(const t of x.tasks)if(t.cat==='sport')t.cat='gym';return x}}catch(e){}return defaults()}
 let S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  try{scheduleSync()}catch(e){}} // weekscores doorsturen naar je vrienden (als je ingelogd bent)
 
 let view='today', weekStart=monday(new Date()), selDay=today(), editing=null, cat='studie';
 
@@ -808,6 +827,7 @@ function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('
   $('navPlan').hidden=mode!=='plan';$('navSport').hidden=mode!=='sport';$('navAqua').hidden=mode!=='aqua';
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   if(S.restEnd)tickRest();
+  if(v==='friends'){fr.err='';renderFriends();if(auth&&!fr.busy&&!fr.pending&&Date.now()-fr.loaded>30000)frRun(frLoad)}
   $('fab').style.display=(v==='today'||v==='week')?'':'none';window.scrollTo(0,0);render()}
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.v)});
 
@@ -1740,6 +1760,157 @@ const AQ_VIEWS=['aquarium','dice','dex'];let lastAqua='aquarium';
 const SPORT_VIEWS=['train','schemas','progress'];
 let lastPlan='today',lastSport='train';
 $('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='sport'?lastSport:b.dataset.m==='aqua'?lastAqua:lastPlan)});
+
+/* =====================================================================
+   VRIENDEN: accounts (e-mail + wachtwoord), vriendencodes en weekranglijst
+   Online staan alleen: bijnaam, vriendencode, vriendschappen en weekscores.
+   ===================================================================== */
+const SB_URL='https://wsvndpusnuywryokbyup.supabase.co',SB_KEY='sb_publishable_QLNBHB-9IE9yivVltbFDNg_qNU3UjHX';
+const APP_URL='https://woutvanautreve.github.io/locked-app/',AKEY='locked-auth';
+let auth=null;try{auth=JSON.parse(localStorage.getItem(AKEY))}catch(e){}
+const fr={profile:null,friends:[],scores:{},metric:'xp',mode:'login',busy:false,msg:'',err:'',loaded:0,needNick:false,pending:null};
+function setAuth(a){auth=a;try{a?localStorage.setItem(AKEY,JSON.stringify(a)):localStorage.removeItem(AKEY)}catch(e){}}
+const fromToken=j=>({at:j.access_token,rt:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000,uid:j.user&&j.user.id,email:j.user&&j.user.email,nick:j.user&&j.user.user_metadata&&j.user.user_metadata.nickname});
+// foutmeldingen van de server in gewone taal
+function sbErr(m){m=String(m||'');const L=m.toLowerCase();
+  if(L.includes('invalid login'))return 'E-mail of wachtwoord klopt niet';
+  if(L.includes('email not confirmed'))return 'Bevestig eerst je e-mail: klik op de link in de mail (kijk ook bij spam)';
+  if(L.includes('already registered')||L.includes('already been registered'))return 'Er bestaat al een account met dit e-mailadres. Log in.';
+  if(L.includes('rate limit'))return 'Er zijn net te veel mails verstuurd. Probeer het over een uurtje opnieuw.';
+  if(L.includes('password')&&L.includes('6'))return 'Je wachtwoord moet minstens 6 tekens hebben';
+  if(L.includes('valid email')||L.includes('invalid email'))return 'Dat e-mailadres klopt niet';
+  if(L.includes('code niet gevonden'))return 'Die vriendencode bestaat niet';
+  if(L.includes('eigen code'))return 'Dat is je eigen code 😄';
+  if(L.includes('schema cache')||L.includes('does not exist'))return 'De database is nog niet klaar (de SQL-code moet nog uitgevoerd worden)';
+  if(L.includes('failed to fetch')||L.includes('network'))return 'Geen internet. Probeer het straks opnieuw.';
+  return m}
+async function refreshAuth(){if(!auth||!auth.rt)return false;
+  try{const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:auth.rt})});
+    if(!r.ok){if(r.status===400||r.status===401)setAuth(null);return false}
+    const j=await r.json(),old=auth;setAuth(Object.assign(fromToken(j),{nick:old.nick||fromToken(j).nick}));return true}catch(e){return false}}
+async function sb(path,opt={},retry=true){
+  if(auth&&!opt.noAuth&&auth.exp<Date.now()+60000)await refreshAuth();
+  const h=Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},opt.headers||{});
+  if(auth&&!opt.noAuth)h.Authorization='Bearer '+auth.at;
+  let r;try{r=await fetch(SB_URL+path,{method:opt.method||'GET',headers:h,body:opt.body?JSON.stringify(opt.body):undefined})}catch(e){throw new Error(sbErr('failed to fetch'))}
+  if(r.status===401&&auth&&retry&&!opt.noAuth&&await refreshAuth())return sb(path,opt,false);
+  const txt=await r.text();let j=null;try{j=txt?JSON.parse(txt):null}catch(e){}
+  if(!r.ok)throw new Error(sbErr(j&&(j.msg||j.message||j.error_description||j.error)||('Fout '+r.status)));
+  return j}
+
+/* --- account --- */
+async function frSignUp(nick,email,pw){
+  const j=await sb('/auth/v1/signup?redirect_to='+encodeURIComponent(APP_URL),{method:'POST',noAuth:true,body:{email,password:pw,data:{nickname:nick}}});
+  if(j&&j.access_token){setAuth(fromToken(j));return 'in'}return 'mail'}
+async function frSignIn(email,pw){const j=await sb('/auth/v1/token?grant_type=password',{method:'POST',noAuth:true,body:{email,password:pw}});setAuth(fromToken(j))}
+async function frLogout(){try{await sb('/auth/v1/logout',{method:'POST'})}catch(e){}setAuth(null);Object.assign(fr,{profile:null,friends:[],scores:{},loaded:0,needNick:false})}
+async function frUser(){const u=await sb('/auth/v1/user');auth.uid=u.id;auth.email=u.email;auth.nick=auth.nick||(u.user_metadata&&u.user_metadata.nickname);setAuth(auth)}
+
+/* --- profiel, vrienden, scores --- */
+async function frEnsureProfile(){
+  if(!auth.uid)await frUser();
+  const p=await sb('/rest/v1/profiles?id=eq.'+auth.uid+'&select=id,nickname,friend_code');
+  if(p&&p.length){fr.profile=p[0];fr.needNick=false;return true}
+  if(!auth.nick){fr.needNick=true;return false}
+  const n=await sb('/rest/v1/profiles?select=id,nickname,friend_code',{method:'POST',headers:{Prefer:'return=representation'},body:{id:auth.uid,nickname:auth.nick.slice(0,20)}});
+  fr.profile=n[0];fr.needNick=false;return true}
+function myScores(){const ws=monday(new Date()),wk=ymd(ws),we=ymd(addDays(ws,6)),inW=d=>d>=wk&&d<=we;
+  let xp=0;for(const t of S.tasks)if(t.done&&inW(t.date))xp+=XP[t.cat]||0;for(const f of S.focus)if(inW(f.date))xp+=f.min;
+  const w=weekStats(ws),g=S.goals,sg=schoolGoal(ws);
+  const workouts=(S.workouts||[]).filter(x=>inW(x.date)).length+(S.cardio||[]).filter(x=>inW(x.date)).length;
+  const cap=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
+  return{week:wk,xp:cap(xp,100000),workouts:cap(workouts,200),goals:(w.gym>=g.gym?1:0)+(w.cardio>=g.cardio?1:0)+(sg>0&&w.studie>=sg?1:0),
+    streak:cap(streak(),3660),fish:FISH.filter(owned).length,gym:cap(w.gym,100),cardio:cap(w.cardio,10000),school:cap(w.studie,10000)}}
+async function frSync(){if(!auth||!fr.profile)return;const s=Object.assign({user_id:auth.uid,updated_at:new Date().toISOString()},myScores());
+  await sb('/rest/v1/scores',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:s});fr.scores[auth.uid]=s}
+let syncT=null;
+function scheduleSync(){if(!auth||!fr.profile)return;clearTimeout(syncT);syncT=setTimeout(()=>frSync().catch(()=>{}),4000)}
+async function frLoad(){
+  if(!(await frEnsureProfile()))return;
+  await frSync();
+  const fs=await sb('/rest/v1/friendships?select=a,b')||[],ids=fs.map(f=>f.a===auth.uid?f.b:f.a);
+  fr.friends=ids.length?await sb('/rest/v1/profiles?select=id,nickname&id=in.('+ids.join(',')+')')||[]:[];
+  const sc=await sb('/rest/v1/scores?select=*&week=eq.'+ymd(monday(new Date())))||[];
+  fr.scores={};for(const s of sc)fr.scores[s.user_id]=s;fr.loaded=Date.now()}
+async function frRun(fn,okMsg){fr.busy=true;fr.err='';renderFriends();
+  try{await fn();if(okMsg)fr.msg=okMsg}catch(e){fr.err=e.message}fr.busy=false;renderFriends()}
+
+/* --- link uit een mail (bevestigen of wachtwoord vergeten) --- */
+(function(){const h=new URLSearchParams(location.hash.slice(1));
+  if(h.get('error_description')){fr.pending='linkerror';fr.err=h.get('error_description').replace(/\+/g,' ');history.replaceState(null,'',location.pathname);return}
+  if(!h.get('access_token'))return;
+  setAuth({at:h.get('access_token'),rt:h.get('refresh_token'),exp:Date.now()+(+h.get('expires_in')||3600)*1000});
+  fr.pending=h.get('type')==='recovery'?'reset':'confirmed';history.replaceState(null,'',location.pathname)})();
+
+/* --- scherm --- */
+const METRICS={xp:['XP','XP'],workouts:['Workouts','workouts'],goals:['Doelen','doelen'],streak:['Reeks','dagen op rij'],fish:['Vissen','vissen']};
+function renderFriends(){const el=$('frWrap');if(!el)return;
+  const keep={};el.querySelectorAll('input[id]').forEach(i=>keep[i.id]=i.value); // ingevulde velden onthouden
+  const msg=(fr.err?'<div class="frmsg err">⚠️ '+esc(fr.err)+'</div>':'')+(fr.msg?'<div class="frmsg ok">'+fr.msg+'</div>':'');
+  const busy=fr.busy?' disabled':'';
+  let h='<h1>Vrienden</h1><div class="sub">Wie maakt deze week de meeste vooruitgang? 🏆</div>';
+  if(fr.pending==='reset'){
+    h+='<div class="card" style="margin-top:14px"><b>Nieuw wachtwoord kiezen</b>'+msg+'<label class="l" for="frNewPw" style="margin-top:10px">Nieuw wachtwoord (minstens 6 tekens)</label><input class="field" id="frNewPw" type="password" autocomplete="new-password"><button class="btn" data-act="newpw"'+busy+'>Opslaan</button></div>'}
+  else if(fr.pending==='confirmed'||fr.pending==='linkerror'){
+    h+='<div class="card" style="margin-top:14px">'+(fr.pending==='confirmed'?'<b>✅ Je e-mail is bevestigd!</b><div class="sub" style="margin-top:6px">Open LOCKED nu via het icoon op je <b>beginscherm</b> en log daar in met je e-mail en wachtwoord.</div>':'<b>Deze link werkt niet (meer)</b>'+msg+'<div class="sub" style="margin-top:6px">Vraag een nieuwe aan via "Wachtwoord vergeten" of registreer opnieuw.</div>')
+      +'<button class="btn ghost" data-act="pendok" style="margin-top:12px">OK</button></div>'}
+  else if(!auth){const reg=fr.mode==='register';
+    h+='<div class="card" style="margin-top:14px"><div class="seg" style="margin-bottom:14px"><button data-act="mode" data-m="login" class="'+(reg?'':'on')+'">Inloggen</button><button data-act="mode" data-m="register" class="'+(reg?'on':'')+'">Account maken</button></div>'
+      +(reg?'<label class="l" for="frNick">Bijnaam (zien je vrienden)</label><input class="field" id="frNick" maxlength="20" placeholder="bv. Wout" autocomplete="nickname">':'')
+      +'<label class="l" for="frEmail">E-mail</label><input class="field" id="frEmail" type="email" inputmode="email" autocomplete="email" placeholder="naam@voorbeeld.be">'
+      +'<label class="l" for="frPw">Wachtwoord'+(reg?' (minstens 6 tekens)':'')+'</label><input class="field" id="frPw" type="password" autocomplete="'+(reg?'new-password':'current-password')+'">'
+      +msg+'<button class="btn" data-act="'+(reg?'signup':'signin')+'"'+busy+'>'+(fr.busy?'Even geduld…':reg?'Account maken':'Inloggen')+'</button>'
+      +(reg?'':'<button class="linkbtn" data-act="forgot" style="margin-top:10px">Wachtwoord vergeten?</button>')+'</div>'
+      +'<div class="sub" style="font-size:12px;margin:10px 2px">🔒 Online staan alleen je bijnaam en je weekscores. Je planning, toetsen en trainingen blijven op je iPhone.</div>'}
+  else if(fr.needNick){
+    h+='<div class="card" style="margin-top:14px"><b>Kies je bijnaam</b>'+msg+'<label class="l" for="frNick" style="margin-top:10px">Bijnaam (zien je vrienden)</label><input class="field" id="frNick" maxlength="20" placeholder="bv. Wout"><button class="btn" data-act="setnick"'+busy+'>Opslaan</button></div>'}
+  else if(!fr.profile){
+    h+='<div class="card" style="margin-top:14px">'+(fr.busy?'Laden…':msg+'<button class="btn" data-act="reload">Opnieuw proberen</button>')+'</div>'}
+  else{const me=fr.profile,rows=[{id:me.id,nickname:me.nickname,me:true}].concat(fr.friends).map(p=>Object.assign({},p,{s:fr.scores[p.id]||{}}));
+    const m=fr.metric;rows.sort((a,b)=>(b.s[m]||0)-(a.s[m]||0));
+    h+=msg+'<div class="card frme"><div class="row between"><div><div class="sub" style="font-size:12px">Ingelogd als</div><b style="font-size:18px">'+esc(me.nickname)+'</b></div><div style="text-align:right"><div class="sub" style="font-size:12px">Jouw vriendencode</div><b class="frcode">'+esc(me.friend_code)+'</b></div></div>'
+      +'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="copy">📋 Kopieer</button><button class="btn ghost" data-act="share">📤 Delen</button></div></div>'
+      +'<div class="card"><b>Vriend toevoegen</b><div class="row" style="gap:8px;margin-top:10px"><input class="field" id="frCode" placeholder="LOCK-XXXXX" maxlength="12" autocapitalize="characters" style="margin:0;text-transform:uppercase"><button class="btn" data-act="addfriend" style="width:auto;padding:0 18px;align-self:stretch"'+busy+'>+</button></div></div>'
+      +'<div class="row between" style="margin:20px 0 8px"><h2 style="margin:0">🏆 Deze week</h2><button class="linkbtn" data-act="reload"'+busy+'>'+(fr.busy?'…':'↻ Vernieuwen')+'</button></div>'
+      +'<div class="seg" id="frMetric" style="margin-bottom:10px">'+Object.keys(METRICS).map(k=>'<button data-act="metric" data-k="'+k+'" class="'+(k===m?'on':'')+'">'+METRICS[k][0]+'</button>').join('')+'</div>'
+      +'<div class="card" style="padding:4px 14px">'+rows.map((r,i)=>{const s=r.s;
+        return '<div class="frrow'+(r.me?' me':'')+'"><div class="frrank">'+(['🥇','🥈','🥉'][i]||'#'+(i+1))+'</div><div style="flex:1;min-width:0"><b>'+esc(r.nickname)+(r.me?' <span class="sub" style="font-size:12px">(jij)</span>':'')+'</b>'
+          +'<div class="sub" style="font-size:12px">💪 '+(s.gym||0)+'x · 🏃 '+fmtMin(s.cardio||0)+' · 📚 '+fmtMin(s.school||0)+' · 🔥 '+(s.streak||0)+' · 🐠 '+(s.fish||0)+'</div></div>'
+          +'<div class="frval"><b>'+(s[m]||0)+'</b><span>'+METRICS[m][1]+'</span></div></div>'}).join('')+'</div>'
+      +(fr.friends.length?'':'<div class="sub" style="font-size:13px;margin:10px 2px">Nog geen vrienden. Stuur je vriendencode door en voeg die van je vrienden toe.</div>')
+      +(fr.loaded?'<div class="sub" style="font-size:12px;margin:8px 2px">Bijgewerkt om '+new Date(fr.loaded).toTimeString().slice(0,5)+'. Elke maandag begint een nieuwe week.</div>':'')
+      +(fr.friends.length?'<h2>Mijn vrienden</h2><div class="card" style="padding:4px 14px">'+fr.friends.map(f=>'<div class="hist"><b>'+esc(f.nickname)+'</b><button class="linkbtn" data-act="unfriend" data-id="'+f.id+'" style="font-size:13px;color:var(--muted)">verwijderen</button></div>').join('')+'</div>':'')
+      +'<div class="sub" style="font-size:12px;margin:16px 2px 4px">'+esc(auth.email||'')+'</div><button class="linkbtn" data-act="logout" style="color:var(--danger)">Uitloggen</button>'}
+  el.innerHTML=h;for(const id in keep){const i=$(id);if(i&&!i.value)i.value=keep[id]}}
+$('frWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act,v=id=>($(id)&&$(id).value||'').trim();fr.msg='';
+  if(a==='mode'){fr.mode=b.dataset.m;fr.err='';renderFriends();return}
+  if(a==='pendok'){fr.pending=null;fr.err='';renderFriends();if(auth)frRun(frLoad);return}
+  if(a==='metric'){fr.metric=b.dataset.k;renderFriends();return}
+  if(a==='signup'){const nick=v('frNick'),email=v('frEmail'),pw=$('frPw').value;
+    if(nick.length<2){fr.err='Kies een bijnaam van minstens 2 tekens';renderFriends();return}
+    if(!email.includes('@')){fr.err='Vul je e-mailadres in';renderFriends();return}
+    if(pw.length<6){fr.err='Je wachtwoord moet minstens 6 tekens hebben';renderFriends();return}
+    frRun(async()=>{const r=await frSignUp(nick,email,pw);if(r==='in')await frLoad();else{fr.mode='login';fr.msg='📧 Bijna klaar! Open de mail van Supabase en klik op de bevestigingslink (kijk ook bij spam). Kom daarna hier terug en log in.'}});return}
+  if(a==='signin'){const email=v('frEmail'),pw=$('frPw').value;if(!email||!pw){fr.err='Vul je e-mail en wachtwoord in';renderFriends();return}
+    frRun(async()=>{await frSignIn(email,pw);await frLoad()},'');return}
+  if(a==='forgot'){const email=v('frEmail');if(!email.includes('@')){fr.err='Vul eerst je e-mailadres in';renderFriends();return}
+    frRun(()=>sb('/auth/v1/recover?redirect_to='+encodeURIComponent(APP_URL),{method:'POST',noAuth:true,body:{email}}),'📧 Check je mail voor een link om een nieuw wachtwoord te kiezen.');return}
+  if(a==='newpw'){const pw=$('frNewPw').value;if(pw.length<6){fr.err='Minstens 6 tekens';renderFriends();return}
+    frRun(async()=>{await sb('/auth/v1/user',{method:'PUT',body:{password:pw}});fr.pending=null;await frLogout()},'✅ Wachtwoord gewijzigd. Log in via LOCKED op je beginscherm.');return}
+  if(a==='setnick'){const nick=v('frNick');if(nick.length<2){fr.err='Minstens 2 tekens';renderFriends();return}auth.nick=nick;setAuth(auth);frRun(frLoad);return}
+  if(a==='reload'){frRun(frLoad);return}
+  if(a==='copy'){const c=fr.profile.friend_code;(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast('📋 Code gekopieerd'),()=>toast(c));return}
+  if(a==='share'){const c=fr.profile.friend_code,t='Doe mee in LOCKED! Voeg mij toe met mijn vriendencode: '+c+'\n'+APP_URL;
+    if(navigator.share)navigator.share({title:'LOCKED',text:t}).catch(()=>{});else(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('📋 Uitnodiging gekopieerd'),()=>toast(c));return}
+  if(a==='addfriend'){const code=v('frCode').toUpperCase();if(!code){fr.err='Vul een vriendencode in';renderFriends();return}
+    frRun(async()=>{const nick=await sb('/rest/v1/rpc/add_friend',{method:'POST',body:{code}});await frLoad();fr.msg='🎉 '+esc(nick)+' is nu je vriend!'});return}
+  if(a==='unfriend'){const id=b.dataset.id;armed(b,'Zeker?',()=>frRun(async()=>{const me=auth.uid,x=me<id?me:id,y=me<id?id:me;await sb('/rest/v1/friendships?a=eq.'+x+'&b=eq.'+y,{method:'DELETE'});await frLoad()}));return}
+  if(a==='logout'){armed(b,'Tik nogmaals om uit te loggen',()=>{frLogout().then(renderFriends)});return}});
+$('frWrap').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const id=e.target.id;
+  const map={frPw:fr.mode==='register'?'signup':'signin',frCode:'addfriend',frNick:'setnick',frNewPw:'newpw'};const act=map[id];if(!act)return;
+  const btn=$('frWrap').querySelector('[data-act="'+act+'"]');if(btn)btn.click()});
+// bij het openen van de app: op de achtergrond je scores doorsturen
+if(auth&&!fr.pending)frLoad().catch(()=>{}).then(()=>{if(view==='friends')renderFriends()});
 
 /* ---------- algemeen ---------- */
 let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
