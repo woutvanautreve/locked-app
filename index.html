@@ -2346,7 +2346,17 @@ if(auth&&!fr.pending)frLoad().catch(()=>{}).then(()=>{if(view==='friends')render
 let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)render()});
 render();
-if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
+  // updateViaCache:'none' = sw.js nooit uit een tussengeheugen halen, zodat updates meteen gezien worden
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+    // telkens je LOCKED weer opent: kijken of er een nieuwe versie online staat
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})})}).catch(()=>{});
+  // nieuwe versie actief? Pagina één keer herladen (je gegevens blijven gewoon bewaard)
+  let swReloaded=false;const hadSW=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadSW||swReloaded)return;swReloaded=true;
+    const typing=document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if(typing)return; // niet herladen terwijl je iets aan het typen bent
+    location.reload()})}
 })();
 </script>
 </body>

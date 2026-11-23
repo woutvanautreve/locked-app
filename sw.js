@@ -1,5 +1,5 @@
 // Zorgt dat de app ook zonder internet werkt, en opent de app als je op een melding tikt.
-const CACHE = 'planner-v7';
+const CACHE = 'planner-v8';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-v2-180.png', 'icon-v2-512.png'];
 
 self.addEventListener('install', e => {
@@ -14,11 +14,12 @@ self.addEventListener('activate', e => {
 });
 
 // Eerst internet proberen (zodat updates binnenkomen), anders de opgeslagen versie.
+// cache: 'no-cache' = altijd bij GitHub nakijken of er een nieuwere versie is (anders kan je tot 10 min een oude krijgen).
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (new URL(e.request.url).origin !== self.location.origin) return; // database (Supabase) nooit opslaan
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request).then(r => r || caches.match('index.html')))
   );
