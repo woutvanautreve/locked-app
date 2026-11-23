@@ -2031,6 +2031,14 @@ $('rollOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');
   // meteen het venster tonen om de nieuwe vis in je aquarium te zetten
   if(b.dataset.act==='totank'){show('dex');openFishPop(FISH.find(x=>x.id===b.dataset.f),b.dataset.m||null)}});
 
+// eenmalig (bij de update): dubbele vissen terugbetalen. Je houdt er 1 van elke versie,
+// en per extra exemplaar krijg je de helft van de prijs van zijn dobbelsteen terug.
+(function refundDuplicates(){if(S.dupRefunded)return;let back=0,n=0;
+  const price=f=>(DICE[f.d]||DICE[0]).p; // LOCKED-vis zit in elke dobbelsteen: goedkoopste prijs
+  for(const f of FISH){const c=S.fish&&S.fish[f.id];if(c>1){n+=c-1;back+=(c-1)*Math.floor(price(f)/2);S.fish[f.id]=1}
+    const mm=S.mut&&S.mut[f.id];if(mm)for(const k in mm)if(mm[k]>1){n+=mm[k]-1;back+=(mm[k]-1)*Math.floor(price(f)/2);mm[k]=1}}
+  S.dupRefunded=1;if(back)S.spent=(S.spent||0)-back;save();
+  if(back)setTimeout(()=>toast('🔁 '+n+' dubbele vis'+(n===1?'':'sen')+' terugbetaald: +'+back+' 🪙'),1500)})();
 /* schermen */
 const coinChip=()=>'<div class="coinchip">🪙 '+coins()+'</div>';
 const TANK_MAX=10;
