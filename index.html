@@ -229,6 +229,10 @@ nav button:active{transform:scale(.88)}
 .reveal{animation:pop .5s ease}
 .reveal .rar{display:inline-block;background:var(--rc);color:#fff;font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
 .reveal .fish.big{width:200px;margin:14px auto 4px}
+.goalpop{animation:pop .5s ease}
+.goalpop .gbig{font-size:54px;line-height:1;animation:chkpop .5s ease}
+.goalpop .gnext{margin-top:14px;font-size:20px;font-weight:700;color:var(--muted)}
+.goalpop .gnext b{color:var(--accent);font-size:24px}
 /* mythische vis: regenboog-label en een gloed die pulseert */
 .reveal.myth .rar{background:linear-gradient(90deg,#e879f9,#818cf8,#22d3ee,#e879f9);background-size:300% 100%;animation:mythbar 2.5s linear infinite}
 .reveal.myth .fish.big{width:230px;animation:mythglow 1.6s ease-in-out infinite}
@@ -574,6 +578,8 @@ nav button.on{color:var(--accent)}
 <section class="view" id="v-dice"><div class="wrap" id="diceWrap"></div></section>
 <section class="view" id="v-dex"><div class="wrap" id="dexWrap"></div></section>
 <div class="rollov" id="rollOv" hidden><div class="rollbox" id="rollBox"></div></div>
+<!-- popup: progressiedoel gehaald -> zwaarder -->
+<div class="rollov" id="goalOv" hidden><div class="rollbox" id="goalBox" role="dialog" aria-modal="true" aria-labelledby="goalTitle"></div></div>
 
 <!-- formulier: eigen oefening -->
 <div class="sheet" id="exSheet">
@@ -588,6 +594,9 @@ nav button.on{color:var(--accent)}
   <div class="bigstep"><button type="button" id="exWarmMin" aria-label="Minder opwarmsets">−</button><b id="exWarmVal">0</b><button type="button" id="exWarmPlus" aria-label="Meer opwarmsets">+</button></div>
   <label class="l">Rusttijd tussen sets</label>
   <div class="opts" id="exRest"></div>
+  <label class="l">🎯 Zwaarder vanaf <span style="font-weight:400">(herhalingen per set)</span></label>
+  <div class="bigstep"><button type="button" id="exGoalMin" aria-label="Minder herhalingen">−</button><b id="exGoalVal">Uit</b><button type="button" id="exGoalPlus" aria-label="Meer herhalingen">+</button></div>
+  <div class="sub" style="font-size:12px;margin:-4px 0 12px;line-height:1.4">Haal je dit aantal herhalingen in een set, dan krijg je een melding dat je het gewicht omhoog mag doen.</div>
   <button type="button" class="linkbtn" id="exPerBtn" style="margin:4px 0 6px">⏱ Andere rust per set ▾</button>
   <div id="exPer" hidden style="margin-bottom:12px"></div>
   <label class="toggle" id="exSaveWrap"><span>Ook bewaren in workout <b id="exSchemaName"></b></span><input type="checkbox" id="exSaveSchema" checked></label>
@@ -1233,11 +1242,11 @@ let wDetail=null,wNew=false,wRename=false,wEdit=false; // schermstatus van het T
 function startWorkout(type){
   if(!(S.schemas[type]||[]).length){toast('Voeg eerst een oefening toe');return}
   askNotify(); // eerste keer: toestemming vragen voor meldingen (moet na een tik)
-  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>({n:x.n,rest:x.rest||0,sets:buildSets(x)}))};
+  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>Object.assign({n:x.n,rest:x.rest||0,sets:buildSets(x)},x.goal?{goal:x.goal}:{}))};
   wEdit=false;wDetail=null;save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
 
 function exInfo(x){const own=(x.wr||[]).concat(x.sr||[]).some(Boolean);
-  return (x.warm?'🔥'+x.warm+' + ':'')+(x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(own?' · eigen rust':x.rest?'':' (standaard)')}
+  return (x.warm?'🔥'+x.warm+' + ':'')+(x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(own?' · eigen rust':x.rest?'':' (standaard)')+(x.goal?' · 🎯 '+x.goal:'')}
 function renderTrain(){
   const W=S.workout,el=$('trainWrap');
   if(W){renderActive(el,W);return}
@@ -1278,7 +1287,7 @@ function renderActive(el,W){
     +(wEdit?'<div class="editnote">✏️ Bewerkmodus: voeg oefeningen of sets toe of haal ze weg. Tik op <b>✅ Klaar</b> als je klaar bent.</div>':'')
     +W.ex.map((ex,i)=>{const last=lastOf(ex.n),raw=lastRaw(ex.n),pr=prOf(ex.n);let nr=0;
       return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b>'+(wEdit?'<button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen" style="color:var(--danger)">✕ Weg</button>':'')+'</div>'
-        +'<div class="sub">⏱ '+fmtRest(restOf(ex))+' rust · '+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
+        +'<div class="sub">⏱ '+fmtRest(restOf(ex))+' rust · '+(goalOf(ex)?'🎯 vanaf '+goalOf(ex)+' herh. zwaarder · ':'')+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
         +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span>Rust</span><span></span></div>'
         +ex.sets.map((s,j)=>{const h=hint(ex,j,raw);if(!s.w)nr++;
           const rs='<select class="srest'+(s.rest?' own':'')+'" data-i="'+i+'" data-j="'+j+'" aria-label="Rust na deze set"'+(wEdit?'':' disabled')+'>'
@@ -1346,6 +1355,8 @@ $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]
     else if(num(s.reps)===null||num(s.reps)<=0){s.reps='';toast('Vul je herhalingen in');renderTrain();return}
     if(s.kg===''||num(s.kg)===null)s.kg='0';
     s.done=true;save();renderTrain();
+    // progressiedoel gehaald? (1x per oefening per training, opwarmsets tellen niet)
+    const goal=goalOf(ex);if(goal&&!s.w&&!ex.hit&&num(s.reps)>=goal){ex.hit=1;save();showGoalPopup(i,s)}
     // laatste set van de laatste oefening: geen rust meer nodig
     if(!(i===W.ex.length-1&&ex.sets.every(x=>x.done)))startRest(restOfSet(ex,s),ex.sets.every(x=>x.done)?(W.ex[i+1]||{}).n:ex.n);return}
   if(a==='addset'){W.ex[i].sets.push({kg:'',reps:'',done:false});save();renderTrain();return}
@@ -1357,6 +1368,21 @@ $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]
   if(a==='cancel'){armed(b,'Zeker? Tik nogmaals om te annuleren',()=>{S.workout=null;stopRest();save();render();toast('Training geannuleerd')});return}
   if(a==='finish')finishWorkout()});
 
+// progressiedoel van een oefening (ook als je het pas tijdens de training in je schema aanpaste)
+function goalOf(ex){return ex.goal||((S.workout&&S.schemas[S.workout.type]||[]).find(x=>x.n===ex.n)||{}).goal||0}
+const nextKg=kg=>kg<10?kg+1:kg+2.5; // kleine gewichten +1 kg, anders +2,5 kg
+function showGoalPopup(i,s){const ex=S.workout.ex[i],kg=num(s.kg)||0,nk=nextKg(kg),reps=num(s.reps),goal=goalOf(ex);
+  const left=ex.sets.filter(x=>!x.w&&!x.done).length;
+  $('goalBox').innerHTML='<div class="goalpop"><div class="gbig">🚀</div><h2 id="goalTitle" style="margin:6px 0 4px">Tijd voor meer gewicht!</h2>'
+    +'<div class="sub">Je deed <b>'+reps+' herhalingen</b> bij <b>'+esc(ex.n)+'</b>'+(kg?' met <b>'+fmtKg(kg)+' kg</b>':'')+'.<br>Je doel was '+goal+': doe het gewicht omhoog!</div>'
+    +(kg?'<div class="gnext">'+fmtKg(kg)+' kg → <b>'+fmtKg(nk)+' kg</b></div>':'')
+    +'<div class="btns" style="margin-top:16px">'+(kg&&left?'<button class="btn" data-act="goalup" data-i="'+i+'" data-kg="'+nk+'">Volgende '+(left===1?'set':left+' sets')+' op '+fmtKg(nk)+' kg</button>':'')
+    +'<button class="btn'+(kg&&left?' ghost':'')+'" data-act="goalok">'+(left?'Nee, zo laten':'Top, volgende keer!')+'</button></div></div>';
+  $('goalOv').hidden=false;beep();try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}}
+$('goalOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b&&e.target!==$('goalOv'))return;
+  if(b&&b.dataset.act==='goalup'&&S.workout){const ex=S.workout.ex[+b.dataset.i],kg=String(+b.dataset.kg);
+    if(ex){ex.sets.forEach(x=>{if(!x.w&&!x.done)x.kg=kg});save();renderTrain();toast('💪 '+ex.n+': volgende sets op '+fmtKg(+kg)+' kg')}}
+  $('goalOv').hidden=true});
 function finishWorkout(){
   const W=S.workout,ex=W.ex.map(e=>({n:e.n,sets:e.sets.filter(s=>s.done).map(s=>Object.assign({kg:num(s.kg)||0,reps:num(s.reps)||0},s.w?{w:true}:{}))})).filter(e=>e.sets.length);
   if(!ex.length){toast('Vink minstens 1 set af met ✓');return}
@@ -1477,7 +1503,10 @@ function renderSchemas(){
 $('warmHalf').onchange=e=>{S.warmHalf=e.target.checked;save();toast(S.warmHalf?'🔥 Opwarmsets: helft van je gewicht':'🔥 Opwarmsets: zelf invullen')};
 
 /* formulier eigen oefening (voor schema of lopende training) */
-let exCtx=null,exSets=3,exRestSel=0,exWarm=0,exWR=[],exSR=[];
+let exCtx=null,exSets=3,exRestSel=0,exWarm=0,exWR=[],exSR=[],exGoal=0;
+// progressiedoel: 0 = uit, anders 3..30 herhalingen
+function setExGoal(n){exGoal=n<3?0:Math.min(30,n);$('exGoalVal').textContent=exGoal?exGoal+' herh.':'Uit'}
+$('exGoalMin').onclick=()=>setExGoal(exGoal<=3?0:exGoal-1);$('exGoalPlus').onclick=()=>setExGoal(exGoal?exGoal+1:8);
 function setExSets(n){exSets=Math.min(10,Math.max(1,n));$('exSetsVal').textContent=exSets;renderExPer()}
 function setExWarm(n){exWarm=Math.min(5,Math.max(0,n));$('exWarmVal').textContent=exWarm;renderExPer()}
 function setExRest(s){exRestSel=s;document.querySelectorAll('#exRest button').forEach(b=>b.classList.toggle('on',+b.dataset.s===s));renderExPer()}
@@ -1505,7 +1534,7 @@ function openEx(ctx){exCtx=ctx;const x=ctx.mode==='schema'&&ctx.i>=0?S.schemas[c
   $('exLibWrap').hidden=!!x;$('exNameLbl').textContent=x?'Naam':'Of typ zelf een oefening';
   exWR=x&&x.wr?x.wr.slice():[];exSR=x&&x.sr?x.sr.slice():[];
   const own=exWR.concat(exSR).some(Boolean);$('exPer').hidden=!own;$('exPerBtn').textContent='⏱ Andere rust per set '+(own?'▴':'▾');
-  $('exName').value=x?x.n:'';setExSets(x?x.sets||3:3);setExWarm(x?x.warm||0:0);setExRest(x&&x.rest?x.rest:S.rest);
+  $('exName').value=x?x.n:'';setExSets(x?x.sets||3:3);setExWarm(x?x.warm||0:0);setExGoal(x?x.goal||0:0);setExRest(x&&x.rest?x.rest:S.rest);
   $('exSaveWrap').hidden=ctx.mode!=='workout';$('exSchemaName').textContent=ctx.type;$('exSaveSchema').checked=true;
   $('exDel').hidden=!x;disarm($('exDel'));
   if(!x)renderExLib();
@@ -1513,9 +1542,9 @@ function openEx(ctx){exCtx=ctx;const x=ctx.mode==='schema'&&ctx.i>=0?S.schemas[c
 function closeEx(){$('exSheet').classList.remove('on');$('back').classList.remove('on');document.activeElement&&document.activeElement.blur()}
 $('exSave').onclick=()=>{const n=$('exName').value.trim();if(!n){toast('Geef je oefening een naam');$('exName').focus();return}
   const item={n,sets:exSets,rest:exRestSel===S.rest?0:exRestSel},l=S.schemas[exCtx.type]=S.schemas[exCtx.type]||[];
-  if(exWarm)item.warm=exWarm;
+  if(exWarm)item.warm=exWarm;if(exGoal)item.goal=exGoal;
   const fill=(a,n)=>Array.from({length:n},(_,k)=>a[k]||0),wr=fill(exWR,exWarm),sr=fill(exSR,exSets);if(wr.some(Boolean))item.wr=wr;if(sr.some(Boolean))item.sr=sr;
-  if(exCtx.mode==='workout'){S.workout.ex.push({n,rest:item.rest,sets:buildSets(item)});if($('exSaveSchema').checked&&!l.some(x=>x.n===n))l.push(item)}
+  if(exCtx.mode==='workout'){S.workout.ex.push(Object.assign({n,rest:item.rest,sets:buildSets(item)},exGoal?{goal:exGoal}:{}));if($('exSaveSchema').checked&&!l.some(x=>x.n===n))l.push(item)}
   else if(exCtx.i>=0)l[exCtx.i]=item;else l.push(item);
   save();closeEx();render();toast(exCtx.mode==='workout'?'➕ '+n+' toegevoegd':'Opgeslagen in '+exCtx.type)};
 $('exDel').onclick=()=>armed($('exDel'),'Tik nogmaals om te verwijderen',()=>{S.schemas[exCtx.type].splice(exCtx.i,1);save();closeEx();render();toast('Verwijderd')});
