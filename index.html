@@ -1828,16 +1828,25 @@ function fishSVG(F,sil,cls,mut){
     const fin='M72 65 L96 44 L101 61 Z',tail='M46 90 L22 66 L31 90 L22 114 Z',body='M46 90 L70 64 L104 60 L128 74 L142 90 L128 106 L104 120 L70 116 Z';
     if(sil)return wrap('<g transform="'+pos+'"><g transform="'+sk+'"><path d="'+dbBar+'" stroke="currentColor" stroke-width="8"/><path d="'+plT+' '+plB+' '+fin+' '+tail+' '+body+'" fill="currentColor"/></g></g>');
     const st=(x,y,s,dl)=>'<path class="spark" style="animation-delay:-'+dl+'s" d="M'+x+' '+(y-s)+' Q'+x+' '+y+' '+(x+s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y+s)+' Q'+x+' '+y+' '+(x-s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y-s)+'Z" fill="#fff"/>';
+    // kleuren: gewoon wit, of de mutatie (brons/goud/diamant) met een glanzend verloop
+    const LM={b:{a:'#f6c99a',b:'#c27a3e',c:'#7a3f12',dbA:'#e8b27e',dbB:'#8a4f1f',gl:'#e0a36b'},
+              g:{a:'#fff3b0',b:'#f4c534',c:'#8a6508',dbA:'#ffe27a',dbB:'#b8860b',gl:'#ffe27a'},
+              d:{a:'#ffffff',b:'#9be7ff',c:'#1f7fa8',dbA:'#e8fbff',dbB:'#4fc3f0',gl:'#9be7ff'}}[mut]||null;
+    const fishFill=LM?'url(#'+id+'f)':'#fff',dbFill=LM?'url(#'+id+'d)':'#fff',line=LM?LM.c:'#0B0B0F',glow=LM?LM.gl:'#e879f9';
+    const grads=LM?'<linearGradient id="'+id+'f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+LM.a+'"/><stop offset=".55" stop-color="'+LM.b+'"/><stop offset="1" stop-color="'+shade(LM.b,-.25)+'"/></linearGradient>'
+      +'<linearGradient id="'+id+'d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+LM.dbA+'"/><stop offset="1" stop-color="'+LM.dbB+'"/></linearGradient>':'';
+    const facets=mut==='d'?'<path d="M70 64 L84 90 L70 116 M104 60 L84 90 M104 120 L84 90" fill="none" stroke="#fff" stroke-width="1.6" opacity=".8"/>':'';
+    const extra=mut?[[60,4,4.5,.3],[4,36,3.5,1.1],[116,34,3.5,.7]].slice(0,MUT[mut].sp).map(a=>st(...a)).join(''):'';
     return wrap('<ellipse cx="60" cy="38" rx="44" ry="30" fill="url(#'+id+'g)"/>'
       +'<g transform="'+pos+'"><g transform="'+sk+'">'
-      +'<path d="'+dbBar+'" stroke="#fff" stroke-width="8"/><path d="'+plT+'" fill="#fff"/><path d="'+plB+'" fill="#fff"/>'
-      +'<path d="M121 50 H147 M121 130 H147" stroke="#0B0B0F" stroke-width="2"/>'
-      +'<g fill="#fff" stroke="#0B0B0F" stroke-width="4"><path d="'+fin+'"/><path d="'+tail+'"/><path d="'+body+'"/></g>'
-      +'<path d="M96 62 L108 90 L96 118 M52 90 H86" fill="none" stroke="#0B0B0F" stroke-width="2.5"/><path d="M141 90 H128" stroke="#0B0B0F" stroke-width="4"/>'
-      +'<path d="M111 80 L125 76 L127 81.5 L113 85.5 Z" fill="#0B0B0F"/></g>'
-      +'<path d="M6 80 H20 M2 90 H24 M8 100 H20" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/></g>'
-      +st(14,14,4,.2)+st(104,10,5,.9)+st(108,60,4,1.5)+st(20,58,3.5,.6),
-      '<radialGradient id="'+id+'g"><stop offset="0" stop-color="#e879f9" stop-opacity=".45"/><stop offset=".6" stop-color="#a78bfa" stop-opacity=".15"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>')}
+      +'<path d="'+dbBar+'" stroke="'+(LM?LM.dbA:'#fff')+'" stroke-width="8"/><path d="'+plT+'" fill="'+dbFill+'"/><path d="'+plB+'" fill="'+dbFill+'"/>'
+      +'<path d="M121 50 H147 M121 130 H147" stroke="'+line+'" stroke-width="2"/>'
+      +'<g fill="'+fishFill+'" stroke="'+line+'" stroke-width="4"><path d="'+fin+'"/><path d="'+tail+'"/><path d="'+body+'"/></g>'+facets
+      +'<path d="M96 62 L108 90 L96 118 M52 90 H86" fill="none" stroke="'+line+'" stroke-width="2.5"/><path d="M141 90 H128" stroke="'+line+'" stroke-width="4"/>'
+      +'<path d="M111 80 L125 76 L127 81.5 L113 85.5 Z" fill="'+line+'"/></g>'
+      +'<path d="M6 80 H20 M2 90 H24 M8 100 H20" stroke="'+(LM?LM.b:'#fff')+'" stroke-width="4" stroke-linecap="round" fill="none"/></g>'
+      +st(14,14,4,.2)+st(104,10,5,.9)+st(108,60,4,1.5)+st(20,58,3.5,.6)+extra,
+      '<radialGradient id="'+id+'g"><stop offset="0" stop-color="'+glow+'" stop-opacity=".5"/><stop offset=".6" stop-color="'+glow+'" stop-opacity=".15"/><stop offset="1" stop-color="'+glow+'" stop-opacity="0"/></radialGradient>'+grads)}
   if(F.s==='ray'){const body='M104 36 C100 30 88 25 78 6 C70 22 50 27 32 31 L16 34 L0 35.5 L16 37 L32 41 C50 45 70 50 78 66 C88 47 100 42 104 36Z',ceph='M103 33 q7 -3 9 -9 q-2 7 -7 11Z M103 39 q7 3 9 9 q-2 -7 -7 -11Z';
     if(sil)return wrap('<path d="'+body+'" fill="currentColor"/><path d="'+ceph+'" fill="currentColor"/>');
     return wrap('<path d="'+body+'" fill="url(#'+id+'b)" stroke="'+shade(c1,-.4)+'" stroke-width=".8"/><path d="M78 8 C82 20 90 28 100 33 M78 64 C82 52 90 44 100 39" stroke="'+shade(c1,.35)+'" stroke-width="1.2" fill="none" opacity=".6"/>'
@@ -1994,10 +2003,11 @@ const mutOf=id=>(S.mut&&S.mut[id])||{};
 const owned=f=>(S.fish&&S.fish[f.id]||0)+Object.values(mutOf(f.id)).reduce((a,b)=>a+b,0);
 function roll(d){const D=DICE[d];if(coins()<D.p){toast('Nog '+(D.p-coins())+' 🪙 nodig');return}
   // eerst de mythische kans (0,01%, bij elke dobbelsteen), anders een gewone vis van deze dobbelsteen
-  const myth=Math.random()<MYTH_KANS;let f=MYTH,mut=null;
+  const myth=Math.random()<MYTH_KANS;let f=MYTH;
   if(!myth){let x=Math.random()*100,r=0;while(r<4&&x>=ODDS[r]){x-=ODDS[r];r++}
-    const opts=FISH.filter(f=>f.d===d&&f.r===r);f=opts[Math.floor(Math.random()*opts.length)];
-    const m=Math.random()*100;mut=m<MUT.d.kans?'d':m<MUT.d.kans+MUT.g.kans?'g':m<MUT.d.kans+MUT.g.kans+MUT.b.kans?'b':null}
+    const opts=FISH.filter(f=>f.d===d&&f.r===r);f=opts[Math.floor(Math.random()*opts.length)]}
+  // mutatie: bij elke vis, ook bij de LOCKED-vis
+  const m=Math.random()*100,mut=m<MUT.d.kans?'d':m<MUT.d.kans+MUT.g.kans?'g':m<MUT.d.kans+MUT.g.kans+MUT.b.kans?'b':null;
   const isNew=!owned(f);S.fish=S.fish||{};S.mut=S.mut||{};
   // dubbel = je had precies deze vis (in deze versie) al: niet nog eens bijhouden, maar de helft van de prijs terug
   const dup=mut?!!mutOf(f.id)[mut]:!!S.fish[f.id],back=dup?Math.floor(D.p/2):0;
@@ -2012,7 +2022,7 @@ function roll(d){const D=DICE[d];if(coins()<D.p){toast('Nog '+(D.p-coins())+' �
     +(M?' <div class="mutbadge m'+mut+'">'+M.e+' '+M.n+'-mutatie</div>':'')+fishSVG(f,false,'big',mut)
     +'<h2 style="margin:6px 0 4px">'+(M?M.n+' ':'')+esc(f.n)+'</h2><div class="sub">'
     +(dup?'🔁 Die had je al! Je krijgt <b>+'+back+' 🪙</b> terug (de helft).':isNew?'✨ Nieuw in je collectie!':M&&newMut?'✨ Eerste '+M.n.toLowerCase()+' '+esc(f.n)+'!':'✨ Nieuwe versie in je collectie!')
-    +(M?'<br><b>Super zeldzaam: maar '+M.kans+'% kans!</b>':'')+(myth?'<br><b>🤯 ONGELOOFLIJK! Maar 0,01% kans: 1 op 10.000!</b>':'')+'</div>'
+    +(M?'<br><b>Super zeldzaam: maar '+M.kans+'% kans!</b>':'')+(myth?'<br><b>🤯 ONGELOOFLIJK! Maar 0,01% kans: 1 op 10.000'+(M?' × '+M.kans+'% = 1 op '+Math.round(10000*100/M.kans).toLocaleString('nl-BE'):'')+'!</b>':'')+'</div>'
     +'<div class="btns" style="margin-top:18px"><button class="btn ghost" data-act="again" data-d="'+d+'">Nog eens ('+D.p+' 🪙)</button>'
     +(dup?'<button class="btn" data-act="close">Sluiten</button>':'<button class="btn" data-act="totank" data-f="'+f.id+'" data-m="'+(mut||'')+'">🐠 In aquarium zetten</button>')+'</div></div>';render()},1400)}
 $('rollOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
@@ -2073,7 +2083,6 @@ function variants(f){const v=[];if(S.fish&&S.fish[f.id])v.push(null);const mm=mu
 // kaartje in de collectie: tik erop om de vis in of uit je aquarium te zetten
 function dexCard(f){const v=variants(f),n=v.length,tm=inTank(f),tank=tm!==undefined;
   const tag=tank?'<em class="intank">🐠 in aquarium</em>':(n?'<em>tik om in je aquarium te zetten</em>':'');
-  if(f.r>=5)return '<div class="dexcard'+(n?'':' locked')+(tank?' tanked':'')+'"'+(n?' data-f="'+f.id+'" role="button" tabindex="0"':'')+' style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!n)+'<b>'+(n?esc(f.n):'???')+'</b><span>'+RAR[f.r]+'</span>'+tag+'</div>'; // mythisch: geen mutaties
   if(!n)return '<div class="dexcard locked" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,true)+'<b>???</b><span>'+RAR[f.r]+'</span><div class="muts">'+['b','g','d'].map(k=>'<i>'+MUT[k].e+'</i>').join('')+'</div></div>';
   // toon de versie die in je aquarium zwemt, anders je mooiste versie
   const cur=tank?tm:(['d','g','b'].find(k=>v.includes(k))||null),mm=mutOf(f.id);
@@ -2119,7 +2128,12 @@ function renderMutDex(k){const M=MUT[k],L=FISH.filter(isNormalFish),got=L.filter
     +DICE.map((D,d)=>{const fs=L.filter(f=>f.d===d);
       return '<h2>'+D.e+' '+D.n+' <span class="sub" style="font-size:13px;font-weight:600">'+fs.filter(f=>mutOf(f.id)[k]).length+'/10</span></h2><div class="dex">'
         +fs.map(f=>{const has=!!mutOf(f.id)[k],tank=has&&inTank(f)===k;
-          return '<div class="dexcard'+(has?' m'+k:' locked')+(tank?' tanked':'')+'"'+(has?' data-f="'+f.id+'" data-m="'+k+'" role="button" tabindex="0"':'')+' style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!has,'',has?k:null)+'<b>'+(has?M.n+' '+esc(f.n):'???')+'</b><span>'+RAR[f.r]+'</span>'+(tank?'<em class="intank">🐠 in aquarium</em>':'')+'</div>'}).join('')+'</div>'}).join('')}
+          return mutCard(f,k)}).join('')+'</div>'}).join('')
+    // bonus: de LOCKED-vis in deze mutatie
+    +'<h2>🌟 Mythisch <span class="sub" style="font-size:13px;font-weight:600">'+(mutOf(MYTH.id)[k]?1:0)+'/1</span></h2>'
+    +'<div class="sub" style="font-size:12px;margin:-4px 0 8px">Een '+{b:'bronzen',g:'gouden',d:'diamanten'}[k]+' LOCKED-vis: 1 op '+Math.round(10000*100/M.kans).toLocaleString('nl-BE')+' worpen.</div><div class="dex">'+mutCard(MYTH,k)+'</div>'}
+function mutCard(f,k){const M=MUT[k],has=!!mutOf(f.id)[k],tank=has&&inTank(f)===k;
+  return '<div class="dexcard'+(has?' m'+k:' locked')+(tank?' tanked':'')+'"'+(has?' data-f="'+f.id+'" data-m="'+k+'" role="button" tabindex="0"':'')+' style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!has,'',has?k:null)+'<b>'+(has?M.n+' '+esc(f.n):'???')+'</b><span>'+RAR[f.r]+'</span>'+(tank?'<em class="intank">🐠 in aquarium</em>':'')+'</div>'}
 function mutBtns(cur){const L=FISH.filter(isNormalFish);
   return ['b','g','d'].map(k=>'<button class="stat mutstat m'+k+(cur===k?' on':'')+'" data-mut="'+k+'" aria-label="'+MUT[k].n+'-collectie bekijken"><b>'+MUT[k].e+' '+L.filter(f=>mutOf(f.id)[k]).length+'/50</b><span>'+MUT[k].n+' ›</span></button>').join('')}
 function renderDex(){
@@ -2132,7 +2146,7 @@ function renderDex(){
     +DICE.map((D,d)=>{const fs=FISH.filter(f=>f.d===d);
       return '<h2>'+D.e+' '+D.n+' <span class="sub" style="font-size:13px;font-weight:600">'+fs.filter(owned).length+'/10</span></h2><div class="dex">'+fs.map(dexCard).join('')+'</div>'}).join('')
     +'<h2>🌟 Mythisch <span class="sub" style="font-size:13px;font-weight:600">'+(owned(MYTH)?'1':'0')+'/1</span></h2>'
-    +'<div class="sub" style="font-size:12px;margin:-4px 0 8px">Uit élke dobbelsteen, maar met maar 0,01% kans (1 op 10.000 worpen).</div><div class="dex">'+dexCard(MYTH)+'</div>'}
+    +'<div class="sub" style="font-size:12px;margin:-4px 0 8px">Uit élke dobbelsteen, maar met maar 0,01% kans (1 op 10.000 worpen). Ook in 🥉 🥇 💎!</div><div class="dex">'+dexCard(MYTH)+'</div>'}
 $('dexWrap').addEventListener('click',e=>{
   const mb=e.target.closest('button[data-mut]');if(mb){dexMut=dexMut===mb.dataset.mut?null:mb.dataset.mut;renderDex();window.scrollTo(0,0);return}
   if(e.target.closest('[data-act="dexback"]')){dexMut=null;renderDex();window.scrollTo(0,0);return}
