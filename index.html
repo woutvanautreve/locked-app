@@ -205,6 +205,14 @@ nav button:active{transform:scale(.88)}
 .muts i.on{filter:none;opacity:1}
 .muts i.cur{transform:scale(1.25)}
 .dexcard em{display:block;font-size:10px;color:var(--muted);font-style:normal;margin-top:3px}
+.dexcard[data-f]{cursor:pointer}.dexcard[data-f]:active{transform:scale(.96)}
+.dexcard.tanked{outline:2px solid #22d3ee;outline-offset:-2px}
+.dexcard em.intank{color:#22d3ee;font-weight:700}
+.fpvar{flex-wrap:wrap}
+.fpswap{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-height:190px;overflow:auto}
+.fpswap button{background:var(--card2);border-radius:10px;padding:6px 2px;color:inherit;font:inherit}
+.fpswap .fish{width:100%;height:auto}
+.fpswap span{display:block;font-size:9px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dexcard.mb{background:color-mix(in srgb,#c27a3e 14%,var(--card))}
 .dexcard.mg{background:color-mix(in srgb,#f4c534 16%,var(--card))}
 .dexcard.md{background:color-mix(in srgb,#7dd3fc 16%,var(--card))}
@@ -583,6 +591,8 @@ nav button.on{color:var(--accent)}
 <section class="view" id="v-dex"><div class="wrap" id="dexWrap"></div></section>
 <div class="rollov" id="rollOv" hidden><div class="rollbox" id="rollBox"></div></div>
 <!-- popup: progressiedoel gehaald -> zwaarder -->
+<!-- popup: vis in of uit je aquarium zetten -->
+<div class="rollov" id="fishOv" hidden><div class="rollbox" id="fishBox" role="dialog" aria-modal="true"></div></div>
 <div class="rollov" id="goalOv" hidden><div class="rollbox" id="goalBox" role="dialog" aria-modal="true" aria-labelledby="goalTitle"></div></div>
 
 <!-- formulier: eigen oefening -->
@@ -2001,25 +2011,36 @@ function roll(d){const D=DICE[d];if(coins()<D.p){toast('Nog '+(D.p-coins())+' �
     box.innerHTML='<div class="reveal'+(mut?' mutated m'+mut:'')+(myth?' myth':'')+'" style="--rc:'+RARC[f.r]+'"><div class="rar">'+(myth?'🌟 ':'')+RAR[f.r]+'</div>'
     +(M?' <div class="mutbadge m'+mut+'">'+M.e+' '+M.n+'-mutatie</div>':'')+fishSVG(f,false,'big',mut)
     +'<h2 style="margin:6px 0 4px">'+(M?M.n+' ':'')+esc(f.n)+'</h2><div class="sub">'
-    +(dup?'🔁 Die had je al! Je krijgt <b>+'+back+' 🪙</b> terug (de helft).':isNew?'✨ Nieuw in je aquarium!':M&&newMut?'✨ Eerste '+M.n.toLowerCase()+' '+esc(f.n)+'!':'✨ Nieuwe versie in je collectie!')
+    +(dup?'🔁 Die had je al! Je krijgt <b>+'+back+' 🪙</b> terug (de helft).':isNew?'✨ Nieuw in je collectie!':M&&newMut?'✨ Eerste '+M.n.toLowerCase()+' '+esc(f.n)+'!':'✨ Nieuwe versie in je collectie!')
     +(M?'<br><b>Super zeldzaam: maar '+M.kans+'% kans!</b>':'')+(myth?'<br><b>🤯 ONGELOOFLIJK! Maar 0,01% kans: 1 op 10.000!</b>':'')+'</div>'
-    +'<div class="btns" style="margin-top:18px"><button class="btn ghost" data-act="again" data-d="'+d+'">Nog eens ('+D.p+' 🪙)</button><button class="btn" data-act="close">Naar aquarium</button></div></div>';render()},1400)}
+    +'<div class="btns" style="margin-top:18px"><button class="btn ghost" data-act="again" data-d="'+d+'">Nog eens ('+D.p+' 🪙)</button>'
+    +(dup?'<button class="btn" data-act="close">Sluiten</button>':'<button class="btn" data-act="totank" data-f="'+f.id+'" data-m="'+(mut||'')+'">🐠 In aquarium zetten</button>')+'</div></div>';render()},1400)}
 $('rollOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
-  if(b.dataset.act==='again')roll(+b.dataset.d);else{$('rollOv').hidden=true;show('aquarium')}});
+  if(b.dataset.act==='again'){roll(+b.dataset.d);return}
+  $('rollOv').hidden=true;
+  // meteen het venster tonen om de nieuwe vis in je aquarium te zetten
+  if(b.dataset.act==='totank'){show('dex');openFishPop(FISH.find(x=>x.id===b.dataset.f),b.dataset.m||null)}});
 
 /* schermen */
 const coinChip=()=>'<div class="coinchip">🪙 '+coins()+'</div>';
 const TANK_MAX=10;
+// heb je deze vis in deze versie? (m = null gewoon, of 'b'/'g'/'d')
+const hasVar=(f,m)=>m?!!mutOf(f.id)[m]:!!(S.fish&&S.fish[f.id]);
+// de 10 mooiste (alleen gebruikt om je aquarium de eerste keer te vullen)
 function tankFish(own){const MW={d:3,g:2,b:1};
   return own.map(f=>{const mm=mutOf(f.id),m=['d','g','b'].find(k=>mm[k])||null;return{f,m,w:f.r*4+(m?MW[m]:0)}})
     .sort((a,b)=>b.w-a.w).slice(0,TANK_MAX)}
+// jouw aquarium: zelf gekozen, max 10 vissen, van elke soort maar 1
+function tankList(){
+  if(!Array.isArray(S.tank)){S.tank=tankFish(FISH.filter(owned)).map(x=>({id:x.f.id,m:x.m}));save()} // eerste keer: niet leeg beginnen
+  return S.tank.map(t=>({f:FISH.find(x=>x.id===t.id),m:t.m||null})).filter(t=>t.f&&hasVar(t.f,t.m))}
+const inTank=f=>(tankList().find(t=>t.f.id===f.id)||{}).m;          // undefined = niet in je aquarium
+const isInTank=f=>tankList().some(t=>t.f.id===f.id);
 function renderAqua(){
   const own=FISH.filter(owned);
-  // max 10 vissen in de tank, van elke soort maar 1: telkens de mooiste versie (diamant > goud > brons > gewoon),
-  // en de zeldzaamste soorten eerst
-  const vis=tankFish(own);
+  const vis=tankList(); // de vissen die jij in je aquarium zette (max 10)
   let seed=7;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280; // vaste "toeval" zodat vissen niet verspringen
-  $('aqWrap').innerHTML='<div class="row between"><h1>Aquarium</h1>'+coinChip()+'</div><div class="sub">'+own.filter(isNormalFish).length+' van de 50 soorten'+(owned(MYTH)?' + 🌟 de LOCKED-vis':'')+' · '+(own.length>TANK_MAX?'je '+TANK_MAX+' mooiste zwemmen hier':'tik op een vis')+'</div>'
+  $('aqWrap').innerHTML='<div class="row between"><h1>Aquarium</h1>'+coinChip()+'</div><div class="sub">'+own.filter(isNormalFish).length+' van de 50 soorten'+(owned(MYTH)?' + 🌟 de LOCKED-vis':'')+' · <b>'+vis.length+'/'+TANK_MAX+'</b> in je aquarium</div>'
     +'<div class="tank" id="tank">'+[12,30,55,78,90].map((x,i)=>'<span class="bubble" style="left:'+x+'%;animation-delay:-'+i*1.3+'s"></span>').join('')
     +vis.map(({f,m})=>{const d=10+rnd()*14,dl=rnd()*d,w=f.r>=5?104:f.r>=3?78:f.r>=2?66:56;
       return '<div class="swim" data-f="'+f.id+'" data-m="'+(m||'')+'" style="top:'+(6+rnd()*62)+'%;--d:'+d.toFixed(1)+'s;--w:'+w+'px;animation-delay:-'+dl.toFixed(1)+'s"><div class="flip" style="--d:'+d.toFixed(1)+'s;animation-delay:-'+dl.toFixed(1)+'s"><div class="bob" style="animation-delay:-'+(rnd()*3).toFixed(1)+'s">'+fishSVG(f,false,'',m)+'</div></div></div>'}).join('')
@@ -2031,7 +2052,9 @@ function renderAqua(){
       +'<path d="M150 90 Q156 66 176 64 Q198 66 204 90Z" fill="#6b7280"/><path d="M160 76 Q176 68 196 76" stroke="#9ca3af" stroke-width="2" fill="none" opacity=".6"/>'
       +'<path d="M110 90 Q114 80 122 80 Q130 80 134 90Z" fill="#a8a29e"/><path d="M290 88 q6 -8 12 0Z" fill="#fde68a" stroke="#d97706" stroke-width="1"/><path d="M96 88 l4 -6 l4 6Z" fill="#fecaca" stroke="#f87171" stroke-width="1"/>'
     +'</svg><div class="sand"></div>'
-    +(own.length?'':'<div class="tankempty">Je aquarium is nog leeg.<br>Verdien munten en rol je eerste vis bij <b>🎲 Dobbelstenen</b>.</div>')+'</div>'
+    +(vis.length?'':own.length?'<div class="tankempty">Je aquarium is nog leeg.<br>Ga naar <b>Collectie</b> en tik op een vis om hem erin te zetten.</div>'
+      :'<div class="tankempty">Je aquarium is nog leeg.<br>Verdien munten en rol je eerste vis bij <b>🎲 Dobbelstenen</b>.</div>')+'</div>'
+    +(own.length?'<div class="sub" style="font-size:12px;margin:8px 2px 0">🐠 Kies zelf welke vissen hier zwemmen: tik op een vis in <b>Collectie</b> (max '+TANK_MAX+', 1 per soort).</div>':'')
     +'<h2>🪙 Zo verdien je munten</h2><div class="card earn">'
     +[['🎯','Weekdoel gehaald (gym, cardio of school)','+50'],['🏋️','Training afgerond','+15'],['🏃','Cardio-workout gelogd','+15'],['💪','Gym- of cardiotaak afgevinkt','+10'],['📝','Toets afgevinkt','+15'],['📚','Schooltaak afgevinkt','+5'],['🏅','Badge vrijgespeeld','+25'],['🎯','Focus (per 5 minuten)','+1'],['✨','Andere taak','+2']]
       .map(([i,t,v])=>'<div class="row between"><span>'+i+' '+t+'</span><b>'+v+'</b></div>').join('')+'</div>'}
@@ -2047,12 +2070,44 @@ function renderDice(){
         +'<button class="btn" data-d="'+d+'"'+(c<D.p?' disabled':'')+'>'+(c<D.p?'Nog '+(D.p-c)+' 🪙 nodig':'🎲 Rollen')+'</button></div>'}).join('')}
 const dexView={}; // welke variant toon je in de collectie (tik om te wisselen)
 function variants(f){const v=[];if(S.fish&&S.fish[f.id])v.push(null);const mm=mutOf(f.id);for(const k of ['b','g','d'])if(mm[k])v.push(k);return v}
-function dexCard(f){const v=variants(f),n=v.length;
-  if(f.r>=5)return '<div class="dexcard'+(n?'':' locked')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!n)+'<b>'+(n?esc(f.n):'???')+'</b><span>'+RAR[f.r]+(n&&S.fish[f.id]>1?' · ×'+S.fish[f.id]:'')+'</span></div>'; // mythisch: geen mutaties
+// kaartje in de collectie: tik erop om de vis in of uit je aquarium te zetten
+function dexCard(f){const v=variants(f),n=v.length,tm=inTank(f),tank=tm!==undefined;
+  const tag=tank?'<em class="intank">🐠 in aquarium</em>':(n?'<em>tik om in je aquarium te zetten</em>':'');
+  if(f.r>=5)return '<div class="dexcard'+(n?'':' locked')+(tank?' tanked':'')+'"'+(n?' data-f="'+f.id+'" role="button" tabindex="0"':'')+' style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!n)+'<b>'+(n?esc(f.n):'???')+'</b><span>'+RAR[f.r]+'</span>'+tag+'</div>'; // mythisch: geen mutaties
   if(!n)return '<div class="dexcard locked" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,true)+'<b>???</b><span>'+RAR[f.r]+'</span><div class="muts">'+['b','g','d'].map(k=>'<i>'+MUT[k].e+'</i>').join('')+'</div></div>';
-  const cur=v[(dexView[f.id]||0)%n],mm=mutOf(f.id),cnt=cur?mm[cur]:S.fish[f.id];
-  return '<div class="dexcard'+(cur?' m'+cur:'')+'" data-f="'+f.id+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,false,'',cur)+'<b>'+(cur?MUT[cur].n+' ':'')+esc(f.n)+'</b><span>'+RAR[f.r]+(cnt>1?' · ×'+cnt:'')+'</span>'
-    +'<div class="muts">'+['b','g','d'].map(k=>'<i class="'+(mm[k]?'on':'')+(cur===k?' cur':'')+'" title="'+MUT[k].n+'">'+MUT[k].e+'</i>').join('')+'</div>'+(n>1?'<em>tik: '+(((dexView[f.id]||0)%n)+1)+'/'+n+'</em>':'')+'</div>'}
+  // toon de versie die in je aquarium zwemt, anders je mooiste versie
+  const cur=tank?tm:(['d','g','b'].find(k=>v.includes(k))||null),mm=mutOf(f.id);
+  return '<div class="dexcard'+(cur?' m'+cur:'')+(tank?' tanked':'')+'" data-f="'+f.id+'" role="button" tabindex="0" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,false,'',cur)+'<b>'+(cur?MUT[cur].n+' ':'')+esc(f.n)+'</b><span>'+RAR[f.r]+'</span>'
+    +'<div class="muts">'+['b','g','d'].map(k=>'<i class="'+(mm[k]?'on':'')+(cur===k?' cur':'')+'" title="'+MUT[k].n+'">'+MUT[k].e+'</i>').join('')+'</div>'+tag+'</div>'}
+// venster: een vis (in een gekozen versie) in of uit je aquarium zetten
+let fpF=null,fpM=null;
+function openFishPop(f,m){fpF=f;const v=variants(f);fpM=m!==undefined&&v.includes(m)?m:(inTank(f)!==undefined?inTank(f):(['d','g','b'].find(k=>v.includes(k))||null));renderFishPop();$('fishOv').hidden=false}
+function renderFishPop(){const f=fpF,m=fpM,v=variants(f),tm=inTank(f),tank=tm!==undefined,n=tankList().length,M=m&&MUT[m];
+  const same=tank&&tm===m,full=!tank&&n>=TANK_MAX;
+  $('fishBox').innerHTML='<div class="reveal'+(m?' mutated m'+m:'')+(f.r>=5?' myth':'')+'" style="--rc:'+RARC[f.r]+'"><div class="rar">'+RAR[f.r]+'</div>'
+    +fishSVG(f,false,'big',m)+'<h2 style="margin:6px 0 4px">'+(M?M.n+' ':'')+esc(f.n)+'</h2>'
+    +(v.length>1?'<div class="seg fpvar" style="margin:10px 0 4px">'+v.map(k=>'<button data-fpm="'+(k||'')+'" class="'+(k===m?'on':'')+'">'+(k?MUT[k].e+' '+MUT[k].n:'Gewoon')+'</button>').join('')+'</div>':'')
+    +'<div class="sub" style="margin-top:8px">'+(same?'🐠 Deze vis zwemt in je aquarium.':tank?'In je aquarium zwemt nu de '+(tm?MUT[tm].n.toLowerCase()+' ':'gewone ')+'versie.':full?'⚠️ Je aquarium is vol ('+n+'/'+TANK_MAX+'). Haal er eerst een vis uit.':'Je aquarium: '+n+'/'+TANK_MAX+' vissen')+'</div>'
+    +'<div class="btns" style="margin-top:16px">'
+    +(same?'<button class="btn danger" data-act="fpout">Uit aquarium halen</button>'
+      :tank?'<button class="btn" data-act="fpin">Deze versie erin zetten</button>'
+      :full?'':'<button class="btn" data-act="fpin">In aquarium zetten</button>')
+    +'<button class="btn ghost" data-act="fpclose">Sluiten</button></div>'
+    // aquarium vol: meteen kunnen wisselen met een vis die er al in zwemt
+    +(full?'<div class="sub" style="margin:14px 0 6px;font-weight:700">🔄 Wissel met:</div><div class="fpswap">'
+      +tankList().map(t=>'<button data-swap="'+t.f.id+'" aria-label="Wissel met '+esc(t.f.n)+'">'+fishSVG(t.f,false,'',t.m)+'<span>'+(t.m?MUT[t.m].e+' ':'')+esc(t.f.n)+'</span></button>').join('')+'</div>':'')
+    +'</div>'}
+$('fishOv').addEventListener('click',e=>{const t=e.target;if(t===$('fishOv')){$('fishOv').hidden=true;return}
+  const vb=t.closest('button[data-fpm]');if(vb){fpM=vb.dataset.fpm||null;renderFishPop();return}
+  const sw=t.closest('button[data-swap]');if(sw){const f=fpF,old=FISH.find(x=>x.id===sw.dataset.swap);
+    S.tank=tankList().filter(x=>x.f.id!==old.id&&x.f.id!==f.id).map(x=>({id:x.f.id,m:x.m})).concat([{id:f.id,m:fpM}]);save();
+    toast('🔄 '+old.n+' eruit, '+(fpM?MUT[fpM].n+' ':'')+f.n+' erin');$('fishOv').hidden=true;render();return}
+  const b=t.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act,f=fpF;
+  if(a==='fpin'){const L=tankList().filter(x=>x.f.id!==f.id); // 1 per soort: andere versie wordt vervangen
+    if(L.length>=TANK_MAX){toast('Je aquarium is vol ('+TANK_MAX+'/'+TANK_MAX+')');return}
+    S.tank=L.map(x=>({id:x.f.id,m:x.m})).concat([{id:f.id,m:fpM}]);save();toast('🐠 '+(fpM?MUT[fpM].n+' ':'')+f.n+' zwemt nu in je aquarium ('+S.tank.length+'/'+TANK_MAX+')')}
+  if(a==='fpout'){S.tank=tankList().filter(x=>x.f.id!==f.id).map(x=>({id:x.f.id,m:x.m}));save();toast('↩️ '+f.n+' uit je aquarium gehaald ('+S.tank.length+'/'+TANK_MAX+')')}
+  $('fishOv').hidden=true;render()});
 let dexMut=null; // null = gewone collectie, anders 'b', 'g' of 'd' = collectie van die mutatie
 // collectie van één mutatie: alle 50 vissen, gekleurd als je ze in die mutatie hebt
 function renderMutDex(k){const M=MUT[k],L=FISH.filter(isNormalFish),got=L.filter(f=>mutOf(f.id)[k]).length;
@@ -2063,7 +2118,8 @@ function renderMutDex(k){const M=MUT[k],L=FISH.filter(isNormalFish),got=L.filter
     +'<div class="row" style="gap:8px">'+mutBtns(k)+'</div>'
     +DICE.map((D,d)=>{const fs=L.filter(f=>f.d===d);
       return '<h2>'+D.e+' '+D.n+' <span class="sub" style="font-size:13px;font-weight:600">'+fs.filter(f=>mutOf(f.id)[k]).length+'/10</span></h2><div class="dex">'
-        +fs.map(f=>{const has=!!mutOf(f.id)[k];return '<div class="dexcard'+(has?' m'+k:' locked')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!has,'',has?k:null)+'<b>'+(has?M.n+' '+esc(f.n):'???')+'</b><span>'+RAR[f.r]+'</span></div>'}).join('')+'</div>'}).join('')}
+        +fs.map(f=>{const has=!!mutOf(f.id)[k],tank=has&&inTank(f)===k;
+          return '<div class="dexcard'+(has?' m'+k:' locked')+(tank?' tanked':'')+'"'+(has?' data-f="'+f.id+'" data-m="'+k+'" role="button" tabindex="0"':'')+' style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!has,'',has?k:null)+'<b>'+(has?M.n+' '+esc(f.n):'???')+'</b><span>'+RAR[f.r]+'</span>'+(tank?'<em class="intank">🐠 in aquarium</em>':'')+'</div>'}).join('')+'</div>'}).join('')}
 function mutBtns(cur){const L=FISH.filter(isNormalFish);
   return ['b','g','d'].map(k=>'<button class="stat mutstat m'+k+(cur===k?' on':'')+'" data-mut="'+k+'" aria-label="'+MUT[k].n+'-collectie bekijken"><b>'+MUT[k].e+' '+L.filter(f=>mutOf(f.id)[k]).length+'/50</b><span>'+MUT[k].n+' ›</span></button>').join('')}
 function renderDex(){
@@ -2081,7 +2137,7 @@ $('dexWrap').addEventListener('click',e=>{
   const mb=e.target.closest('button[data-mut]');if(mb){dexMut=dexMut===mb.dataset.mut?null:mb.dataset.mut;renderDex();window.scrollTo(0,0);return}
   if(e.target.closest('[data-act="dexback"]')){dexMut=null;renderDex();window.scrollTo(0,0);return}
   const c=e.target.closest('.dexcard[data-f]');if(!c)return;const f=FISH.find(x=>x.id===c.dataset.f);
-  if(variants(f).length<2)return;dexView[f.id]=(dexView[f.id]||0)+1;c.outerHTML=dexCard(f)});
+  openFishPop(f,c.dataset.m!==undefined?(c.dataset.m||null):undefined)});
 $('diceWrap').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(b&&!b.disabled)roll(+b.dataset.d)});
 $('aqWrap').addEventListener('click',e=>{const s=e.target.closest('.swim');if(!s)return;const f=FISH.find(x=>x.id===s.dataset.f),m=s.dataset.m;toast((m?MUT[m].e+' '+MUT[m].n+' ':'')+f.n+' · '+RAR[f.r])});
 
