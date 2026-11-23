@@ -2043,7 +2043,7 @@ $('rollOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');
 const coinChip=()=>'<div class="coinchip">🪙 '+coins()+'</div>';
 const TANK_MAX=10;
 // heb je deze vis in deze versie? (m = null gewoon, of 'b'/'g'/'d')
-const hasVar=(f,m)=>m?!!mutOf(f.id)[m]:!!(S.fish&&S.fish[f.id]);
+const hasVar=(f,m)=>m?!!mutOf(f.id)[m]:hasNormal(f);
 // de 10 mooiste (alleen gebruikt om je aquarium de eerste keer te vullen)
 function tankFish(own){const MW={d:3,g:2,b:1};
   return own.map(f=>{const mm=mutOf(f.id),m=['d','g','b'].find(k=>mm[k])||null;return{f,m,w:f.r*4+(m?MW[m]:0)}})
@@ -2087,7 +2087,9 @@ function renderDice(){
         +'<div class="minifish">'+fs.map(f=>'<span title="'+(owned(f)?esc(f.n):'???')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!owned(f))+'</span>').join('')+'</div>'
         +'<button class="btn" data-d="'+d+'"'+(c<D.p?' disabled':'')+'>'+(c<D.p?'Nog '+(D.p-c)+' 🪙 nodig':'🎲 Rollen')+'</button></div>'}).join('')}
 const dexView={}; // welke variant toon je in de collectie (tik om te wisselen)
-function variants(f){const v=[];if(S.fish&&S.fish[f.id])v.push(null);const mm=mutOf(f.id);for(const k of ['b','g','d'])if(mm[k])v.push(k);return v}
+// gewone versie: als je hem gerold hebt, of als je alle 3 de mutaties (brons, goud, diamant) van die vis hebt
+const hasNormal=f=>!!(S.fish&&S.fish[f.id])||['b','g','d'].every(k=>mutOf(f.id)[k]);
+function variants(f){const v=[];if(hasNormal(f))v.push(null);const mm=mutOf(f.id);for(const k of ['b','g','d'])if(mm[k])v.push(k);return v}
 // kaartje in de collectie: tik erop om de vis in of uit je aquarium te zetten
 function dexCard(f){const v=variants(f),n=v.length,tm=inTank(f),tank=tm!==undefined;
   const tag=tank?'<em class="intank">🐠 in aquarium</em>':(n?'<em>tik om in je aquarium te zetten</em>':'');
