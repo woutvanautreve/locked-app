@@ -1,5 +1,5 @@
 // Zorgt dat de app ook zonder internet werkt, en opent de app als je op een melding tikt.
-const CACHE = 'planner-v8';
+const CACHE = 'planner-v9';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-v2-180.png', 'icon-v2-512.png'];
 
 self.addEventListener('install', e => {
