@@ -331,6 +331,7 @@ nav button:active{transform:scale(.88)}
 .bhead span{font-size:12px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px}
 .bhead:first-child{margin-top:4px}
 .btog{font-style:normal;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:8px;background:var(--card2);color:var(--text,inherit);font-size:16px;font-weight:800}
+.bsec{display:flex;width:100%;justify-content:space-between;align-items:center;font:inherit;color:inherit;text-align:left;padding:0}
 .bpeek{font-size:16px;margin:-2px 12px 4px;line-height:1.4}
 .bpeek span{font-size:11px;color:var(--muted)}
 .opts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
@@ -487,7 +488,7 @@ nav button.on{color:var(--accent)}
     <div class="stat"><b id="sBest">0</b><span>langste reeks</span></div>
     <div class="stat"><b id="sDone">0</b><span>taken afgevinkt</span></div>
   </div>
-  <h2 id="badgeHead">Badges</h2>
+  <h2><button class="bsec" id="badgeToggle" aria-expanded="true"><span id="badgeHead">Badges</span><i class="btog" id="badgeTog">−</i></button></h2>
   <div id="badges"></div>
   <h2>Laatste 7 dagen</h2>
   <div class="card"><div class="chart" id="chart"></div>
@@ -855,6 +856,9 @@ function renderBadges(){
   if(!S.badges||fresh.length){S.badges=got.map(b=>b.id);save()}
   if(fresh.length)setTimeout(()=>toast(fresh.length===1?'🏅 Badge: '+fresh[0].i+' '+fresh[0].n+' · +25 🪙':'🏅 '+fresh.length+' nieuwe badges! · +'+fresh.length*25+' 🪙'),900);
   $('badgeHead').textContent='Badges · '+got.length+'/'+BADGES.length;
+  // hele badge-afdeling in- of uitklappen
+  const secOpen=!S.bHide;$('badgeTog').textContent=secOpen?'−':'+';$('badgeToggle').setAttribute('aria-expanded',secOpen);
+  $('badges').hidden=!secOpen;if(!secOpen)return;
   const cats=[...new Set(BADGES.map(b=>b.c))];
   const open=S.bOpen||{}; // welke categorieën open staan (standaard dicht)
   $('badges').innerHTML=cats.map(c=>{const L=BADGES.filter(b=>b.c===c),n=L.filter(b=>got.includes(b)).length,o=!!open[c];
@@ -862,6 +866,7 @@ function renderBadges(){
       +(o?'':'<div class="bpeek">'+(n?L.filter(b=>got.includes(b)).map(b=>b.i).slice(-8).join(' ')+' ':'')+'<span>'+(n?'':'Nog geen badges · ')+'tik + om te bekijken</span></div>')
       +(o?'<div class="badges">'+L.map(b=>{const[v,g]=b.p(s),ok=v>=g;
       return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')+'</div>':'')}).join('')}
+$('badgeToggle').onclick=()=>{S.bHide=!S.bHide;save();renderBadges()};
 $('badges').addEventListener('click',e=>{const b=e.target.closest('button[data-bc]');if(!b)return;const c=b.dataset.bc;
   S.bOpen=S.bOpen||{};if(S.bOpen[c])delete S.bOpen[c];else S.bOpen[c]=1;save();renderBadges()});
 /* ---------- schooluren en vakanties ---------- */
