@@ -327,6 +327,9 @@ nav button:active{transform:scale(.88)}
 .badge span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .badge.locked .i{filter:grayscale(1);opacity:.35}
 .badge.locked b{color:var(--muted)}
+.bhead{display:flex;justify-content:space-between;align-items:baseline;margin:16px 2px 8px;font-weight:800;font-size:14px}
+.bhead span{font-size:12px;color:var(--muted);font-weight:700}
+.bhead:first-child{margin-top:4px}
 .opts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .opts button{padding:8px 13px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600}
 .opts button.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -482,7 +485,7 @@ nav button.on{color:var(--accent)}
     <div class="stat"><b id="sDone">0</b><span>taken afgevinkt</span></div>
   </div>
   <h2 id="badgeHead">Badges</h2>
-  <div class="badges" id="badges"></div>
+  <div id="badges"></div>
   <h2>Laatste 7 dagen</h2>
   <div class="card"><div class="chart" id="chart"></div>
     <div class="row sub" style="font-size:12px;margin-top:10px;gap:14px"><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sport)"></i> sport</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--studie)"></i> school</span><span>(minuten)</span></div></div>
@@ -797,29 +800,62 @@ function badgeStats(){
   const weeks=new Set(done.map(t=>ymd(monday(parse(t.date)))));
   const weekGoal=[...weeks].some(w=>{const s=weekStats(parse(w));return s.gym>=S.goals.gym&&s.cardio>=S.goals.cardio});
   const prepped=done.some(t=>t.kind==='toets'&&done.some(x=>x.cat==='studie'&&x.kind!=='toets'&&x.sub===t.sub&&x.date<=t.date&&x.date>=ymd(addDays(parse(t.date),-14))));
-  return{n:done.length,gym:done.filter(t=>t.cat==='gym').length,cardio:sum('cardio'),school,focus:S.focus.length,best:Math.max(S.best||0,bestStreak()),weekGoal,prepped,xp:totalXP()}}
-const BADGES=[
-  {id:'first',i:'🏁',n:'Eerste stap',d:'1 taak afvinken',p:s=>[s.n,1]},
-  {id:'gym1',i:'💪',n:'Gym-starter',d:'1x naar de gym',p:s=>[s.gym,1]},
-  {id:'gym10',i:'🏋️',n:'Gymrat',d:'10x naar de gym',p:s=>[s.gym,10]},
-  {id:'cardio',i:'🏃',n:'Hardloper',d:'5u cardio',p:s=>[s.cardio,300]},
-  {id:'school',i:'📚',n:'Studiebol',d:'10u school',p:s=>[s.school,600]},
-  {id:'focus',i:'🎯',n:'Focusmeester',d:'5 focussessies',p:s=>[s.focus,5]},
-  {id:'streak3',i:'🔥',n:'Op dreef',d:'3 dagen op rij',p:s=>[s.best,3]},
-  {id:'streak7',i:'⚡',n:'Onstopbaar',d:'7 dagen op rij',p:s=>[s.best,7]},
-  {id:'week',i:'🏆',n:'Weekdoel',d:'Gym + cardio in 1 week',p:s=>[s.weekGoal?1:0,1]},
-  {id:'exam',i:'📝',n:'Goed voorbereid',d:'Geleerd vóór een toets',p:s=>[s.prepped?1:0,1]},
-  {id:'lvl5',i:'⭐',n:'Level 5',d:'400 XP verdienen',p:s=>[s.xp,400]},
-  {id:'lvl10',i:'👑',n:'Level 10',d:'900 XP verdienen',p:s=>[s.xp,900]}];
+  const W=S.workouts||[],C=S.cardio||[],wSets=W.flatMap(w=>w.ex.flatMap(e=>e.sets));
+  const wkend=d=>{const x=parse(d).getDay();return x===0||x===6};
+  let fish=0;try{fish=FISH.filter(owned).length}catch(e){}
+  return{n:done.length,gym:done.filter(t=>t.cat==='gym').length,cardio:sum('cardio'),school,focus:S.focus.length,best:Math.max(S.best||0,bestStreak()),
+    weekGoal,prepped,xp:totalXP(),
+    wg:[...weeks].filter(w=>{const s=weekStats(parse(w));return s.gym>=S.goals.gym&&s.cardio>=S.goals.cardio}).length,
+    wo:W.length,sets:wSets.filter(x=>!x.w).length,warm:wSets.filter(x=>x.w).length,
+    vol:Math.round(wSets.filter(x=>!x.w).reduce((a,x)=>a+(+x.kg||0)*(+x.reps||0),0)),prs:progCount(W),
+    cdN:C.length,km:Math.floor(C.reduce((a,c)=>a+(+c.km||0),0)),exams:done.filter(t=>t.kind==='toets').length,fish,
+    early:done.filter(t=>t.time&&t.time<'08:00').length,owl:done.filter(t=>t.time&&t.time>='21:00').length,
+    wknd:W.filter(w=>wkend(w.date)).length+C.filter(c=>wkend(c.date)).length,days:activeDays().size}}
+// Badges per categorie, met steeds moeilijkere niveaus. [id, naam, doel]; de oude id's blijven, zodat behaalde badges blijven staan.
+const BCATS=[
+  {c:'✅ Taken',i:'✅',k:'n',d:g=>g+' taken afvinken',t:[['first','Eerste stap',1],['tk5','Op gang',5],['tk10','Takenjager',10],['tk25','Doener',25],['tk50','Afvinker',50],['tk100','Takenmachine',100],['tk250','Productiviteitsbeest',250],['tk500','Onvermoeibaar',500],['tk1000','Takenlegende',1000]]},
+  {c:'💪 Gym',i:'💪',k:'gym',d:g=>g+'x naar de gym',t:[['gym1','Gym-starter',1],['gym5','Vaste klant',5],['gym10','Gymrat',10],['gym25','IJzervreter',25],['gym50','Gymbeest',50],['gym100','Honderdklapper',100],['gym200','Gymlegende',200]]},
+  {c:'📒 Trainingen gelogd',i:'📒',k:'wo',d:g=>g+' trainingen loggen',t:[['wo1','Logboek open',1],['wo5','Trainer',5],['wo10','Notulist',10],['wo25','Trainingsdagboek',25],['wo50','Data-atleet',50],['wo100','Statistiekbeul',100],['wo250','Archivaris van ijzer',250]]},
+  {c:'🔁 Sets',i:'🔁',k:'sets',d:g=>g+' sets doen',t:[['set10','Eerste sets',10],['set50','Setjes',50],['set100','Honderd sets',100],['set250','Setmachine',250],['set500','Set-tsunami',500],['set1000','Duizend sets',1000],['set2500','Set-legende',2500]]},
+  {c:'🏗️ Totaal getild',i:'🏗️',k:'vol',d:g=>(g/1000)+' ton tillen',t:[['vol1','Eerste ton',1000],['vol5','Olifant',5000],['vol10','Vrachtwagen',10000],['vol25','Dinosaurus',25000],['vol50','Walvis',50000],['vol100','Vliegtuig',100000],['vol250','Ruimteschip',250000]]},
+  {c:'🏆 Vooruitgang',i:'📈',k:'prs',d:g=>g+'x je record verbeteren',t:[['pr1','Eerste PR',1],['pr5','Sterker',5],['pr10','Groeier',10],['pr25','Recordbreker',25],['pr50','PR-jager',50],['pr100','Onverslaanbaar',100]]},
+  {c:'🏃 Cardio',i:'🏃',k:'cardio',d:g=>fmtMin(g)+' cardio',t:[['cd60','Op adem',60],['cardio','Hardloper',300],['cd600','Duurloper',600],['cd1200','Marathonhart',1200],['cd3000','IJzeren longen',3000],['cd6000','Cardiokoning',6000]]},
+  {c:'🛣️ Afstand',i:'🛣️',k:'km',d:g=>g+' km afleggen',t:[['km5','Eerste 5 km',5],['km21','Halve marathon',21],['km42','Marathon',42],['km100','Honderd km',100],['km250','Ver weg',250],['km500','Land door',500],['km1000','Duizend km',1000]]},
+  {c:'🚴 Cardio-workouts',i:'🚴',k:'cdN',d:g=>g+' cardio-workouts loggen',t:[['cdn1','Eerste ritje',1],['cdn5','Rondjes',5],['cdn10','Uithouder',10],['cdn25','Kilometervreter',25],['cdn50','Duursporter',50],['cdn100','Cardiomachine',100]]},
+  {c:'📚 School',i:'📚',k:'school',d:g=>fmtMin(g)+' school',t:[['sc60','Eerste uur',60],['sc300','Leergierig',300],['school','Studiebol',600],['sc1500','Boekenwurm',1500],['sc3000','Professor',3000],['sc6000','Geleerde',6000],['sc12000','Genie',12000]]},
+  {c:'🎯 Focus',i:'🎯',k:'focus',d:g=>g+' focussessies',t:[['fc1','Eerste focus',1],['focus','Focusmeester',5],['fc10','Laserblik',10],['fc25','Zen',25],['fc50','Monnik',50],['fc100','Onverstoorbaar',100],['fc250','Focuslegende',250]]},
+  {c:'🔥 Reeks',i:'🔥',k:'best',d:g=>g+' dagen op rij',t:[['streak3','Op dreef',3],['streak7','Onstopbaar',7],['st14','Twee weken',14],['st30','Maandreeks',30],['st60','Gewoontemaker',60],['st100','Honderd dagen',100],['st365','Een heel jaar',365]]},
+  {c:'🗓️ Weekdoelen',i:'🏆',k:'wg',d:g=>'Gym + cardio in '+g+' weken',t:[['week','Weekdoel',1],['wg2','Dubbel',2],['wg4','Maandje',4],['wg8','Vaste kracht',8],['wg12','Kwartaal',12],['wg26','Half jaar',26],['wg52','Heel jaar',52]]},
+  {c:'📝 Toetsen',i:'📝',k:'exams',d:g=>g+' toetsen afgerond',t:[['ex1','Eerste toets',1],['ex5','Toetsentijger',5],['ex10','Examenheld',10],['ex25','Diplomajager',25]]},
+  {c:'⭐ XP',i:'⭐',k:'xp',d:g=>g+' XP verdienen',t:[['xp100','Level 2',100],['lvl5','Level 5',400],['lvl10','Level 10',900],['lvl20','Level 20',1900],['lvl50','Level 50',4900],['lvl100','Level 100',9900]]},
+  {c:'🐠 Aquarium',i:'🐠',k:'fish',d:g=>g+' soorten vissen',t:[['fs1','Eerste vis',1],['fs5','Visje erbij',5],['fs10','Schooltje',10],['fs20','Aquariaan',20],['fs30','Rifbouwer',30],['fs40','Oceaanbaas',40],['fs50','Alle vissen',50]]}];
+const BADGES=[];
+for(const c of BCATS)for(const[id,n,g]of c.t)BADGES.push({id,i:c.i,n,c:c.c,d:c.d(g),p:s=>[s[c.k]||0,g]});
+// speciale badges
+BADGES.push(...[
+  {id:'exam',i:'🧠',n:'Goed voorbereid',d:'Geleerd vóór een toets',p:s=>[s.prepped?1:0,1]},
+  {id:'early1',i:'🌅',n:'Vroege vogel',d:'Taak vóór 8:00 gedaan',p:s=>[s.early,1]},
+  {id:'early10',i:'🐓',n:'Ochtendmens',d:'10 taken vóór 8:00',p:s=>[s.early,10]},
+  {id:'owl1',i:'🦉',n:'Nachtuil',d:'Taak na 21:00 gedaan',p:s=>[s.owl,1]},
+  {id:'owl10',i:'🌙',n:'Nachtbraker',d:'10 taken na 21:00',p:s=>[s.owl,10]},
+  {id:'wknd1',i:'🏖️',n:'Weekendstrijder',d:'Trainen in het weekend',p:s=>[s.wknd,1]},
+  {id:'wknd10',i:'⚔️',n:'Geen rustdag',d:'10x trainen in het weekend',p:s=>[s.wknd,10]},
+  {id:'warm10',i:'🌡️',n:'Opgewarmd',d:'10 opwarmsets',p:s=>[s.warm,10]},
+  {id:'warm100',i:'♨️',n:'Blessurevrij',d:'100 opwarmsets',p:s=>[s.warm,100]},
+  {id:'days30',i:'📆',n:'30 actieve dagen',d:'30 dagen actief',p:s=>[s.days,30]},
+  {id:'days100',i:'💯',n:'100 actieve dagen',d:'100 dagen actief',p:s=>[s.days,100]},
+  {id:'days365',i:'🌍',n:'365 actieve dagen',d:'365 dagen actief',p:s=>[s.days,365]}].map(b=>Object.assign(b,{c:'✨ Speciaal'})));
 function renderBadges(){
   const s=badgeStats(),got=BADGES.filter(b=>{const[v,g]=b.p(s);return v>=g});
   // nieuwe badge vrijgespeeld? (de eerste keer stil bijhouden)
   const fresh=S.badges?got.filter(b=>!S.badges.includes(b.id)):[];
   if(!S.badges||fresh.length){S.badges=got.map(b=>b.id);save()}
-  if(fresh.length)setTimeout(()=>toast('🏅 Badge: '+fresh[0].i+' '+fresh[0].n+' · +25 🪙'),900);
+  if(fresh.length)setTimeout(()=>toast(fresh.length===1?'🏅 Badge: '+fresh[0].i+' '+fresh[0].n+' · +25 🪙':'🏅 '+fresh.length+' nieuwe badges! · +'+fresh.length*25+' 🪙'),900);
   $('badgeHead').textContent='Badges · '+got.length+'/'+BADGES.length;
-  $('badges').innerHTML=BADGES.map(b=>{const[v,g]=b.p(s),ok=v>=g;
-    return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')}
+  const cats=[...new Set(BADGES.map(b=>b.c))];
+  $('badges').innerHTML=cats.map(c=>{const L=BADGES.filter(b=>b.c===c),n=L.filter(b=>got.includes(b)).length;
+    return '<div class="bhead">'+c+'<span>'+n+'/'+L.length+'</span></div><div class="badges">'+L.map(b=>{const[v,g]=b.p(s),ok=v>=g;
+      return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')+'</div>'}).join('')}
 /* ---------- schooluren en vakanties ---------- */
 const SDAYS=[1,2,3,4,5,6,0];
 function schoolDef(){const d={};for(const k of SDAYS)d[k]={on:k>=1&&k<=5,from:'08:30',to:k===3?'12:00':'15:30'};return{on:false,days:d}}
