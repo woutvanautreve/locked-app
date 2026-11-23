@@ -229,6 +229,12 @@ nav button:active{transform:scale(.88)}
 .reveal{animation:pop .5s ease}
 .reveal .rar{display:inline-block;background:var(--rc);color:#fff;font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
 .reveal .fish.big{width:200px;margin:14px auto 4px}
+/* mythische vis: regenboog-label en een gloed die pulseert */
+.reveal.myth .rar{background:linear-gradient(90deg,#e879f9,#818cf8,#22d3ee,#e879f9);background-size:300% 100%;animation:mythbar 2.5s linear infinite}
+.reveal.myth .fish.big{width:230px;animation:mythglow 1.6s ease-in-out infinite}
+@keyframes mythbar{to{background-position:300% 0}}
+@keyframes mythglow{50%{filter:drop-shadow(0 0 16px #e879f9) drop-shadow(0 0 6px #fff)}}
+.fish.r5{animation:mythglow 2.4s ease-in-out infinite}
 /* grafiek per oefening */
 .chwrap{touch-action:pan-y}
 .chart2{width:100%;height:auto;display:block;cursor:crosshair}
@@ -820,7 +826,7 @@ function badgeStats(){
   const prepped=done.some(t=>t.kind==='toets'&&done.some(x=>x.cat==='studie'&&x.kind!=='toets'&&x.sub===t.sub&&x.date<=t.date&&x.date>=ymd(addDays(parse(t.date),-14))));
   const W=S.workouts||[],C=S.cardio||[],wSets=W.flatMap(w=>w.ex.flatMap(e=>e.sets));
   const wkend=d=>{const x=parse(d).getDay();return x===0||x===6};
-  let fish=0;try{fish=FISH.filter(owned).length}catch(e){}
+  let fish=0,myth=0;try{fish=FISH.filter(f=>isNormalFish(f)&&owned(f)).length;myth=owned(MYTH)?1:0}catch(e){}
   return{n:done.length,gym:done.filter(t=>t.cat==='gym').length,cardio:sum('cardio'),school,focus:S.focus.length,best:Math.max(S.best||0,bestStreak()),
     weekGoal,prepped,xp:totalXP(),
     wg:[...weeks].filter(w=>{const s=weekStats(parse(w));return s.gym>=S.goals.gym&&s.cardio>=S.goals.cardio}).length,
@@ -828,7 +834,7 @@ function badgeStats(){
     vol:Math.round(wSets.filter(x=>!x.w).reduce((a,x)=>a+(+x.kg||0)*(+x.reps||0),0)),prs:progCount(W),
     cdN:C.length,km:Math.floor(C.reduce((a,c)=>a+(+c.km||0),0)),exams:done.filter(t=>t.kind==='toets').length,fish,
     early:done.filter(t=>t.time&&t.time<'08:00').length,owl:done.filter(t=>t.time&&t.time>='21:00').length,
-    wknd:W.filter(w=>wkend(w.date)).length+C.filter(c=>wkend(c.date)).length,days:activeDays().size}}
+    wknd:W.filter(w=>wkend(w.date)).length+C.filter(c=>wkend(c.date)).length,days:activeDays().size,myth}}
 // Badges per categorie, met steeds moeilijkere niveaus. [id, naam, doel]; de oude id's blijven, zodat behaalde badges blijven staan.
 const BCATS=[
   {c:'✅ Taken',i:'✅',k:'n',d:g=>g+' taken afvinken',t:[['first','Eerste stap',1],['tk5','Op gang',5],['tk10','Takenjager',10],['tk25','Doener',25],['tk50','Afvinker',50],['tk100','Takenmachine',100],['tk250','Productiviteitsbeest',250],['tk500','Onvermoeibaar',500],['tk1000','Takenlegende',1000]]},
@@ -862,7 +868,8 @@ BADGES.push(...[
   {id:'warm100',i:'♨️',n:'Blessurevrij',d:'100 opwarmsets',p:s=>[s.warm,100]},
   {id:'days30',i:'📆',n:'30 actieve dagen',d:'30 dagen actief',p:s=>[s.days,30]},
   {id:'days100',i:'💯',n:'100 actieve dagen',d:'100 dagen actief',p:s=>[s.days,100]},
-  {id:'days365',i:'🌍',n:'365 actieve dagen',d:'365 dagen actief',p:s=>[s.days,365]}].map(b=>Object.assign(b,{c:'✨ Speciaal'})));
+  {id:'days365',i:'🌍',n:'365 actieve dagen',d:'365 dagen actief',p:s=>[s.days,365]},
+  {id:'myth',i:'🌟',n:'Mythisch',d:'Vang de geheime vis (0,01%)',p:s=>[s.myth,1]}].map(b=>Object.assign(b,{c:'✨ Speciaal'})));
 function renderBadges(){
   const s=badgeStats(),got=BADGES.filter(b=>{const[v,g]=b.p(s);return v>=g});
   // nieuwe badge vrijgespeeld? (de eerste keer stil bijhouden)
@@ -1626,8 +1633,9 @@ $('progWrap').addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||e.b
 /* =====================================================================
    AQUARIUM: munten verdienen, vissen rollen met dobbelstenen
    ===================================================================== */
-const RAR=['Common','Uncommon','Rare','Epic','Legendary'];
-const RARC=['#94a3b8','#22c55e','#3b82f6','#a855f7','#f59e0b'];
+const RAR=['Common','Uncommon','Rare','Epic','Legendary','Mythisch'];
+const RARC=['#94a3b8','#22c55e','#3b82f6','#a855f7','#f59e0b','#e879f9'];
+const MYTH_KANS=0.0001; // 0,01% kans op de LOCKED-vis, bij elke dobbelsteen
 const ODDS=[45,28,15,9,3]; // kans in % per zeldzaamheid
 const DICE=[
   {n:'Vijver',p:50,c:'#84cc16',e:'🪷'},{n:'Rivier',p:120,c:'#0ea5e9',e:'🏞️'},{n:'Rif',p:250,c:'#f97316',e:'🪸'},
@@ -1687,6 +1695,10 @@ const FISH=[
  {n:'Kosmische Kwal',d:4,r:4,s:'jelly',c1:'#a78bfa',c2:'#f0abfc',f:['cosmic']},
  {n:'Leviathan',d:4,r:4,b:'shark',t:'shark',df:'tri',dh:11,af:'tri',c1:'#1e1b4b',c2:'#312e81',bel:'#3730a3',f:['runes','viperfangs'],gl:'#22d3ee',ir:'#ef4444'}
 ].map((o,i)=>Object.assign({id:'f'+(i+1)},o));
+// geheime 51e vis: het LOCKED-logo. Zit in geen enkele dobbelsteen, maar elke worp heeft 0,01% kans.
+FISH.push({id:'locked',n:'LOCKED-vis',d:-1,r:5,s:'locked',c1:'#ffffff',c2:'#0B0B0F',f:[]});
+const MYTH=FISH[FISH.length-1];
+const isNormalFish=f=>f.r<5; // de 50 gewone soorten (voor tellers en de ranglijst)
 
 // ===== Vissen: tekenen =====
 const MUT={b:{n:'Brons',e:'🥉',kans:8,c1:'#d98f4e',c2:'#8a4f1f',bel:'#f6c99a',glow:'#e0a36b',sp:1},
@@ -1767,6 +1779,22 @@ function fishSVG(F,sil,cls,mut){
   const sparkle=()=>{if(!M)return '';const st=(x,y,s)=>'<path class="spark" style="animation-delay:-'+((x*7+y)%16)/10+'s" d="M'+x+' '+(y-s)+' Q'+x+' '+y+' '+(x+s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y+s)+' Q'+x+' '+y+' '+(x-s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y-s)+'Z" fill="#fff"/>';
     return [[72,14,5],[36,52,4],[100,48,4.5],[22,20,4]].slice(0,M.sp).map(a=>st(...a)).join('')};
   // ---- speciale vormen ----
+  if(F.s==='locked'){ // het app-logo: futuristische vis met een halter in zijn mond
+    const pos='translate(16 -12.5) scale(.54)',sk='translate(90 90) skewX(-10) translate(-84 -90)';
+    const dbBar='M134 30 V150',plT='M117 43 H151 L155 47 V53 L151 57 H117 L113 53 V47 Z',plB='M117 123 H151 L155 127 V133 L151 137 H117 L113 133 V127 Z';
+    const fin='M72 65 L96 44 L101 61 Z',tail='M46 90 L22 66 L31 90 L22 114 Z',body='M46 90 L70 64 L104 60 L128 74 L142 90 L128 106 L104 120 L70 116 Z';
+    if(sil)return wrap('<g transform="'+pos+'"><g transform="'+sk+'"><path d="'+dbBar+'" stroke="currentColor" stroke-width="8"/><path d="'+plT+' '+plB+' '+fin+' '+tail+' '+body+'" fill="currentColor"/></g></g>');
+    const st=(x,y,s,dl)=>'<path class="spark" style="animation-delay:-'+dl+'s" d="M'+x+' '+(y-s)+' Q'+x+' '+y+' '+(x+s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y+s)+' Q'+x+' '+y+' '+(x-s)+' '+y+' Q'+x+' '+y+' '+x+' '+(y-s)+'Z" fill="#fff"/>';
+    return wrap('<ellipse cx="60" cy="38" rx="44" ry="30" fill="url(#'+id+'g)"/>'
+      +'<g transform="'+pos+'"><g transform="'+sk+'">'
+      +'<path d="'+dbBar+'" stroke="#fff" stroke-width="8"/><path d="'+plT+'" fill="#fff"/><path d="'+plB+'" fill="#fff"/>'
+      +'<path d="M121 50 H147 M121 130 H147" stroke="#0B0B0F" stroke-width="2"/>'
+      +'<g fill="#fff" stroke="#0B0B0F" stroke-width="4"><path d="'+fin+'"/><path d="'+tail+'"/><path d="'+body+'"/></g>'
+      +'<path d="M96 62 L108 90 L96 118 M52 90 H86" fill="none" stroke="#0B0B0F" stroke-width="2.5"/><path d="M141 90 H128" stroke="#0B0B0F" stroke-width="4"/>'
+      +'<path d="M111 80 L125 76 L127 81.5 L113 85.5 Z" fill="#0B0B0F"/></g>'
+      +'<path d="M6 80 H20 M2 90 H24 M8 100 H20" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/></g>'
+      +st(14,14,4,.2)+st(104,10,5,.9)+st(108,60,4,1.5)+st(20,58,3.5,.6),
+      '<radialGradient id="'+id+'g"><stop offset="0" stop-color="#e879f9" stop-opacity=".45"/><stop offset=".6" stop-color="#a78bfa" stop-opacity=".15"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>')}
   if(F.s==='ray'){const body='M104 36 C100 30 88 25 78 6 C70 22 50 27 32 31 L16 34 L0 35.5 L16 37 L32 41 C50 45 70 50 78 66 C88 47 100 42 104 36Z',ceph='M103 33 q7 -3 9 -9 q-2 7 -7 11Z M103 39 q7 3 9 9 q-2 -7 -7 -11Z';
     if(sil)return wrap('<path d="'+body+'" fill="currentColor"/><path d="'+ceph+'" fill="currentColor"/>');
     return wrap('<path d="'+body+'" fill="url(#'+id+'b)" stroke="'+shade(c1,-.4)+'" stroke-width=".8"/><path d="M78 8 C82 20 90 28 100 33 M78 64 C82 52 90 44 100 39" stroke="'+shade(c1,.35)+'" stroke-width="1.2" fill="none" opacity=".6"/>'
@@ -1922,9 +1950,11 @@ function checkWeeklyBonus(){
 const mutOf=id=>(S.mut&&S.mut[id])||{};
 const owned=f=>(S.fish&&S.fish[f.id]||0)+Object.values(mutOf(f.id)).reduce((a,b)=>a+b,0);
 function roll(d){const D=DICE[d];if(coins()<D.p){toast('Nog '+(D.p-coins())+' 🪙 nodig');return}
-  let x=Math.random()*100,r=0;while(r<4&&x>=ODDS[r]){x-=ODDS[r];r++}
-  const opts=FISH.filter(f=>f.d===d&&f.r===r),f=opts[Math.floor(Math.random()*opts.length)];
-  const m=Math.random()*100,mut=m<MUT.d.kans?'d':m<MUT.d.kans+MUT.g.kans?'g':m<MUT.d.kans+MUT.g.kans+MUT.b.kans?'b':null;
+  // eerst de mythische kans (0,01%, bij elke dobbelsteen), anders een gewone vis van deze dobbelsteen
+  const myth=Math.random()<MYTH_KANS;let f=MYTH,mut=null;
+  if(!myth){let x=Math.random()*100,r=0;while(r<4&&x>=ODDS[r]){x-=ODDS[r];r++}
+    const opts=FISH.filter(f=>f.d===d&&f.r===r);f=opts[Math.floor(Math.random()*opts.length)];
+    const m=Math.random()*100;mut=m<MUT.d.kans?'d':m<MUT.d.kans+MUT.g.kans?'g':m<MUT.d.kans+MUT.g.kans+MUT.b.kans?'b':null}
   const isNew=!owned(f);S.spent=(S.spent||0)+D.p;S.fish=S.fish||{};S.mut=S.mut||{};
   let newMut=false;
   if(mut){const o=S.mut[f.id]=S.mut[f.id]||{};newMut=!o[mut];o[mut]=(o[mut]||0)+1}else S.fish[f.id]=(S.fish[f.id]||0)+1;
@@ -1932,11 +1962,11 @@ function roll(d){const D=DICE[d];if(coins()<D.p){toast('Nog '+(D.p-coins())+' �
   const ov=$('rollOv'),box=$('rollBox');ov.hidden=false;
   box.innerHTML='<div class="die" style="background:'+D.c+'">🎲</div><div class="sub" style="margin-top:14px">'+D.e+' '+D.n+'dobbelsteen rollen…</div>';
   setTimeout(()=>{const M=mut&&MUT[mut];
-    box.innerHTML='<div class="reveal'+(mut?' mutated m'+mut:'')+'" style="--rc:'+RARC[f.r]+'"><div class="rar">'+RAR[f.r]+'</div>'
+    box.innerHTML='<div class="reveal'+(mut?' mutated m'+mut:'')+(myth?' myth':'')+'" style="--rc:'+RARC[f.r]+'"><div class="rar">'+(myth?'🌟 ':'')+RAR[f.r]+'</div>'
     +(M?' <div class="mutbadge m'+mut+'">'+M.e+' '+M.n+'-mutatie</div>':'')+fishSVG(f,false,'big',mut)
     +'<h2 style="margin:6px 0 4px">'+(M?M.n+' ':'')+esc(f.n)+'</h2><div class="sub">'
     +(isNew?'✨ Nieuw in je aquarium!':M?(newMut?'✨ Eerste '+M.n.toLowerCase()+' '+esc(f.n)+'!':'Je hebt er nu '+S.mut[f.id][mut]+' in '+M.n.toLowerCase()):'Je hebt er nu '+S.fish[f.id]+' van')
-    +(M?'<br><b>Super zeldzaam: maar '+M.kans+'% kans!</b>':'')+'</div>'
+    +(M?'<br><b>Super zeldzaam: maar '+M.kans+'% kans!</b>':'')+(myth?'<br><b>🤯 ONGELOOFLIJK! Maar 0,01% kans: 1 op 10.000!</b>':'')+'</div>'
     +'<div class="btns" style="margin-top:18px"><button class="btn ghost" data-act="again" data-d="'+d+'">Nog eens ('+D.p+' 🪙)</button><button class="btn" data-act="close">Naar aquarium</button></div></div>';render()},1400)}
 $('rollOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
   if(b.dataset.act==='again')roll(+b.dataset.d);else{$('rollOv').hidden=true;show('aquarium')}});
@@ -1950,9 +1980,9 @@ function renderAqua(){
     for(let i=0;i<Math.min(3,S.fish&&S.fish[f.id]||0);i++)list.push({f,m:null,w:0})}
   const vis=list.sort((a,b)=>(b.m?3:0)+b.f.r-((a.m?3:0)+a.f.r)).slice(0,24); // max 24 vissen tegelijk in de tank
   let seed=7;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280; // vaste "toeval" zodat vissen niet verspringen
-  $('aqWrap').innerHTML='<div class="row between"><h1>Aquarium</h1>'+coinChip()+'</div><div class="sub">'+own.length+' van de 50 soorten · tik op een vis</div>'
+  $('aqWrap').innerHTML='<div class="row between"><h1>Aquarium</h1>'+coinChip()+'</div><div class="sub">'+own.filter(isNormalFish).length+' van de 50 soorten'+(owned(MYTH)?' + 🌟 de LOCKED-vis':'')+' · tik op een vis</div>'
     +'<div class="tank" id="tank">'+[12,30,55,78,90].map((x,i)=>'<span class="bubble" style="left:'+x+'%;animation-delay:-'+i*1.3+'s"></span>').join('')
-    +vis.map(({f,m})=>{const d=10+rnd()*14,dl=rnd()*d,w=f.r>=3?78:f.r>=2?66:56;
+    +vis.map(({f,m})=>{const d=10+rnd()*14,dl=rnd()*d,w=f.r>=5?104:f.r>=3?78:f.r>=2?66:56;
       return '<div class="swim" data-f="'+f.id+'" data-m="'+(m||'')+'" style="top:'+(6+rnd()*62)+'%;--d:'+d.toFixed(1)+'s;--w:'+w+'px;animation-delay:-'+dl.toFixed(1)+'s"><div class="flip" style="--d:'+d.toFixed(1)+'s;animation-delay:-'+dl.toFixed(1)+'s"><div class="bob" style="animation-delay:-'+(rnd()*3).toFixed(1)+'s">'+fishSVG(f,false,'',m)+'</div></div></div>'}).join('')
     +'<div class="rays"></div>'
     +'<svg class="plants" viewBox="0 0 400 90" preserveAspectRatio="xMidYMax slice">'
@@ -1969,8 +1999,9 @@ function renderAqua(){
 function renderDice(){
   const c=coins();
   $('diceWrap').innerHTML='<div class="row between"><h1>Dobbelstenen</h1>'+coinChip()+'</div><div class="sub">Elke dobbelsteen heeft 10 vissen: 2 per zeldzaamheid.</div>'
-    +'<div class="odds">'+RAR.map((r,i)=>'<span><i style="background:'+RARC[i]+'"></i>'+r+' '+ODDS[i]+'%</span>').join('')+'</div>'
+    +'<div class="odds">'+RAR.slice(0,ODDS.length).map((r,i)=>'<span><i style="background:'+RARC[i]+'"></i>'+r+' '+ODDS[i]+'%</span>').join('')+'</div>'
     +'<div class="odds" style="margin-top:-6px">Mutatie (bij elke worp): '+['b','g','d'].map(k=>'<span>'+MUT[k].e+' '+MUT[k].n+' '+MUT[k].kans+'%</span>').join('')+'</div>'
+    +'<div class="odds" style="margin-top:-6px"><span><i style="background:'+RARC[5]+'"></i>🌟 Mythisch 0,01% bij élke dobbelsteen: '+(owned(MYTH)?'de LOCKED-vis ✅':'??? (geheim)')+'</span></div>'
     +DICE.map((D,d)=>{const fs=FISH.filter(f=>f.d===d),got=fs.filter(owned).length;
       return '<div class="card dicecard" style="--dc:'+D.c+'"><div class="row between"><div><b style="font-size:18px">'+D.e+' '+D.n+'</b><div class="sub" style="font-size:12px">'+got+'/10 gevangen</div></div><div class="price">'+D.p+' 🪙</div></div>'
         +'<div class="minifish">'+fs.map(f=>'<span title="'+(owned(f)?esc(f.n):'???')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!owned(f))+'</span>').join('')+'</div>'
@@ -1978,17 +2009,20 @@ function renderDice(){
 const dexView={}; // welke variant toon je in de collectie (tik om te wisselen)
 function variants(f){const v=[];if(S.fish&&S.fish[f.id])v.push(null);const mm=mutOf(f.id);for(const k of ['b','g','d'])if(mm[k])v.push(k);return v}
 function dexCard(f){const v=variants(f),n=v.length;
+  if(f.r>=5)return '<div class="dexcard'+(n?'':' locked')+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,!n)+'<b>'+(n?esc(f.n):'???')+'</b><span>'+RAR[f.r]+(n&&S.fish[f.id]>1?' · ×'+S.fish[f.id]:'')+'</span></div>'; // mythisch: geen mutaties
   if(!n)return '<div class="dexcard locked" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,true)+'<b>???</b><span>'+RAR[f.r]+'</span><div class="muts">'+['b','g','d'].map(k=>'<i>'+MUT[k].e+'</i>').join('')+'</div></div>';
   const cur=v[(dexView[f.id]||0)%n],mm=mutOf(f.id),cnt=cur?mm[cur]:S.fish[f.id];
   return '<div class="dexcard'+(cur?' m'+cur:'')+'" data-f="'+f.id+'" style="--rc:'+RARC[f.r]+'">'+fishSVG(f,false,'',cur)+'<b>'+(cur?MUT[cur].n+' ':'')+esc(f.n)+'</b><span>'+RAR[f.r]+(cnt>1?' · ×'+cnt:'')+'</span>'
     +'<div class="muts">'+['b','g','d'].map(k=>'<i class="'+(mm[k]?'on':'')+(cur===k?' cur':'')+'" title="'+MUT[k].n+'">'+MUT[k].e+'</i>').join('')+'</div>'+(n>1?'<em>tik: '+(((dexView[f.id]||0)%n)+1)+'/'+n+'</em>':'')+'</div>'}
 function renderDex(){
-  const own=FISH.filter(owned).length,mc={b:0,g:0,d:0};for(const f of FISH){const mm=mutOf(f.id);for(const k in mc)if(mm[k])mc[k]++}
+  const own=FISH.filter(f=>isNormalFish(f)&&owned(f)).length,mc={b:0,g:0,d:0};for(const f of FISH.filter(isNormalFish)){const mm=mutOf(f.id);for(const k in mc)if(mm[k])mc[k]++}
   $('dexWrap').innerHTML='<div class="row between"><h1>Collectie</h1>'+coinChip()+'</div><div class="sub">'+own+' van de 50 vissen · '+(S.rolls||0)+'x gerold</div>'
     +'<div class="bar" style="margin:10px 0 8px"><i style="width:'+own/50*100+'%"></i></div>'
     +'<div class="row" style="gap:8px">'+['b','g','d'].map(k=>'<div class="stat mutstat m'+k+'"><b>'+MUT[k].e+' '+mc[k]+'/50</b><span>'+MUT[k].n+'</span></div>').join('')+'</div>'
     +DICE.map((D,d)=>{const fs=FISH.filter(f=>f.d===d);
-      return '<h2>'+D.e+' '+D.n+' <span class="sub" style="font-size:13px;font-weight:600">'+fs.filter(owned).length+'/10</span></h2><div class="dex">'+fs.map(dexCard).join('')+'</div>'}).join('')}
+      return '<h2>'+D.e+' '+D.n+' <span class="sub" style="font-size:13px;font-weight:600">'+fs.filter(owned).length+'/10</span></h2><div class="dex">'+fs.map(dexCard).join('')+'</div>'}).join('')
+    +'<h2>🌟 Mythisch <span class="sub" style="font-size:13px;font-weight:600">'+(owned(MYTH)?'1':'0')+'/1</span></h2>'
+    +'<div class="sub" style="font-size:12px;margin:-4px 0 8px">Uit élke dobbelsteen, maar met maar 0,01% kans (1 op 10.000 worpen).</div><div class="dex">'+dexCard(MYTH)+'</div>'}
 $('dexWrap').addEventListener('click',e=>{const c=e.target.closest('.dexcard[data-f]');if(!c)return;const f=FISH.find(x=>x.id===c.dataset.f);
   if(variants(f).length<2)return;dexView[f.id]=(dexView[f.id]||0)+1;c.outerHTML=dexCard(f)});
 $('diceWrap').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(b&&!b.disabled)roll(+b.dataset.d)});
@@ -2061,7 +2095,7 @@ function myScores(){const ws=monday(new Date()),wk=ymd(ws),we=ymd(addDays(ws,6))
   const workouts=(S.workouts||[]).filter(x=>inW(x.date)).length+(S.cardio||[]).filter(x=>inW(x.date)).length;
   const cap=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
   return{week:wk,xp:cap(xp,100000),workouts:cap(workouts,200),goals:(w.gym>=g.gym?1:0)+(w.cardio>=g.cardio?1:0)+(sg>0&&w.studie>=sg?1:0),
-    streak:cap(streak(),3660),fish:FISH.filter(owned).length,gym:cap(w.gym,100),cardio:cap(w.cardio,10000),school:cap(w.studie,10000)}}
+    streak:cap(streak(),3660),fish:FISH.filter(f=>isNormalFish(f)&&owned(f)).length,gym:cap(w.gym,100),cardio:cap(w.cardio,10000),school:cap(w.studie,10000)}}
 async function frSync(){if(!auth||!fr.profile)return;const s=Object.assign({user_id:auth.uid,updated_at:new Date().toISOString()},myScores());
   await sb('/rest/v1/scores',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:s});fr.scores[auth.uid]=s}
 let syncT=null;
