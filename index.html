@@ -488,7 +488,7 @@ nav button.on{color:var(--accent)}
     <div class="stat"><b id="sBest">0</b><span>langste reeks</span></div>
     <div class="stat"><b id="sDone">0</b><span>taken afgevinkt</span></div>
   </div>
-  <h2><button class="bsec" id="badgeToggle" aria-expanded="true"><span id="badgeHead">Badges</span><i class="btog" id="badgeTog">−</i></button></h2>
+  <h2><button class="bsec" id="badgeToggle" aria-expanded="false"><span id="badgeHead">Badges</span><i class="btog" id="badgeTog">+</i></button></h2>
   <div id="badges"></div>
   <h2>Laatste 7 dagen</h2>
   <div class="card"><div class="chart" id="chart"></div>
@@ -857,7 +857,9 @@ function renderBadges(){
   if(fresh.length)setTimeout(()=>toast(fresh.length===1?'🏅 Badge: '+fresh[0].i+' '+fresh[0].n+' · +25 🪙':'🏅 '+fresh.length+' nieuwe badges! · +'+fresh.length*25+' 🪙'),900);
   $('badgeHead').textContent='Badges · '+got.length+'/'+BADGES.length;
   // hele badge-afdeling in- of uitklappen
-  const secOpen=!S.bHide;$('badgeTog').textContent=secOpen?'−':'+';$('badgeToggle').setAttribute('aria-expanded',secOpen);
+  // standaard dicht
+  const secOpen=!!S.bShow;
+  $('badgeTog').textContent=secOpen?'−':'+';$('badgeToggle').setAttribute('aria-expanded',secOpen);
   $('badges').hidden=!secOpen;if(!secOpen)return;
   const cats=[...new Set(BADGES.map(b=>b.c))];
   const open=S.bOpen||{}; // welke categorieën open staan (standaard dicht)
@@ -866,7 +868,7 @@ function renderBadges(){
       +(o?'':'<div class="bpeek">'+(n?L.filter(b=>got.includes(b)).map(b=>b.i).slice(-8).join(' ')+' ':'')+'<span>'+(n?'':'Nog geen badges · ')+'tik + om te bekijken</span></div>')
       +(o?'<div class="badges">'+L.map(b=>{const[v,g]=b.p(s),ok=v>=g;
       return '<div class="badge'+(ok?'':' locked')+'"><div class="i">'+b.i+'</div><b>'+b.n+'</b><span>'+(ok?'✅ behaald':b.d+(g>1?' ('+Math.min(99,Math.floor(v/g*100))+'%)':''))+'</span></div>'}).join('')+'</div>':'')}).join('')}
-$('badgeToggle').onclick=()=>{S.bHide=!S.bHide;save();renderBadges()};
+$('badgeToggle').onclick=()=>{S.bShow=!S.bShow;save();renderBadges()};
 $('badges').addEventListener('click',e=>{const b=e.target.closest('button[data-bc]');if(!b)return;const c=b.dataset.bc;
   S.bOpen=S.bOpen||{};if(S.bOpen[c])delete S.bOpen[c];else S.bOpen[c]=1;save();renderBadges()});
 /* ---------- schooluren en vakanties ---------- */
