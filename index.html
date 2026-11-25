@@ -242,6 +242,17 @@ button.mutstat.on{border-color:var(--accent)}
 .reveal .rar{display:inline-block;background:var(--rc);color:#fff;font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
 .reveal .fish.big{width:200px;margin:14px auto 4px}
 .goalpop{animation:pop .5s ease}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.phprev{margin:12px 0 8px;border-radius:14px;background:var(--card2);min-height:120px;display:grid;place-items:center;overflow:hidden}
+.phprev img{width:100%;max-height:260px;object-fit:cover;display:block}
+.phprev span{font-size:13px;color:var(--muted)}
+.phpick{display:block;cursor:pointer}
+#phNote{resize:none;text-align:left;font:inherit;font-size:15px}
+.wophoto{margin:6px 0 8px;border-radius:12px;overflow:hidden;background:var(--card2);min-height:60px;display:grid;place-items:center}
+.wophoto img{width:100%;max-height:320px;object-fit:cover;display:block}
+.wophoto span{font-size:12px;color:var(--muted);padding:14px}
+.wonote{font-size:14px;margin:2px 0 8px;line-height:1.4}
+.wophbtn{margin-top:8px;font-size:13px}
 .syncopt{background:var(--card2);border-radius:12px;padding:10px 12px;margin-top:10px;text-align:left}
 .syncopt b{display:block}.syncopt span{display:block;font-size:12px;color:var(--muted)}
 .goalpop .gbig{font-size:54px;line-height:1;animation:chkpop .5s ease}
@@ -595,6 +606,8 @@ nav button.on{color:var(--accent)}
 <!-- popup: progressiedoel gehaald -> zwaarder -->
 <!-- popup: vis in of uit je aquarium zetten -->
 <div class="rollov" id="fishOv" hidden><div class="rollbox" id="fishBox" role="dialog" aria-modal="true"></div></div>
+<!-- popup: foto en uitleg bij een workout -->
+<div class="rollov" id="photoOv" hidden><div class="rollbox" id="photoBox" role="dialog" aria-modal="true"></div><input type="file" id="phFile" accept="image/*" class="vh" tabindex="-1" aria-hidden="true"></div>
 <!-- popup: gegevens van je account of van dit toestel houden -->
 <div class="rollov" id="syncOv" hidden><div class="rollbox" id="syncBox" role="dialog" aria-modal="true"></div></div>
 <div class="rollov" id="goalOv" hidden><div class="rollbox" id="goalBox" role="dialog" aria-modal="true" aria-labelledby="goalTitle"></div></div>
@@ -1281,7 +1294,8 @@ function renderTrain(){
     +(wNew?'<div class="card" style="margin-top:10px"><label class="l" for="wNewName">Naam van je nieuwe workout</label><input class="field" id="wNewName" placeholder="bv. Push day, Armen, Benen…" maxlength="30"><div class="btns"><button class="btn ghost" data-act="newcancel">Annuleren</button><button class="btn" data-act="newsave">Maken</button></div></div>':'')
     +cardioListHTML()
     +'<h2>Laatste 5 workouts</h2>'+(hist.length?hist.map(woCard).join(''):'<div class="empty">Nog geen trainingen gelogd.</div>');
-  if(wNew)setTimeout(()=>{const i=$('wNewName');if(i)i.focus()},50)}
+  if(wNew)setTimeout(()=>{const i=$('wNewName');if(i)i.focus()},50);
+  try{hydratePhotos(el)}catch(e){}} // foto's bij je laatste workouts laden
 
 // overzichtsscherm van één workout: bekijken, aanpassen en starten
 function renderDetail(el,name){
@@ -1331,6 +1345,7 @@ function trainNav(a,b,i){
   const L=wDetail&&S.schemas[wDetail];
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur(); // anders wordt het scherm niet ververst
   if(a==='cardio'){openCardio();return}
+  if(a==='wophoto'){openPhotoPop(b.dataset.id);return}
   if(a==='rmcardio'){armed(b,'Zeker? Tik nogmaals',()=>{S.cardio=(S.cardio||[]).filter(c=>c.id!==b.dataset.id);save();render();toast('Cardio-workout verwijderd')});return}
   if(a==='open'){if(!b.dataset.type)return;wDetail=b.dataset.type;wRename=false;wNew=false;renderTrain();window.scrollTo(0,0);return}
   if(a==='back'){wDetail=null;wRename=false;renderTrain();window.scrollTo(0,0);return}
@@ -1416,6 +1431,8 @@ function finishWorkout(){
   t.done=true;S.workout=null;stopRest();save();render();
   try{frSyncEx().catch(()=>{});frSyncWo().catch(()=>{})}catch(e){} // nieuwe resultaten delen met vrienden
   toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
+  // meteen vragen: foto en uitleg voor je vrienden?
+  const newId=S.workouts[S.workouts.length-1].id;setTimeout(()=>{try{openPhotoPop(newId)}catch(e){}},600);
   if(prs.length)setTimeout(()=>toast('🏆 Vooruitgang op '+(prs.length===1?prs[0]:prs.length+' oefeningen')+'! +'+prs.length*PROG_XP+' XP · +'+prs.length*PROG_COIN+' 🪙'),2400)}
 
 /* ===== cardio-workouts: afstand + tijd -> gemiddelde pace ===== */
@@ -2321,17 +2338,23 @@ async function frLoadEx(){if(!auth||!fr.friends.length){fr.exStats=[];return}
 /* laatste 5 workouts (gym + cardio) op je profiel, zodat vrienden ze kunnen bekijken */
 // je laatste 5 workouts (gym + cardio) uit je eigen gegevens, zonder login (voor het Training-scherm)
 function localRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
-  const gym=(S.workouts||[]).map(w=>({at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type),
-    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:{ex:w.ex.map(e=>({n:e.n,s:e.sets.map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))}}));
+  const gym=(S.workouts||[]).map(w=>({id:w.id,own:true,at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type),
+    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:Object.assign({ex:w.ex.map(e=>({n:e.n,s:e.sets.map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))},woExtra(w))}));
   const cd=(S.cardio||[]).map(c=>({at:new Date(parse(c.date).getTime()+12*3600000).toISOString(),kind:'cardio',title:String(c.name||c.type),mins:r(c.sec/60,1440),info:{type:c.type,km:c.km,sec:c.sec}}));
   return gym.concat(cd).sort((a,b)=>a.at<b.at?1:-1).slice(0,5)}
 function myRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
   const gym=(S.workouts||[]).map(w=>({id:String(w.id).slice(0,30),at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type).slice(0,40),
-    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:{ex:w.ex.slice(0,15).map(e=>({n:e.n.slice(0,40),s:e.sets.slice(0,12).map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))}}));
+    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:Object.assign({ex:w.ex.slice(0,15).map(e=>({n:e.n.slice(0,40),s:e.sets.slice(0,12).map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))},woExtra(w))}));
   const cd=(S.cardio||[]).map(c=>({id:String(c.id).slice(0,30),at:new Date(parse(c.date).getTime()+12*3600000).toISOString(),kind:'cardio',title:String(c.name||c.type).slice(0,40),
     mins:r(c.sec/60,1440),info:{type:c.type,km:c.km,sec:c.sec}}));
   return gym.concat(cd).sort((a,b)=>a.at<b.at?1:-1).slice(0,5).map(x=>Object.assign({user_id:auth.uid},x))}
-async function frSyncWo(){if(!auth||!fr.profile||S.shareWo===false)return;const rows=myRecentWo();
+// uitleg en foto van een workout (de foto staat in Supabase Storage, hier alleen de plek)
+const woExtra=w=>Object.assign({},w.note?{note:String(w.note).slice(0,200)}:{},w.photo?{photo:w.photo,pv:w.photoV||0}:{});
+async function frSyncWo(){if(!auth||!fr.profile)return;
+  // foto's van workouts die niet meer bij je laatste 5 horen: verwijderen (max 5 foto's per persoon)
+  const keep=new Set(myRecentWo().map(x=>x.id)),old=(S.workouts||[]).filter(w=>w.photo&&!keep.has(String(w.id).slice(0,30)));
+  if(old.length){try{await photoDelete(old.map(w=>w.photo));old.forEach(w=>{w.photo=null;w.photoV=0});save()}catch(e){}}
+  if(S.shareWo===false)return;const rows=myRecentWo();
   if(rows.length)await sb('/rest/v1/recent_workouts',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:rows});
   // oudere workouts weghalen, zodat er online maar 5 staan
   await sb('/rest/v1/recent_workouts?user_id=eq.'+auth.uid+(rows.length?'&id=not.in.('+rows.map(x=>'"'+x.id.replace(/"/g,'')+'"').join(',')+')':''),{method:'DELETE'})}
@@ -2362,7 +2385,63 @@ function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' 
   const ex=i.ex||[],n=ex.reduce((a,e)=>a+e.s.filter(s=>!s[2]).length,0);
   return '<div class="card wocard"><div class="row between"><b>💪 '+esc(w.title)+'</b><span class="sub" style="font-size:12px">'+when+(w.mins?' · '+w.mins+' min':'')+'</span></div>'
     +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' sets</div>'
-    +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')+'</div>'}
+    // foto en uitleg van na de training
+    +(i.photo?'<div class="wophoto" data-photo="'+esc(i.photo)+'" data-v="'+(+i.pv||0)+'"><span>📸 Foto laden…</span></div>':'')
+    +(i.note?'<div class="wonote">💬 '+esc(i.note)+'</div>':'')
+    +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')
+    +(w.own?'<button class="linkbtn wophbtn" data-act="wophoto" data-id="'+esc(String(w.id))+'">📸 '+(i.photo||i.note?'Foto of uitleg aanpassen':'Foto en uitleg toevoegen')+'</button>':'')+'</div>'}
+/* ===== foto's bij je workouts (Supabase Storage, map = jouw id, max 5 per persoon) ===== */
+const PHOTO_BUCKET='workout-photos',photoCache={};
+const photoPathFor=w=>auth.uid+'/'+String(w.id).replace(/[^a-z0-9_-]/gi,'').slice(0,30)+'.jpg';
+async function storageFetch(path,opt){if(auth.exp<Date.now()+60000)await refreshAuth();
+  const h=Object.assign({apikey:SB_KEY,Authorization:'Bearer '+auth.at},opt.headers||{});
+  const r=await fetch(SB_URL+'/storage/v1/object/'+path,Object.assign({},opt,{headers:h}));
+  if(!r.ok){let m='Fout '+r.status;try{const j=await r.json();m=j.message||j.error||m}catch(e){}
+    if(/row-level security|policy/i.test(m))m='Je hebt al 5 foto\'s online (of geen toegang)';if(/maximum allowed size|too large/i.test(m))m='Foto is te groot';throw new Error(sbErr(m))}
+  return r}
+async function photoUpload(blob,path){await storageFetch(PHOTO_BUCKET+'/'+path,{method:'POST',headers:{'Content-Type':'image/jpeg','x-upsert':'true'},body:blob})}
+async function photoDelete(paths){if(!paths.length)return;await storageFetch(PHOTO_BUCKET,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({prefixes:paths})})}
+async function photoGet(path,v){const k=path+'#'+(v||0);if(photoCache[k])return photoCache[k];
+  try{const r=await storageFetch('authenticated/'+PHOTO_BUCKET+'/'+path,{method:'GET'});return photoCache[k]=URL.createObjectURL(await r.blob())}catch(e){return null}}
+// foto verkleinen op je toestel: max 1080 px, JPG, zo klein mogelijk (meestal ±150 KB)
+async function compressPhoto(file){const url=URL.createObjectURL(file);
+  try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('Deze foto kan niet gelezen worden'));i.src=url});
+    const s=Math.min(1,1080/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    let q=.78,b;do{b=await new Promise(r=>c.toBlob(r,'image/jpeg',q));q-=.1}while(b&&b.size>300000&&q>.3);
+    if(!b)throw new Error('Deze foto kan niet gelezen worden');return b}finally{URL.revokeObjectURL(url)}}
+// venster: foto en uitleg bij een workout
+let phW=null,phBlob=null,phPrev=null,phBusy=false,phDrop=false;
+function openPhotoPop(id){phW=(S.workouts||[]).find(w=>String(w.id)===String(id));if(!phW)return;phBlob=null;phDrop=false;
+  if(phPrev)URL.revokeObjectURL(phPrev);phPrev=null;renderPhotoPop();$('photoOv').hidden=false;
+  if(phW.photo&&auth&&auth.uid)photoGet(phW.photo,phW.photoV).then(u=>{if(u&&!phPrev&&!phDrop&&phW){phPrev=u;renderPhotoPop(true)}})}
+function renderPhotoPop(keepText){const w=phW,logged=!!(auth&&auth.uid&&fr.profile),txt=keepText&&$('phNote')?$('phNote').value:(w.note||'');
+  const has=phBlob||(w.photo&&!phDrop);
+  $('photoBox').innerHTML='<div class="goalpop"><h2 style="margin:0 0 4px">📸 Hoe ging je training?</h2>'
+    +'<div class="sub">'+esc(w.type)+' · '+DN[parse(w.date).getDay()]+' '+parse(w.date).getDate()+' '+MN[parse(w.date).getMonth()]+'</div>'
+    +'<div class="phprev">'+(phPrev&&!phDrop?'<img src="'+phPrev+'" alt="Voorbeeld van je foto">':'<span>'+(has?'📸 Foto laden…':'Nog geen foto')+'</span>')+'</div>'
+    +(logged?'<label class="btn ghost phpick" for="phFile">'+(has?'🔄 Andere foto':'📷 Foto kiezen of maken')+'</label>'
+      +(has?'<button class="linkbtn" data-act="phdrop" style="color:var(--danger);margin-top:6px">Foto weghalen</button>':'')
+      :'<div class="sub" style="font-size:12px;margin:8px 0">📸 Log in bij <b>Plannen → Vrienden</b> om een foto toe te voegen. Een uitleg kan wel al.</div>')
+    +'<label class="l" for="phNote" style="text-align:left;margin-top:12px">💬 Uitleg voor je vrienden</label>'
+    +'<textarea class="field" id="phNote" maxlength="200" rows="3" placeholder="bv. Nieuw PR op bench! 💪">'+esc(txt)+'</textarea>'
+    +'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="phskip">'+(w.photo||w.note?'Sluiten':'Overslaan')+'</button><button class="btn" data-act="phsave"'+(phBusy?' disabled':'')+'>'+(phBusy?'Even geduld…':'Opslaan')+'</button></div></div>'}
+$('phFile').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(!f||!phW)return;
+  try{phBlob=await compressPhoto(f);phDrop=false;phPrev=URL.createObjectURL(phBlob);renderPhotoPop(true)}catch(err){toast('⚠️ '+err.message)}});
+$('photoOv').addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled||!phW)return;const a=b.dataset.act,w=phW;
+  if(a==='phskip'){$('photoOv').hidden=true;phW=null;return}
+  if(a==='phdrop'){phBlob=null;phDrop=true;phPrev=null;renderPhotoPop(true);return}
+  if(a!=='phsave')return;
+  const note=$('phNote').value.trim().slice(0,200);phBusy=true;renderPhotoPop(true);
+  try{if(phBlob){const p=photoPathFor(w);await photoUpload(phBlob,p);w.photo=p;w.photoV=Date.now()}
+    else if(phDrop&&w.photo){await photoDelete([w.photo]);w.photo=null;w.photoV=0}
+    w.note=note||null;save();$('photoOv').hidden=true;phW=null;render();
+    try{frSyncWo().catch(()=>{})}catch(e){}toast('📸 Opgeslagen'+(w.photo?': je vrienden zien je foto bij je laatste workouts':''))}
+  catch(err){toast('⚠️ '+err.message)}finally{phBusy=false;if(phW)renderPhotoPop(true)}});
+// foto's in kaartjes laden (alleen jij en je vrienden mogen ze zien, dus via je login)
+function hydratePhotos(root){if(!root)return;root.querySelectorAll('.wophoto[data-photo]:not([data-done])').forEach(async el=>{el.dataset.done=1;
+  if(!auth||!auth.uid){el.innerHTML='<span>📸 Log in bij Vrienden om de foto te zien</span>';return}
+  const u=await photoGet(el.dataset.photo,el.dataset.v);el.innerHTML=u?'<img src="'+u+'" alt="Foto van de training">':'<span>📸 Foto niet gevonden</span>'})}
 function friendProfileHTML(){const me=fr.view==='me';
   const f=me?{id:'me',nickname:fr.profile.nickname}:fr.friends.find(x=>x.id===fr.view);if(!f){fr.view=null;return null}
   const s=me?Object.assign({},fr.scores[auth.uid]||{},myScores()):fr.scores[f.id]||{};
@@ -2471,7 +2550,8 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
       +'<label class="toggle" style="margin:14px 0 6px"><span>📅 Toon mijn planning van deze en volgende week</span><input type="checkbox" data-act="shareplan"'+(S.sharePlan===false?'':' checked')+'></label>'
       +'<div class="sub" style="font-size:12px;line-height:1.4">Vrienden zien dan wat je wanneer gepland hebt (naam, uur en wat je al afvinkte). Zet je dit uit, dan wordt je planning meteen online verwijderd.</div></div>'
       +'<div class="sub" style="font-size:12px;margin:16px 2px 4px">'+esc(auth.email||'')+'</div><button class="linkbtn" data-act="logout" style="color:var(--danger)">Uitloggen</button>'}
-  el.innerHTML=h;for(const id in keep){const i=$(id);if(i&&!i.value)i.value=keep[id]}}
+  el.innerHTML=h;for(const id in keep){const i=$(id);if(i&&!i.value)i.value=keep[id]}
+  hydratePhotos(el)}
 $('frWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act,v=id=>($(id)&&$(id).value||'').trim();fr.msg='';
   if(a==='mode'){fr.mode=b.dataset.m;fr.err='';renderFriends();return}
   if(a==='shareex'){const on=b.checked;S.shareEx=on;save();
