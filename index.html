@@ -1267,15 +1267,14 @@ function renderTrain(){
   if(wDetail&&S.schemas[wDetail]){renderDetail(el,wDetail);return}
   wDetail=null;
   const planned=S.tasks.filter(t=>t.cat==='gym'&&t.date===today()&&!t.done);
-  const hist=S.workouts.slice(-8).reverse();
+  const hist=localRecentWo(); // laatste 5 workouts (gym + cardio), met alle oefeningen en sets
   el.innerHTML='<h1>Training</h1><div class="sub">Tik op een workout om hem te bekijken, aan te passen en te starten.</div>'
     +(planned.length?'<h2>Vandaag gepland</h2>'+planned.map(t=>'<button class="typecard planned" style="width:100%;margin-bottom:8px" data-act="open" data-type="'+esc(wtypes().includes(t.sub)?t.sub:wtypes()[0]||'')+'"><b>▶ '+esc(t.title)+'</b><span>'+(t.time?t.time+'–'+(t.end||fromMin(toMin(t.time)+t.dur))+' · ':'')+'tik om te openen</span></button>').join(''):'')
     +'<h2>Mijn workouts</h2><div class="types">'+wtypes().map(t=>'<button class="typecard" data-act="open" data-type="'+esc(t)+'"><b>'+esc(t)+'</b><span>'+S.schemas[t].length+' oefening'+(S.schemas[t].length===1?'':'en')+'</span></button>').join('')
     +'<button class="typecard newcard" data-act="neww"><b>＋ Nieuwe workout</b><span>begin met 0 oefeningen</span></button></div>'
     +(wNew?'<div class="card" style="margin-top:10px"><label class="l" for="wNewName">Naam van je nieuwe workout</label><input class="field" id="wNewName" placeholder="bv. Push day, Armen, Benen…" maxlength="30"><div class="btns"><button class="btn ghost" data-act="newcancel">Annuleren</button><button class="btn" data-act="newsave">Maken</button></div></div>':'')
     +cardioListHTML()
-    +'<h2>Vorige trainingen</h2>'+(hist.length?'<div class="card" style="padding:4px 14px">'+hist.map(w=>{const d=parse(w.date),sets=w.ex.reduce((a,e)=>a+e.sets.length,0),vol=w.ex.reduce((a,e)=>a+e.sets.reduce((b,s)=>b+s.kg*s.reps,0),0);
-      return '<div class="hist"><div><b>'+esc(w.type)+'</b><div class="sub" style="font-size:12px">'+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+' · '+Math.round((w.end-w.start)/60000)+' min</div></div><div class="sub" style="text-align:right;font-size:12px">'+sets+' sets<br>'+Math.round(vol)+' kg</div></div>'}).join('')+'</div>':'<div class="empty">Nog geen trainingen gelogd.</div>');
+    +'<h2>Laatste 5 workouts</h2>'+(hist.length?hist.map(woCard).join(''):'<div class="empty">Nog geen trainingen gelogd.</div>');
   if(wNew)setTimeout(()=>{const i=$('wNewName');if(i)i.focus()},50)}
 
 // overzichtsscherm van één workout: bekijken, aanpassen en starten
@@ -2269,6 +2268,12 @@ async function frSyncEx(){if(!auth||!fr.profile||S.shareEx===false)return;const 
 async function frLoadEx(){if(!auth||!fr.friends.length){fr.exStats=[];return}
   fr.exStats=await sb('/rest/v1/exercise_stats?select=user_id,ex,d,kg,reps&user_id=in.('+fr.friends.map(f=>f.id).join(',')+')&order=d')||[];fr.exLoaded=Date.now()}
 /* laatste 5 workouts (gym + cardio) op je profiel, zodat vrienden ze kunnen bekijken */
+// je laatste 5 workouts (gym + cardio) uit je eigen gegevens, zonder login (voor het Training-scherm)
+function localRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
+  const gym=(S.workouts||[]).map(w=>({at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type),
+    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:{ex:w.ex.map(e=>({n:e.n,s:e.sets.map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))}}));
+  const cd=(S.cardio||[]).map(c=>({at:new Date(parse(c.date).getTime()+12*3600000).toISOString(),kind:'cardio',title:String(c.name||c.type),mins:r(c.sec/60,1440),info:{type:c.type,km:c.km,sec:c.sec}}));
+  return gym.concat(cd).sort((a,b)=>a.at<b.at?1:-1).slice(0,5)}
 function myRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
   const gym=(S.workouts||[]).map(w=>({id:String(w.id).slice(0,30),at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type).slice(0,40),
     mins:r(((w.end||0)-(w.start||0))/60000,1440),info:{ex:w.ex.slice(0,15).map(e=>({n:e.n.slice(0,40),s:e.sets.slice(0,12).map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))}}));
