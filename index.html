@@ -2401,7 +2401,7 @@ function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' 
       +'<div class="sub" style="margin-top:4px">'+fmtKg(+i.km)+' km · '+fmtDur(+i.sec)+(p&&p.txt?' · '+esc(p.txt):'')+'</div></div>'}
   const ex=i.ex||[],n=ex.reduce((a,e)=>a+e.s.filter(s=>!s[2]).length,0);
   return '<div class="card wocard"><div class="row between"><b>💪 '+esc(w.title)+'</b><span class="sub" style="font-size:12px">'+when+(w.mins?' · '+w.mins+' min':'')+'</span></div>'
-    +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' set'+(n===1?'':'s')</div>'
+    +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' set'+(n===1?'':'s')+'</div>'
     // foto en uitleg van na de training
     +(i.photo?'<div class="wophoto" data-photo="'+esc(i.photo)+'" data-v="'+(+i.pv||0)+'"><span>📸 Foto laden…</span></div>':'')
     +(i.note?'<div class="wonote">💬 '+esc(i.note)+'</div>':'')
@@ -2426,7 +2426,7 @@ function postCard(w){const me=w.user_id===auth.uid,f=me?{nickname:fr.profile?fr.
   let meta,more='';
   if(cardio){const p=paceOf(i.type,+i.km,+i.sec);meta='🏃 '+esc(w.title)+' · '+fmtKg(+i.km)+' km · '+fmtDur(+i.sec)+(p&&p.txt?' · '+esc(p.txt):'')}
   else{const ex=i.ex||[],n=ex.reduce((a,e)=>a+e.s.filter(s=>!s[2]).length,0);
-    meta='💪 '+esc(w.title)+(w.mins?' · '+w.mins+' min':'')+' · '+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' set'+(n===1?'':'s')';
+    meta='💪 '+esc(w.title)+(w.mins?' · '+w.mins+' min':'')+' · '+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' set'+(n===1?'':'s');
     more=ex.length?'<details class="postmore"><summary>Bekijk de workout ▾</summary>'+ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')+'</details>':''}
   return '<article class="post"><div class="posthead"><div class="avatar" style="background:'+avColor(nick)+'">'+esc(nick.slice(0,1).toUpperCase())+'</div>'
     +'<div><b>'+esc(nick)+(me?' <span>(jij)</span>':'')+'</b><span>'+timeAgo(w.at)+'</span></div></div>'
