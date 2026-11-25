@@ -159,7 +159,21 @@ nav button:active{transform:scale(.88)}
 .bigstep button{width:48px;height:48px;border-radius:12px;background:var(--card2);font-size:24px;font-weight:700}
 .bigstep b{font-size:30px;min-width:40px;text-align:center}
 /* ===== aquarium ===== */
-.modebar .seg button{font-size:13px;padding:10px 2px}
+.modebar .seg button{font-size:12px;padding:10px 1px;white-space:nowrap}
+/* ===== feed ===== */
+.post{background:var(--card);border-radius:18px;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
+.posthead{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;flex:none}
+.posthead b{display:block}.posthead span{font-size:12px;color:var(--muted)}
+.post .wophoto{margin:0;border-radius:0;min-height:200px}
+.post .wophoto img{max-height:none;aspect-ratio:4/5;object-fit:cover}
+.postbody{padding:10px 14px 12px}
+.postcap{font-size:15px;line-height:1.4;margin-bottom:8px}
+.postcap b{margin-right:4px}
+.postmeta{font-size:13px;color:var(--muted)}
+.postmore summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:700;margin-top:6px;list-style:none}
+.postmore summary::-webkit-details-marker{display:none}
+.postmore .woex{font-size:12px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .coinchip{background:color-mix(in srgb,#f59e0b 18%,transparent);color:var(--text);font-weight:800;padding:7px 12px;border-radius:999px;font-size:15px;white-space:nowrap}
 .tank{position:relative;height:330px;margin-top:14px;border-radius:22px;overflow:hidden;background:linear-gradient(180deg,#7dd3fc 0%,#0ea5e9 45%,#075985 100%);box-shadow:inset 0 0 40px rgba(0,0,0,.25)}
@@ -247,7 +261,7 @@ button.mutstat.on{border-color:var(--accent)}
 .phprev img{width:100%;max-height:260px;object-fit:cover;display:block}
 .phprev span{font-size:13px;color:var(--muted)}
 .phpick{display:block;cursor:pointer}
-#phNote{resize:none;text-align:left;font:inherit;font-size:15px}
+#phNote{resize:none;text-align:left;font:inherit;font-size:15px;color:inherit}
 .wophoto{margin:6px 0 8px;border-radius:12px;overflow:hidden;background:var(--card2);min-height:60px;display:grid;place-items:center}
 .wophoto img{width:100%;max-height:320px;object-fit:cover;display:block}
 .wophoto span{font-size:12px;color:var(--muted);padding:14px}
@@ -451,7 +465,7 @@ nav button.on{color:var(--accent)}
 </head>
 <body>
 
-<div class="modebar"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button><button data-m="aqua">🐠 Aquarium</button></div></div>
+<div class="modebar"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button><button data-m="aqua">🐠 Aquarium</button><button data-m="feed">📸 Feed</button></div></div>
 
 <!-- VANDAAG -->
 <section class="view on" id="v-today"><div class="wrap">
@@ -602,6 +616,7 @@ nav button.on{color:var(--accent)}
 <section class="view" id="v-aquarium"><div class="wrap" id="aqWrap"></div></section>
 <section class="view" id="v-dice"><div class="wrap" id="diceWrap"></div></section>
 <section class="view" id="v-dex"><div class="wrap" id="dexWrap"></div></section>
+<section class="view" id="v-feed"><div class="wrap" id="feedWrap"></div></section>
 <div class="rollov" id="rollOv" hidden><div class="rollbox" id="rollBox"></div></div>
 <!-- popup: progressiedoel gehaald -> zwaarder -->
 <!-- popup: vis in of uit je aquarium zetten -->
@@ -992,9 +1007,11 @@ function render(){
 /* ---------- navigatie ---------- */
 function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  const mode=SPORT_VIEWS.includes(v)?'sport':AQ_VIEWS.includes(v)?'aqua':'plan';
-  if(mode==='sport')lastSport=v;else if(mode==='aqua')lastAqua=v;else lastPlan=v;
+  const mode=v==='feed'?'feed':SPORT_VIEWS.includes(v)?'sport':AQ_VIEWS.includes(v)?'aqua':'plan';
+  if(mode==='sport')lastSport=v;else if(mode==='aqua')lastAqua=v;else if(mode==='plan')lastPlan=v;
   $('navPlan').hidden=mode!=='plan';$('navSport').hidden=mode!=='sport';$('navAqua').hidden=mode!=='aqua';
+  document.querySelector('nav').hidden=mode==='feed'; // de feed heeft geen tabbladen onderaan
+  if(v==='feed')loadFeed();
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   if(S.restEnd)tickRest();
   if(v==='friends'){fr.err='';renderFriends();if(auth&&!fr.busy&&!fr.pending&&Date.now()-fr.loaded>30000)frRun(frLoad)}
@@ -1432,7 +1449,7 @@ function finishWorkout(){
   try{frSyncEx().catch(()=>{});frSyncWo().catch(()=>{})}catch(e){} // nieuwe resultaten delen met vrienden
   toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
   // meteen vragen: foto en uitleg voor je vrienden?
-  const newId=S.workouts[S.workouts.length-1].id;setTimeout(()=>{try{openPhotoPop(newId)}catch(e){}},600);
+  const newId=S.workouts[S.workouts.length-1].id;setTimeout(()=>{try{openPhotoPop(newId,true)}catch(e){}},600); // verplicht posten
   if(prs.length)setTimeout(()=>toast('🏆 Vooruitgang op '+(prs.length===1?prs[0]:prs.length+' oefeningen')+'! +'+prs.length*PROG_XP+' XP · +'+prs.length*PROG_COIN+' 🪙'),2400)}
 
 /* ===== cardio-workouts: afstand + tijd -> gemiddelde pace ===== */
@@ -2190,7 +2207,7 @@ const AQ_VIEWS=['aquarium','dice','dex'];let lastAqua='aquarium';
 /* wisselen tussen Plannen en Sporten */
 const SPORT_VIEWS=['train','schemas','progress'];
 let lastPlan='today',lastSport='train';
-$('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='sport'?lastSport:b.dataset.m==='aqua'?lastAqua:lastPlan)});
+$('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='feed'?'feed':b.dataset.m==='sport'?lastSport:b.dataset.m==='aqua'?lastAqua:lastPlan)});
 
 /* =====================================================================
    VRIENDEN: accounts (e-mail + wachtwoord), vriendencodes en weekranglijst
@@ -2384,12 +2401,51 @@ function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' 
       +'<div class="sub" style="margin-top:4px">'+fmtKg(+i.km)+' km · '+fmtDur(+i.sec)+(p&&p.txt?' · '+esc(p.txt):'')+'</div></div>'}
   const ex=i.ex||[],n=ex.reduce((a,e)=>a+e.s.filter(s=>!s[2]).length,0);
   return '<div class="card wocard"><div class="row between"><b>💪 '+esc(w.title)+'</b><span class="sub" style="font-size:12px">'+when+(w.mins?' · '+w.mins+' min':'')+'</span></div>'
-    +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' sets</div>'
+    +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' set'+(n===1?'':'s')</div>'
     // foto en uitleg van na de training
     +(i.photo?'<div class="wophoto" data-photo="'+esc(i.photo)+'" data-v="'+(+i.pv||0)+'"><span>📸 Foto laden…</span></div>':'')
     +(i.note?'<div class="wonote">💬 '+esc(i.note)+'</div>':'')
     +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')
     +(w.own?'<button class="linkbtn wophbtn" data-act="wophoto" data-id="'+esc(String(w.id))+'">📸 '+(i.photo||i.note?'Foto of uitleg aanpassen':'Foto en uitleg toevoegen')+'</button>':'')+'</div>'}
+/* ===== 📸 Feed: de laatste workouts van je vrienden en jezelf, met foto en tekst ===== */
+const fd={items:null,err:'',at:0,busy:false};
+const timeAgo=iso=>{const m=Math.max(0,Math.round((Date.now()-new Date(iso))/60000));
+  return m<1?'net nu':m<60?m+' min geleden':m<1440?Math.round(m/60)+' u geleden':m<2880?'gisteren':Math.round(m/1440)+' dagen geleden'};
+const avColor=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))>>>0;return 'hsl('+(h%360)+',55%,48%)'};
+async function loadFeed(force){if(!auth||!auth.uid){renderFeed();return}
+  if(fd.busy||(!force&&fd.items&&Date.now()-fd.at<30000)){renderFeed();return}
+  fd.busy=true;fd.err='';renderFeed();
+  try{if(!fr.profile||!fr.loaded)await frLoad(); // vrienden en profiel nodig
+    const ids=fr.friends.map(f=>f.id);let rows=[];
+    if(ids.length)rows=await sb('/rest/v1/recent_workouts?select=*&user_id=in.('+ids.join(',')+')&order=at.desc&limit=60')||[];
+    // je eigen posts rechtstreeks uit je eigen gegevens (altijd up-to-date)
+    fd.items=rows.concat(myRecentWo()).sort((a,b)=>a.at<b.at?1:-1);fd.at=Date.now()}
+  catch(e){fd.err=e.message}fd.busy=false;if(view==='feed')renderFeed()}
+function postCard(w){const me=w.user_id===auth.uid,f=me?{nickname:fr.profile?fr.profile.nickname:'Jij'}:(fr.friends.find(x=>x.id===w.user_id)||{nickname:'Vriend'});
+  const i=w.info||{},nick=f.nickname||'?',cardio=w.kind==='cardio';
+  let meta,more='';
+  if(cardio){const p=paceOf(i.type,+i.km,+i.sec);meta='🏃 '+esc(w.title)+' · '+fmtKg(+i.km)+' km · '+fmtDur(+i.sec)+(p&&p.txt?' · '+esc(p.txt):'')}
+  else{const ex=i.ex||[],n=ex.reduce((a,e)=>a+e.s.filter(s=>!s[2]).length,0);
+    meta='💪 '+esc(w.title)+(w.mins?' · '+w.mins+' min':'')+' · '+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' set'+(n===1?'':'s')';
+    more=ex.length?'<details class="postmore"><summary>Bekijk de workout ▾</summary>'+ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')+'</details>':''}
+  return '<article class="post"><div class="posthead"><div class="avatar" style="background:'+avColor(nick)+'">'+esc(nick.slice(0,1).toUpperCase())+'</div>'
+    +'<div><b>'+esc(nick)+(me?' <span>(jij)</span>':'')+'</b><span>'+timeAgo(w.at)+'</span></div></div>'
+    +(i.photo?'<div class="wophoto" data-photo="'+esc(i.photo)+'" data-v="'+(+i.pv||0)+'"><span>📸 Foto laden…</span></div>':'')
+    +'<div class="postbody">'+(i.note?'<div class="postcap"><b>'+esc(nick)+'</b>'+esc(i.note)+'</div>':'')+'<div class="postmeta">'+meta+'</div>'+more+'</div></article>'}
+function renderFeed(){const el=$('feedWrap');if(!el)return;
+  let h='<div class="row between" style="margin-top:6px"><h1>📸 Feed</h1>'+(auth&&auth.uid?'<button class="linkbtn" data-act="feedreload"'+(fd.busy?' disabled':'')+'>'+(fd.busy?'…':'↻ Vernieuwen')+'</button>':'')+'</div>'
+    +'<div class="sub" style="margin-bottom:12px">De laatste workouts van je vrienden en jezelf.</div>';
+  if(!auth||!auth.uid)h+='<div class="card"><b>Log in om de feed te zien</b><div class="sub" style="margin-top:6px">Ga naar <b>Plannen → Vrienden</b>, maak een account en voeg vrienden toe. Daarna zie je hier hun workouts, foto\'s en verhalen.</div></div>';
+  else if(fd.err)h+='<div class="frmsg err">⚠️ '+esc(fd.err)+'</div>';
+  else if(!fd.items)h+='<div class="empty">Laden…</div>';
+  else if(!fd.items.length)h+='<div class="empty">Nog geen posts.<br>Rond een training af en post je eerste foto! 💪</div>';
+  else{const posts=fd.items.filter(w=>(w.info||{}).photo||(w.info||{}).note),rest=fd.items.length-posts.length;
+    h+=(posts.length?posts.map(postCard).join(''):'<div class="empty">Nog geen foto\'s of verhalen gepost.</div>')
+      +(rest?'<details class="postmore" style="margin:4px 2px 20px"><summary>'+rest+' workout'+(rest===1?'':'s')+' zonder foto ▾</summary>'+fd.items.filter(w=>!posts.includes(w)).map(postCard).join('')+'</details>':'')
+      +(fr.friends.length?'':'<div class="sub" style="font-size:13px;margin:10px 2px">Voeg vrienden toe bij <b>Plannen → Vrienden</b> om hun posts te zien.</div>')}
+  el.innerHTML=h;hydratePhotos(el)}
+$('feedWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act="feedreload"]');if(b)loadFeed(true)});
+$('feedWrap').addEventListener('toggle',e=>{if(e.target.matches('details'))hydratePhotos(e.target)},true);
 /* ===== foto's bij je workouts (Supabase Storage, map = jouw id, max 5 per persoon) ===== */
 const PHOTO_BUCKET='workout-photos',photoCache={};
 const photoPathFor=w=>auth.uid+'/'+String(w.id).replace(/[^a-z0-9_-]/gi,'').slice(0,30)+'.jpg';
@@ -2411,13 +2467,18 @@ async function compressPhoto(file){const url=URL.createObjectURL(file);
     let q=.78,b;do{b=await new Promise(r=>c.toBlob(r,'image/jpeg',q));q-=.1}while(b&&b.size>300000&&q>.3);
     if(!b)throw new Error('Deze foto kan niet gelezen worden');return b}finally{URL.revokeObjectURL(url)}}
 // venster: foto en uitleg bij een workout
-let phW=null,phBlob=null,phPrev=null,phBusy=false,phDrop=false;
-function openPhotoPop(id){phW=(S.workouts||[]).find(w=>String(w.id)===String(id));if(!phW)return;phBlob=null;phDrop=false;
+let phW=null,phBlob=null,phPrev=null,phBusy=false,phDrop=false,phPost=false; // phPost = na een training: foto + tekst verplicht
+function openPhotoPop(id,post){phW=(S.workouts||[]).find(w=>String(w.id)===String(id));if(!phW)return;phBlob=null;phDrop=false;phPost=!!post;
   if(phPrev)URL.revokeObjectURL(phPrev);phPrev=null;renderPhotoPop();$('photoOv').hidden=false;
   if(phW.photo&&auth&&auth.uid)photoGet(phW.photo,phW.photoV).then(u=>{if(u&&!phPrev&&!phDrop&&phW){phPrev=u;renderPhotoPop(true)}})}
 function renderPhotoPop(keepText){const w=phW,logged=!!(auth&&auth.uid&&fr.profile),txt=keepText&&$('phNote')?$('phNote').value:(w.note||'');
-  const has=phBlob||(w.photo&&!phDrop);
-  $('photoBox').innerHTML='<div class="goalpop"><h2 style="margin:0 0 4px">📸 Hoe ging je training?</h2>'
+  const has=phBlob||(w.photo&&!phDrop),ready=has&&txt.trim().length>0;
+  if(phPost&&!logged){ // posten kan alleen met een account
+    $('photoBox').innerHTML='<div class="goalpop"><div class="gbig">📤</div><h2 style="margin:6px 0 4px">Post je training</h2>'
+      +'<div class="sub">Om je training te posten in de feed van je vrienden, heb je een account nodig.<br>Log in bij <b>Plannen → Vrienden</b>. Daarna kun je hem nog posten via <b>Training → 📸</b>.</div>'
+      +'<div class="btns" style="margin-top:14px"><button class="btn" data-act="phskip">OK</button></div></div>';return}
+  $('photoBox').innerHTML='<div class="goalpop"><h2 style="margin:0 0 4px">'+(phPost?'📤 Post je training':'📸 Hoe ging je training?')+'</h2>'
+    +(phPost?'<div class="sub" style="font-size:12px;margin-bottom:2px">Voeg een <b>foto</b> en een <b>tekst</b> toe. Je post verschijnt in de 📸 Feed van je vrienden.</div>':'')
     +'<div class="sub">'+esc(w.type)+' · '+DN[parse(w.date).getDay()]+' '+parse(w.date).getDate()+' '+MN[parse(w.date).getMonth()]+'</div>'
     +'<div class="phprev">'+(phPrev&&!phDrop?'<img src="'+phPrev+'" alt="Voorbeeld van je foto">':'<span>'+(has?'📸 Foto laden…':'Nog geen foto')+'</span>')+'</div>'
     +(logged?'<label class="btn ghost phpick" for="phFile">'+(has?'🔄 Andere foto':'📷 Foto kiezen of maken')+'</label>'
@@ -2425,18 +2486,27 @@ function renderPhotoPop(keepText){const w=phW,logged=!!(auth&&auth.uid&&fr.profi
       :'<div class="sub" style="font-size:12px;margin:8px 0">📸 Log in bij <b>Plannen → Vrienden</b> om een foto toe te voegen. Een uitleg kan wel al.</div>')
     +'<label class="l" for="phNote" style="text-align:left;margin-top:12px">💬 Uitleg voor je vrienden</label>'
     +'<textarea class="field" id="phNote" maxlength="200" rows="3" placeholder="bv. Nieuw PR op bench! 💪">'+esc(txt)+'</textarea>'
-    +'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="phskip">'+(w.photo||w.note?'Sluiten':'Overslaan')+'</button><button class="btn" data-act="phsave"'+(phBusy?' disabled':'')+'>'+(phBusy?'Even geduld…':'Opslaan')+'</button></div></div>'}
+    +(phPost?'<div class="btns" style="margin-top:12px"><button class="btn" id="phPostBtn" data-act="phsave"'+(phBusy||!ready?' disabled':'')+'>'+(phBusy?'Even geduld…':'📤 Posten')+'</button></div>'
+        +'<div class="sub" id="phNeed" style="font-size:12px;margin-top:6px">'+(ready?'':'Nog nodig: '+[has?'':'📷 foto',txt.trim()?'':'💬 tekst'].filter(Boolean).join(' en '))+'</div>'
+      :'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="phskip">'+(w.photo||w.note?'Sluiten':'Overslaan')+'</button><button class="btn" data-act="phsave"'+(phBusy?' disabled':'')+'>'+(phBusy?'Even geduld…':'Opslaan')+'</button></div>')+'</div>'}
+// bij posten: de knop pas aanzetten als er een foto én tekst is
+$('photoOv').addEventListener('input',e=>{if(!phPost||e.target.id!=='phNote'||!phW)return;const has=phBlob||(phW.photo&&!phDrop),t=e.target.value.trim();
+  $('phPostBtn').disabled=phBusy||!(has&&t);$('phNeed').textContent=has&&t?'':'Nog nodig: '+[has?'':'📷 foto',t?'':'💬 tekst'].filter(Boolean).join(' en ')});
 $('phFile').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(!f||!phW)return;
   try{phBlob=await compressPhoto(f);phDrop=false;phPrev=URL.createObjectURL(phBlob);renderPhotoPop(true)}catch(err){toast('⚠️ '+err.message)}});
 $('photoOv').addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled||!phW)return;const a=b.dataset.act,w=phW;
   if(a==='phskip'){$('photoOv').hidden=true;phW=null;return}
   if(a==='phdrop'){phBlob=null;phDrop=true;phPrev=null;renderPhotoPop(true);return}
   if(a!=='phsave')return;
-  const note=$('phNote').value.trim().slice(0,200);phBusy=true;renderPhotoPop(true);
-  try{if(phBlob){const p=photoPathFor(w);await photoUpload(phBlob,p);w.photo=p;w.photoV=Date.now()}
+  const note=$('phNote').value.trim().slice(0,200);
+  if(phPost&&!(note&&(phBlob||w.photo))){toast('Voeg een foto en een tekst toe');return}
+  phBusy=true;renderPhotoPop(true);
+  try{if(phPost&&S.shareWo===false){S.shareWo=true;toast('🏋️ Delen van je workouts staat weer aan')} // posten = delen met je vrienden
+    if(phBlob){const p=photoPathFor(w);await photoUpload(phBlob,p);w.photo=p;w.photoV=Date.now()}
     else if(phDrop&&w.photo){await photoDelete([w.photo]);w.photo=null;w.photoV=0}
     w.note=note||null;save();$('photoOv').hidden=true;phW=null;render();
-    try{frSyncWo().catch(()=>{})}catch(e){}toast('📸 Opgeslagen'+(w.photo?': je vrienden zien je foto bij je laatste workouts':''))}
+    const posted=phPost;try{frSyncWo().then(()=>{fd.at=0;if(view==='feed')loadFeed()}).catch(()=>{})}catch(e){}
+    toast(posted?'📤 Gepost! Je vrienden zien het in hun 📸 Feed':'📸 Opgeslagen'+(w.photo?': je vrienden zien je foto bij je laatste workouts':''))}
   catch(err){toast('⚠️ '+err.message)}finally{phBusy=false;if(phW)renderPhotoPop(true)}});
 // foto's in kaartjes laden (alleen jij en je vrienden mogen ze zien, dus via je login)
 function hydratePhotos(root){if(!root)return;root.querySelectorAll('.wophoto[data-photo]:not([data-done])').forEach(async el=>{el.dataset.done=1;
