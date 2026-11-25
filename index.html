@@ -242,6 +242,8 @@ button.mutstat.on{border-color:var(--accent)}
 .reveal .rar{display:inline-block;background:var(--rc);color:#fff;font-weight:800;padding:5px 14px;border-radius:999px;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
 .reveal .fish.big{width:200px;margin:14px auto 4px}
 .goalpop{animation:pop .5s ease}
+.syncopt{background:var(--card2);border-radius:12px;padding:10px 12px;margin-top:10px;text-align:left}
+.syncopt b{display:block}.syncopt span{display:block;font-size:12px;color:var(--muted)}
 .goalpop .gbig{font-size:54px;line-height:1;animation:chkpop .5s ease}
 .goalpop .gnext{margin-top:14px;font-size:20px;font-weight:700;color:var(--muted)}
 .goalpop .gnext b{color:var(--accent);font-size:24px}
@@ -593,6 +595,8 @@ nav button.on{color:var(--accent)}
 <!-- popup: progressiedoel gehaald -> zwaarder -->
 <!-- popup: vis in of uit je aquarium zetten -->
 <div class="rollov" id="fishOv" hidden><div class="rollbox" id="fishBox" role="dialog" aria-modal="true"></div></div>
+<!-- popup: gegevens van je account of van dit toestel houden -->
+<div class="rollov" id="syncOv" hidden><div class="rollbox" id="syncBox" role="dialog" aria-modal="true"></div></div>
 <div class="rollov" id="goalOv" hidden><div class="rollbox" id="goalBox" role="dialog" aria-modal="true" aria-labelledby="goalTitle"></div></div>
 
 <!-- formulier: eigen oefening -->
@@ -742,9 +746,11 @@ const fromMin=n=>{n=Math.min(n,23*60+45);return pad(Math.floor(n/60))+':'+pad(n%
 const fmtMin=m=>m>=60?(Math.floor(m/60)+'u'+(m%60?' '+m%60+'m':'')):m+' min';
 
 function defaults(){return{tasks:[],focus:[],goals:{gym:2,cardio:60,studie:300},timer:null,name:'',best:0,fDur:25}}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s){const x=Object.assign(defaults(),s);
+// opgeslagen gegevens (van dit toestel of uit je account) netjes klaarzetten
+function normState(s){const x=Object.assign(defaults(),s);
   x.goals=Object.assign({gym:2,cardio:60,studie:300},x.goals);delete x.goals.sport;
-  for(const t of x.tasks)if(t.cat==='sport')t.cat='gym';return x}}catch(e){}return defaults()}
+  for(const t of x.tasks)if(t.cat==='sport')t.cat='gym';return x}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return normState(s)}catch(e){}return defaults()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
   try{scheduleSync()}catch(e){}} // weekscores doorsturen naar je vrienden (als je ingelogd bent)
@@ -2233,7 +2239,51 @@ function myScores(){const ws=monday(new Date()),wk=ymd(ws),we=ymd(addDays(ws,6))
 async function frSync(){if(!auth||!fr.profile)return;const s=Object.assign({user_id:auth.uid,updated_at:new Date().toISOString()},myScores());
   await sb('/rest/v1/scores',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:s});fr.scores[auth.uid]=s}
 let syncT=null;
-function scheduleSync(){if(!auth||!fr.profile)return;clearTimeout(syncT);syncT=setTimeout(()=>{frSync().catch(()=>{});frSyncPlan().catch(()=>{})},4000)}
+function scheduleSync(){if(!auth||!fr.profile)return;clearTimeout(syncT);syncT=setTimeout(()=>{frSync().catch(()=>{});frSyncPlan().catch(()=>{});
+  if(cloudReady())cloudSync().catch(()=>{})},4000)} // je gegevens naar je account (pas na de eerste keuze op dit toestel)
+
+/* ===== je gegevens in je account (zelfde planning, trainingen en vissen op elk toestel) ===== */
+// dingen die bij één toestel horen, gaan niet mee naar je account
+const DEVICE_KEYS=['timer','workout','restEnd','restTotal','restNext','pushOn','pushIds','pushKey','iosTimer','iosAuto','seenIosHelp','cloudUid','cloudAt','cloudHash'];
+function syncData(s){const d={};for(const k in s)if(!DEVICE_KEYS.includes(k))d[k]=s[k];return d}
+// vaste volgorde van de sleutels, zodat dezelfde gegevens altijd dezelfde vingerafdruk geven
+const stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}':JSON.stringify(v);
+function hashOf(o){const t=stable(o);let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+'.'+t.length}
+const cloudReady=()=>!!(auth&&auth.uid&&S.cloudUid===auth.uid&&S.cloudAt); // dit toestel is al gekoppeld aan dit account
+const localEmpty=()=>!(S.tasks.length||(S.workouts||[]).length||(S.cardio||[]).length||Object.keys(S.fish||{}).length||Object.keys(S.mut||{}).length||S.focus.length);
+let cloudBusy=false,cloudAsking=null;
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+async function cloudPush(){const data=syncData(S),at=new Date().toISOString();
+  await sb('/rest/v1/user_state',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:{user_id:auth.uid,data,updated_at:at}});
+  S.cloudUid=auth.uid;S.cloudAt=at;S.cloudHash=hashOf(data);saveLocal()}
+// gegevens uit je account op dit toestel zetten (wat bij dit toestel hoort, blijft staan)
+function cloudApply(c){const keep={};for(const k of DEVICE_KEYS)if(k in S)keep[k]=S[k];
+  S=Object.assign(normState(c.data),keep);S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=hashOf(syncData(S));saveLocal();render()}
+// vergelijken met je account: ophalen, doorsturen, of (als allebei veranderd zijn) vragen welke je wilt houden
+async function cloudSync(){if(!auth||!auth.uid||!fr.profile||cloudBusy||cloudAsking)return;cloudBusy=true;
+  try{const r=await sb('/rest/v1/user_state?select=data,updated_at&user_id=eq.'+auth.uid),c=r&&r[0];
+    const mine=S.cloudUid===auth.uid,local=hashOf(syncData(S)),changed=!mine||local!==S.cloudHash;
+    if(!c){await cloudPush();return}                                   // nog niets in je account: dit toestel doorsturen
+    if(mine&&c.updated_at===S.cloudAt){if(changed)await cloudPush();return} // account niet veranderd sinds de vorige keer
+    if(hashOf(syncData(normState(c.data)))===local){S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=local;saveLocal();return} // precies hetzelfde: alleen koppelen
+    if((mine&&!changed)||(!mine&&localEmpty())){cloudApply(c);toast('☁️ Je gegevens zijn opgehaald uit je account');return}
+    cloudAsk(c)}                                                         // allebei anders: jij kiest
+  finally{cloudBusy=false}}
+const stateSummary=s=>(s.tasks||[]).length+' taken · '+((s.workouts||[]).length+(s.cardio||[]).length)+' trainingen · '+Object.keys(s.fish||{}).length+' vissen';
+function cloudAsk(c){cloudAsking=c;const when=new Date(c.updated_at);
+  $('syncBox').innerHTML='<div class="goalpop"><div class="gbig">☁️</div><h2 style="margin:6px 0 4px">Welke gegevens wil je houden?</h2>'
+    +'<div class="sub">In je account en op dit toestel staan verschillende gegevens.</div>'
+    +'<div class="syncopt"><b>☁️ Account</b><span>'+stateSummary(c.data||{})+'</span><span>bijgewerkt '+DN[when.getDay()]+' '+when.getDate()+' '+MN[when.getMonth()]+' '+pad(when.getHours())+':'+pad(when.getMinutes())+'</span></div>'
+    +'<div class="syncopt"><b>📱 Dit toestel</b><span>'+stateSummary(S)+'</span></div>'
+    +'<div class="btns" style="margin-top:14px;flex-direction:column"><button class="btn" data-act="usecloud">☁️ Account gebruiken</button><button class="btn ghost" data-act="usedevice">📱 Dit toestel gebruiken</button></div>'
+    +'<div class="sub" style="font-size:12px;margin-top:10px">De andere gegevens worden vervangen. Twijfel je? Maak eerst een back-up (Doelen → Instellingen).</div></div>';
+  $('syncOv').hidden=false}
+$('syncOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||!cloudAsking)return;const c=cloudAsking;
+  if(b.dataset.act==='usecloud'){armed(b,'Tik nogmaals: dit toestel wordt vervangen',()=>{cloudAsking=null;$('syncOv').hidden=true;cloudApply(c);toast('☁️ Gegevens uit je account gebruikt')});return}
+  if(b.dataset.act==='usedevice'){armed(b,'Tik nogmaals: je account wordt vervangen',()=>{cloudAsking=null;$('syncOv').hidden=true;
+    cloudPush().then(()=>{toast('📱 Dit toestel staat nu in je account');renderFriends()},e=>toast('⚠️ '+e.message))});return}});
+let cloudLastCheck=0;
+document.addEventListener('visibilitychange',()=>{if(document.hidden||!cloudReady()||Date.now()-cloudLastCheck<10000)return;cloudLastCheck=Date.now();cloudSync().catch(()=>{})});
 /* planning van deze en volgende week delen met vrienden */
 const planRange=()=>{const m=monday(new Date());return[ymd(m),ymd(addDays(m,13))]};
 function myPlanRows(){const[a,b]=planRange();
@@ -2249,6 +2299,7 @@ async function frSyncPlan(force){if(!auth||!fr.profile||S.sharePlan===false)retu
   planHash=h}
 async function frLoad(){
   if(!(await frEnsureProfile()))return;
+  try{await cloudSync()}catch(e){} // eerst je gegevens met je account gelijkzetten
   await frSync();
   const fs=await sb('/rest/v1/friendships?select=a,b')||[],ids=fs.map(f=>f.a===auth.uid?f.b:f.a);
   fr.friends=ids.length?await sb('/rest/v1/profiles?select=id,nickname&id=in.('+ids.join(',')+')')||[]:[];
@@ -2392,7 +2443,7 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
       +msg+'<button class="btn" data-act="'+(reg?'signup':'signin')+'"'+busy+'>'+(fr.busy?'Even geduld…':reg?'Account maken':'Inloggen')+'</button>'
       +(!reg&&fr.canResend?'<button class="btn ghost" data-act="resend" style="margin-top:8px"'+busy+'>📧 Bevestigingsmail opnieuw sturen</button>':'')
       +(reg?'':'<button class="linkbtn" data-act="forgot" style="margin-top:10px">Wachtwoord vergeten?</button>')+'</div>'
-      +'<div class="sub" style="font-size:12px;margin:10px 2px">🔒 Online staan alleen je bijnaam, je weekscores en (als je delen aanzet) je oefening-grafieken en laatste 5 workouts. Je planning en toetsen blijven op je iPhone.</div>'}
+      +'<div class="sub" style="font-size:12px;margin:10px 2px">☁️ Met een account worden al je gegevens in je account bewaard, zodat je ze op elk toestel hebt. Alleen jij kunt ze zien. 🔒 Vrienden zien alleen je bijnaam, je weekscores en wat je zelf deelt.</div>'}
   else if(fr.needNick){
     h+='<div class="card" style="margin-top:14px"><b>Kies je bijnaam</b>'+msg+'<label class="l" for="frNick" style="margin-top:10px">Bijnaam (zien je vrienden)</label><input class="field" id="frNick" maxlength="20" placeholder="bv. Wout"><button class="btn" data-act="setnick"'+busy+'>Opslaan</button></div>'}
   else if(!fr.profile){
@@ -2401,7 +2452,8 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
     const m=fr.metric;rows.sort((a,b)=>(b.s[m]||0)-(a.s[m]||0));
     h+=msg+'<div class="card frme"><div class="row between"><div><div class="sub" style="font-size:12px">Ingelogd als</div><b style="font-size:18px">'+esc(me.nickname)+'</b></div><div style="text-align:right"><div class="sub" style="font-size:12px">Jouw vriendencode</div><b class="frcode">'+esc(me.friend_code)+'</b></div></div>'
       +'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="copy">📋 Kopieer</button><button class="btn ghost" data-act="share">📤 Delen</button></div>'
-      +'<button class="btn" data-act="frprof" data-id="me" style="margin-top:8px">👤 Mijn profiel en laatste 5 workouts</button></div>'
+      +'<button class="btn" data-act="frprof" data-id="me" style="margin-top:8px">👤 Mijn profiel en laatste 5 workouts</button>'
+      +'<div class="sub" style="font-size:12px;margin-top:10px">'+(cloudReady()?'☁️ Je gegevens staan veilig in je account · bijgewerkt om '+new Date(S.cloudAt).toTimeString().slice(0,5)+'. Log op een ander toestel in en je hebt alles daar ook.':'☁️ Je gegevens worden aan je account gekoppeld…')+'</div></div>'
       +'<div class="card"><b>Vriend toevoegen</b><div class="row" style="gap:8px;margin-top:10px"><input class="field" id="frCode" placeholder="LOCK-XXXXX" maxlength="12" autocapitalize="characters" style="margin:0;text-transform:uppercase"><button class="btn" data-act="addfriend" style="width:auto;padding:0 18px;align-self:stretch"'+busy+'>+</button></div></div>'
       +'<div class="row between" style="margin:20px 0 8px"><h2 style="margin:0">🏆 Deze week</h2><button class="linkbtn" data-act="reload"'+busy+'>'+(fr.busy?'…':'↻ Vernieuwen')+'</button></div>'
       +'<div class="seg" id="frMetric" style="margin-bottom:10px">'+Object.keys(METRICS).map(k=>'<button data-act="metric" data-k="'+k+'" class="'+(k===m?'on':'')+'">'+METRICS[k][0]+'</button>').join('')+'</div>'
