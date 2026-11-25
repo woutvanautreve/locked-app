@@ -623,8 +623,6 @@ nav button.on{color:var(--accent)}
 <div class="rollov" id="fishOv" hidden><div class="rollbox" id="fishBox" role="dialog" aria-modal="true"></div></div>
 <!-- popup: foto en uitleg bij een workout -->
 <div class="rollov" id="photoOv" hidden><div class="rollbox" id="photoBox" role="dialog" aria-modal="true"></div><input type="file" id="phFile" accept="image/*" class="vh" tabindex="-1" aria-hidden="true"></div>
-<!-- popup: gegevens van je account of van dit toestel houden -->
-<div class="rollov" id="syncOv" hidden><div class="rollbox" id="syncBox" role="dialog" aria-modal="true"></div></div>
 <div class="rollov" id="goalOv" hidden><div class="rollbox" id="goalBox" role="dialog" aria-modal="true" aria-labelledby="goalTitle"></div></div>
 
 <!-- formulier: eigen oefening -->
@@ -2273,8 +2271,8 @@ function myScores(){const ws=monday(new Date()),wk=ymd(ws),we=ymd(addDays(ws,6))
 async function frSync(){if(!auth||!fr.profile)return;const s=Object.assign({user_id:auth.uid,updated_at:new Date().toISOString()},myScores());
   await sb('/rest/v1/scores',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:s});fr.scores[auth.uid]=s}
 let syncT=null;
-function scheduleSync(){if(!auth||!fr.profile)return;clearTimeout(syncT);syncT=setTimeout(()=>{frSync().catch(()=>{});frSyncPlan().catch(()=>{});
-  if(cloudReady())cloudSync().catch(()=>{})},4000)} // je gegevens naar je account (pas na de eerste keuze op dit toestel)
+function scheduleSync(){if(!auth||!fr.profile)return;clearTimeout(syncT);syncT=setTimeout(()=>{frSync().catch(()=>{});frSyncPlan().catch(()=>{})},4000);
+  try{cloudSoon()}catch(e){}} // je gegevens snel naar je account (pas als dit toestel gekoppeld is)
 
 /* ===== je gegevens in je account (zelfde planning, trainingen en vissen op elk toestel) ===== */
 // dingen die bij één toestel horen, gaan niet mee naar je account
@@ -2285,7 +2283,7 @@ const stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v&&typeof v==='
 function hashOf(o){const t=stable(o);let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)+'.'+t.length}
 const cloudReady=()=>!!(auth&&auth.uid&&S.cloudUid===auth.uid&&S.cloudAt); // dit toestel is al gekoppeld aan dit account
 const localEmpty=()=>!(S.tasks.length||(S.workouts||[]).length||(S.cardio||[]).length||Object.keys(S.fish||{}).length||Object.keys(S.mut||{}).length||S.focus.length);
-let cloudBusy=false,cloudAsking=null;
+let cloudBusy=false;
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 async function cloudPush(){const data=syncData(S),at=new Date().toISOString();
   await sb('/rest/v1/user_state',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:{user_id:auth.uid,data,updated_at:at}});
@@ -2293,31 +2291,30 @@ async function cloudPush(){const data=syncData(S),at=new Date().toISOString();
 // gegevens uit je account op dit toestel zetten (wat bij dit toestel hoort, blijft staan)
 function cloudApply(c){const keep={};for(const k of DEVICE_KEYS)if(k in S)keep[k]=S[k];
   S=Object.assign(normState(c.data),keep);S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=hashOf(syncData(S));saveLocal();render()}
-// vergelijken met je account: ophalen, doorsturen, of (als allebei veranderd zijn) vragen welke je wilt houden
-async function cloudSync(){if(!auth||!auth.uid||!fr.profile||cloudBusy||cloudAsking)return;cloudBusy=true;
-  try{const r=await sb('/rest/v1/user_state?select=data,updated_at&user_id=eq.'+auth.uid),c=r&&r[0];
+// vergelijken met je account. Regel: JE ACCOUNT WINT.
+// - Account niet veranderd sinds de vorige keer → jouw wijzigingen doorsturen.
+// - Account wel veranderd (op een ander toestel) → dit toestel neemt de gegevens van je account over.
+//   Had dit toestel nog eigen, niet-doorgestuurde gegevens? Dan eerst een kopie bewaren (vangnet).
+async function cloudSync(){if(!auth||!auth.uid||!fr.profile||cloudBusy)return;cloudBusy=true;
+  try{// eerst alleen kijken óf er iets veranderd is (klein en zuinig)
+    const m=await sb('/rest/v1/user_state?select=updated_at&user_id=eq.'+auth.uid),meta=m&&m[0];
     const mine=S.cloudUid===auth.uid,local=hashOf(syncData(S)),changed=!mine||local!==S.cloudHash;
-    if(!c){await cloudPush();return}                                   // nog niets in je account: dit toestel doorsturen
-    if(mine&&c.updated_at===S.cloudAt){if(changed)await cloudPush();return} // account niet veranderd sinds de vorige keer
-    if(hashOf(syncData(normState(c.data)))===local){S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=local;saveLocal();return} // precies hetzelfde: alleen koppelen
-    if((mine&&!changed)||(!mine&&localEmpty())){cloudApply(c);toast('☁️ Je gegevens zijn opgehaald uit je account');return}
-    cloudAsk(c)}                                                         // allebei anders: jij kiest
+    if(!meta){await cloudPush();return}                                     // nog niets in je account: dit toestel doorsturen
+    if(mine&&meta.updated_at===S.cloudAt){if(changed)await cloudPush();return} // account niet veranderd: jouw wijzigingen doorsturen
+    const r=await sb('/rest/v1/user_state?select=data,updated_at&user_id=eq.'+auth.uid),c=r&&r[0];if(!c)return;
+    if(hashOf(syncData(normState(c.data)))===local){S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=local;saveLocal();return} // precies hetzelfde
+    if(changed&&!localEmpty())try{localStorage.setItem('locked-kopie-voor-account',JSON.stringify({at:new Date().toISOString(),data:syncData(S)}))}catch(e){}
+    cloudApply(c);toast('☁️ Bijgewerkt met de gegevens van je account')}
   finally{cloudBusy=false}}
-const stateSummary=s=>(s.tasks||[]).length+' taken · '+((s.workouts||[]).length+(s.cardio||[]).length)+' trainingen · '+Object.keys(s.fish||{}).length+' vissen';
-function cloudAsk(c){cloudAsking=c;const when=new Date(c.updated_at);
-  $('syncBox').innerHTML='<div class="goalpop"><div class="gbig">☁️</div><h2 style="margin:6px 0 4px">Welke gegevens wil je houden?</h2>'
-    +'<div class="sub">In je account en op dit toestel staan verschillende gegevens.</div>'
-    +'<div class="syncopt"><b>☁️ Account</b><span>'+stateSummary(c.data||{})+'</span><span>bijgewerkt '+DN[when.getDay()]+' '+when.getDate()+' '+MN[when.getMonth()]+' '+pad(when.getHours())+':'+pad(when.getMinutes())+'</span></div>'
-    +'<div class="syncopt"><b>📱 Dit toestel</b><span>'+stateSummary(S)+'</span></div>'
-    +'<div class="btns" style="margin-top:14px;flex-direction:column"><button class="btn" data-act="usecloud">☁️ Account gebruiken</button><button class="btn ghost" data-act="usedevice">📱 Dit toestel gebruiken</button></div>'
-    +'<div class="sub" style="font-size:12px;margin-top:10px">De andere gegevens worden vervangen. Twijfel je? Maak eerst een back-up (Doelen → Instellingen).</div></div>';
-  $('syncOv').hidden=false}
-$('syncOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||!cloudAsking)return;const c=cloudAsking;
-  if(b.dataset.act==='usecloud'){armed(b,'Tik nogmaals: dit toestel wordt vervangen',()=>{cloudAsking=null;$('syncOv').hidden=true;cloudApply(c);toast('☁️ Gegevens uit je account gebruikt')});return}
-  if(b.dataset.act==='usedevice'){armed(b,'Tik nogmaals: je account wordt vervangen',()=>{cloudAsking=null;$('syncOv').hidden=true;
-    cloudPush().then(()=>{toast('📱 Dit toestel staat nu in je account');renderFriends()},e=>toast('⚠️ '+e.message))});return}});
+// snel doorsturen na een wijziging (1,5 s), los van de vriendenscores
+let cloudT=null;
+function cloudSoon(){if(!cloudReady())return;clearTimeout(cloudT);cloudT=setTimeout(()=>cloudSync().catch(()=>{}),1500)}
 let cloudLastCheck=0;
-document.addEventListener('visibilitychange',()=>{if(document.hidden||!cloudReady()||Date.now()-cloudLastCheck<10000)return;cloudLastCheck=Date.now();cloudSync().catch(()=>{})});
+document.addEventListener('visibilitychange',()=>{if(!cloudReady())return;
+  if(document.hidden){clearTimeout(cloudT);cloudSync().catch(()=>{});return} // app weg: meteen doorsturen
+  if(Date.now()-cloudLastCheck<5000)return;cloudLastCheck=Date.now();cloudSync().catch(()=>{})}); // app terug: ophalen
+// terwijl de app open is: elke 20 seconden kijken of een ander toestel iets veranderde
+setInterval(()=>{if(!document.hidden&&cloudReady())cloudSync().catch(()=>{})},20000);
 /* planning van deze en volgende week delen met vrienden */
 const planRange=()=>{const m=monday(new Date());return[ymd(m),ymd(addDays(m,13))]};
 function myPlanRows(){const[a,b]=planRange();
