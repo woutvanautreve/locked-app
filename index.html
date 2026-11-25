@@ -2279,7 +2279,10 @@ async function frSyncWo(){if(!auth||!fr.profile||S.shareWo===false)return;const 
   if(rows.length)await sb('/rest/v1/recent_workouts',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:rows});
   // oudere workouts weghalen, zodat er online maar 5 staan
   await sb('/rest/v1/recent_workouts?user_id=eq.'+auth.uid+(rows.length?'&id=not.in.('+rows.map(x=>'"'+x.id.replace(/"/g,'')+'"').join(',')+')':''),{method:'DELETE'})}
-async function frOpenFriend(id){fr.view=id;fr.wo=null;fr.woErr='';fr.plan=null;fr.planErr='';fr.planWk=0;renderFriends();window.scrollTo(0,0);
+async function frOpenFriend(id){fr.view=id;fr.wo=null;fr.woErr='';fr.plan=null;fr.planErr='';fr.planWk=0;
+  // je eigen profiel: rechtstreeks uit je eigen gegevens (werkt ook zonder internet)
+  if(id==='me'){fr.wo=myRecentWo();fr.plan=myPlanRows();renderFriends();window.scrollTo(0,0);return}
+  renderFriends();window.scrollTo(0,0);
   const[a,b]=planRange();
   await Promise.all([
     sb('/rest/v1/recent_workouts?select=*&user_id=eq.'+id+'&order=at.desc&limit=5').then(r=>{fr.wo=r||[]},e=>{fr.woErr=e.message;fr.wo=[]}),
@@ -2291,7 +2294,7 @@ function friendPlanHTML(f){const wk=fr.planWk||0,m=addDays(monday(new Date()),wk
   if(fr.plan===null)return h+'<div class="empty">Laden…</div>';
   if(fr.planErr)return h+'<div class="frmsg err">⚠️ '+esc(fr.planErr)+'</div>';
   const L=fr.plan.filter(x=>x.d>=ymd(m)&&x.d<=ymd(addDays(m,6)));
-  if(!L.length)return h+'<div class="empty">'+(fr.plan.length?esc(f.nickname)+' heeft '+(wk?'volgende':'deze')+' week nog niets gepland.':esc(f.nickname)+' deelt (nog) geen planning.')+'</div>';
+  if(!L.length)return h+'<div class="empty">'+(f.id==='me'?'Je hebt '+(wk?'volgende':'deze')+' week nog niets gepland.':fr.plan.length?esc(f.nickname)+' heeft '+(wk?'volgende':'deze')+' week nog niets gepland.':esc(f.nickname)+' deelt (nog) geen planning.')+'</div>';
   for(let i=0;i<7;i++){const d=addDays(m,i),k=ymd(d),day=L.filter(x=>x.d===k).sort((a,b)=>(a.t||'99')<(b.t||'99')?-1:1);if(!day.length)continue;
     h+='<div class="fpday'+(k===today()?' now':'')+'">'+(k===today()?'Vandaag · ':'')+DNL[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+'<span>'+day.filter(x=>x.done).length+'/'+day.length+'</span></div>'
       +day.map(x=>'<div class="fpit c-'+esc(x.cat)+(x.done?' done':'')+'"><span class="fpt">'+(x.t?esc(x.t)+(x.e?'–'+esc(x.e):''):fmtMin(x.dur))+'</span><b>'+esc(x.title)+'</b><span class="fpc">'+(x.kind==='toets'?'📝 Toets':esc(CAT[x.cat]||x.cat))+(x.done?' · ✅':'')+'</span></div>').join('')}
@@ -2304,14 +2307,18 @@ function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' 
   return '<div class="card wocard"><div class="row between"><b>💪 '+esc(w.title)+'</b><span class="sub" style="font-size:12px">'+when+(w.mins?' · '+w.mins+' min':'')+'</span></div>'
     +'<div class="sub" style="font-size:12px;margin:2px 0 6px">'+ex.length+' oefening'+(ex.length===1?'':'en')+' · '+n+' sets</div>'
     +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')+'</div>'}
-function friendProfileHTML(){const f=fr.friends.find(x=>x.id===fr.view);if(!f){fr.view=null;return null}const s=fr.scores[f.id]||{};
-  return '<button class="linkbtn" data-act="frback" style="margin-top:6px">‹ Vrienden</button><h1>'+esc(f.nickname)+'</h1>'
+function friendProfileHTML(){const me=fr.view==='me';
+  const f=me?{id:'me',nickname:fr.profile.nickname}:fr.friends.find(x=>x.id===fr.view);if(!f){fr.view=null;return null}
+  const s=me?Object.assign({},fr.scores[auth.uid]||{},myScores()):fr.scores[f.id]||{};
+  const off=me&&[S.shareWo===false?'je workouts':'',S.sharePlan===false?'je planning':''].filter(Boolean);
+  return '<button class="linkbtn" data-act="frback" style="margin-top:6px">‹ Vrienden</button><h1>'+esc(f.nickname)+(me?' <span class="sub" style="font-size:15px">(jij)</span>':'')+'</h1>'
+    +(me?'<div class="sub" style="margin:-6px 0 10px">👤 Zo zien je vrienden jouw profiel.'+(off.length?' 🔒 '+off.join(' en ')+' deel je nu niet (zie Delen).':'')+'</div>':'')
     +'<div class="card"><div class="sub" style="font-size:12px;margin-bottom:4px">Deze week</div><b>'+(s.xp||0)+' XP</b>'
     +'<div class="sub" style="font-size:13px;margin-top:4px">💪 '+(s.gym||0)+'x gym · 🏃 '+fmtMin(s.cardio||0)+' · 📚 '+fmtMin(s.school||0)+' · 🔥 '+(s.streak||0)+' dagen · 🐠 '+(s.fish||0)+' vissen</div></div>'
     +'<h2>📅 Planning</h2>'+friendPlanHTML(f)
     +'<h2>Laatste 5 workouts</h2>'
     +(fr.wo===null?'<div class="empty">Laden…</div>':fr.woErr?'<div class="frmsg err">⚠️ '+esc(fr.woErr)+'</div>'
-      :fr.wo.length?fr.wo.map(woCard).join(''):'<div class="empty">'+esc(f.nickname)+' heeft nog geen workouts gedeeld.</div>')}
+      :fr.wo.length?fr.wo.map(woCard).join(''):'<div class="empty">'+(me?'Je hebt nog geen workouts gelogd.':esc(f.nickname)+' heeft nog geen workouts gedeeld.')+'</div>')}
 async function frRun(fn,okMsg){fr.busy=true;fr.err='';renderFriends();
   try{await fn();if(okMsg)fr.msg=okMsg}catch(e){fr.err=e.message}fr.busy=false;renderFriends()}
 
@@ -2388,12 +2395,13 @@ function renderFriends(){const el=$('frWrap');if(!el)return;
   else{const me=fr.profile,rows=[{id:me.id,nickname:me.nickname,me:true}].concat(fr.friends).map(p=>Object.assign({},p,{s:fr.scores[p.id]||{}}));
     const m=fr.metric;rows.sort((a,b)=>(b.s[m]||0)-(a.s[m]||0));
     h+=msg+'<div class="card frme"><div class="row between"><div><div class="sub" style="font-size:12px">Ingelogd als</div><b style="font-size:18px">'+esc(me.nickname)+'</b></div><div style="text-align:right"><div class="sub" style="font-size:12px">Jouw vriendencode</div><b class="frcode">'+esc(me.friend_code)+'</b></div></div>'
-      +'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="copy">📋 Kopieer</button><button class="btn ghost" data-act="share">📤 Delen</button></div></div>'
+      +'<div class="btns" style="margin-top:12px"><button class="btn ghost" data-act="copy">📋 Kopieer</button><button class="btn ghost" data-act="share">📤 Delen</button></div>'
+      +'<button class="btn" data-act="frprof" data-id="me" style="margin-top:8px">👤 Mijn profiel en laatste 5 workouts</button></div>'
       +'<div class="card"><b>Vriend toevoegen</b><div class="row" style="gap:8px;margin-top:10px"><input class="field" id="frCode" placeholder="LOCK-XXXXX" maxlength="12" autocapitalize="characters" style="margin:0;text-transform:uppercase"><button class="btn" data-act="addfriend" style="width:auto;padding:0 18px;align-self:stretch"'+busy+'>+</button></div></div>'
       +'<div class="row between" style="margin:20px 0 8px"><h2 style="margin:0">🏆 Deze week</h2><button class="linkbtn" data-act="reload"'+busy+'>'+(fr.busy?'…':'↻ Vernieuwen')+'</button></div>'
       +'<div class="seg" id="frMetric" style="margin-bottom:10px">'+Object.keys(METRICS).map(k=>'<button data-act="metric" data-k="'+k+'" class="'+(k===m?'on':'')+'">'+METRICS[k][0]+'</button>').join('')+'</div>'
       +'<div class="card" style="padding:4px 14px">'+rows.map((r,i)=>{const s=r.s;
-        return '<div class="frrow'+(r.me?' me':' tap')+'"'+(r.me?'':' data-act="frprof" data-id="'+r.id+'" role="button" tabindex="0" aria-label="Profiel van '+esc(r.nickname)+'"')+'><div class="frrank">'+(['🥇','🥈','🥉'][i]||'#'+(i+1))+'</div><div style="flex:1;min-width:0"><b>'+esc(r.nickname)+(r.me?' <span class="sub" style="font-size:12px">(jij)</span>':'')+'</b>'
+        return '<div class="frrow tap'+(r.me?' me':'')+'" data-act="frprof" data-id="'+(r.me?'me':r.id)+'" role="button" tabindex="0" aria-label="'+(r.me?'Mijn profiel':'Profiel van '+esc(r.nickname))+'"><div class="frrank">'+(['🥇','🥈','🥉'][i]||'#'+(i+1))+'</div><div style="flex:1;min-width:0"><b>'+esc(r.nickname)+(r.me?' <span class="sub" style="font-size:12px">(jij)</span>':'')+'</b>'
           +'<div class="sub" style="font-size:12px">💪 '+(s.gym||0)+'x · 🏃 '+fmtMin(s.cardio||0)+' · 📚 '+fmtMin(s.school||0)+' · 🔥 '+(s.streak||0)+' · 🐠 '+(s.fish||0)+'</div></div>'
           +'<div class="frval"><b>'+(s[m]||0)+'</b><span>'+METRICS[m][1]+'</span></div></div>'}).join('')+'</div>'
       +(fr.friends.length?'':'<div class="sub" style="font-size:13px;margin:10px 2px">Nog geen vrienden. Stuur je vriendencode door en voeg die van je vrienden toe.</div>')
