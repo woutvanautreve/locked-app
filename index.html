@@ -1174,7 +1174,7 @@ $('tSave').onclick=()=>{
 function armed(b,msg,fn){if(b.dataset.armed){disarm(b);fn();return}
   b.dataset.orig=b.dataset.orig||b.textContent;b.dataset.armed='1';b.textContent=msg;clearTimeout(b._t);b._t=setTimeout(()=>disarm(b),4000)}
 function disarm(b){if(b.dataset.orig)b.textContent=b.dataset.orig;delete b.dataset.armed;clearTimeout(b._t)}
-$('tDel').onclick=()=>{if(!editing)return;armed($('tDel'),'Tik nogmaals om te verwijderen',()=>{const id=editing.id;S.tasks=S.tasks.filter(t=>t.id!==id);save();closeSheet();render();toast('🗑️ Verwijderd')})};
+$('tDel').onclick=()=>{if(!editing)return;armed($('tDel'),'Tik nogmaals om te verwijderen',()=>{const id=editing.id;S.tasks=S.tasks.filter(t=>t.id!==id);markDel('tasks:'+id);save();closeSheet();render();toast('🗑️ Verwijderd')})};
 
 /* ---------- doelen & instellingen ---------- */
 document.querySelectorAll('.step button').forEach(b=>b.onclick=()=>{const g=b.dataset.g,d=+b.dataset.d;
@@ -1189,7 +1189,12 @@ $('importFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)ret
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(x){toast('⚠️ Terugzetten lukte niet');return}
     toast('✅ Back-up teruggezet!');setTimeout(()=>location.reload(),700)};
   r.readAsText(f)};
-$('resetBtn').onclick=()=>armed($('resetBtn'),'Zeker? Tik nogmaals om ALLES te wissen',()=>{S=defaults();save();render();toast('Alles gewist')});
+$('resetBtn').onclick=()=>armed($('resetBtn'),'Zeker? Tik nogmaals om ALLES te wissen',()=>{
+  // koppeling met je account bewaren, en onthouden dat je bewust alles wiste (anders komt het via je account terug)
+  const keep={};for(const k of ['cloudUid','cloudAt','cloudHash'])if(k in S)keep[k]=S[k];
+  S=Object.assign(defaults(),keep,{wipedAt:Date.now()});save();render();toast('Alles gewist')});
+// iets bewust verwijderen: onthouden, zodat het niet via een ander toestel terugkomt
+function markDel(key){S.del=S.del||{};S.del[key]=Date.now()}
 
 /* ---------- focus timer ---------- */
 const DURS=[15,25,45,60];
@@ -1308,7 +1313,8 @@ function renderTrain(){
     +'<button class="typecard newcard" data-act="neww"><b>＋ Nieuwe workout</b><span>begin met 0 oefeningen</span></button></div>'
     +(wNew?'<div class="card" style="margin-top:10px"><label class="l" for="wNewName">Naam van je nieuwe workout</label><input class="field" id="wNewName" placeholder="bv. Push day, Armen, Benen…" maxlength="30"><div class="btns"><button class="btn ghost" data-act="newcancel">Annuleren</button><button class="btn" data-act="newsave">Maken</button></div></div>':'')
     +cardioListHTML()
-    +'<h2>Laatste 5 workouts</h2>'+(hist.length?hist.map(woCard).join(''):'<div class="empty">Nog geen trainingen gelogd.</div>');
+    +'<h2>Laatste 5 workouts</h2>'+(hist.length?hist.map(woCard).join(''):'<div class="empty">Nog geen trainingen gelogd.</div>')
+    +(()=>{try{return orphansHTML()}catch(e){return ''}})(); // teruggevonden foto's (als die er zijn)
   if(wNew)setTimeout(()=>{const i=$('wNewName');if(i)i.focus()},50);
   try{hydratePhotos(el)}catch(e){}} // foto's bij je laatste workouts laden
 
@@ -1361,7 +1367,10 @@ function trainNav(a,b,i){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur(); // anders wordt het scherm niet ververst
   if(a==='cardio'){openCardio();return}
   if(a==='wophoto'){openPhotoPop(b.dataset.id);return}
-  if(a==='rmcardio'){armed(b,'Zeker? Tik nogmaals',()=>{S.cardio=(S.cardio||[]).filter(c=>c.id!==b.dataset.id);save();render();toast('Cardio-workout verwijderd')});return}
+  if(a==='orphlink'){const p=b.dataset.p,sel=document.querySelector('select[data-orph="'+CSS.escape(p)+'"]'),w=sel&&(S.workouts||[]).find(x=>String(x.id)===sel.value);if(!w)return;
+    w.photo=p;w.photoV=Date.now();photoOrphans=photoOrphans.filter(x=>x!==p);save();renderTrain();toast('🔗 Foto gekoppeld aan '+w.type);try{frSyncWo().catch(()=>{})}catch(e){}return}
+  if(a==='orphdel'){armed(b,'Tik nogmaals om te verwijderen',()=>{const p=b.dataset.p;photoDelete([p]).then(()=>{photoOrphans=photoOrphans.filter(x=>x!==p);renderTrain();toast('🗑️ Foto verwijderd')},e=>toast('⚠️ '+e.message))});return}
+  if(a==='rmcardio'){armed(b,'Zeker? Tik nogmaals',()=>{S.cardio=(S.cardio||[]).filter(c=>c.id!==b.dataset.id);markDel('cardio:'+b.dataset.id);save();render();toast('Cardio-workout verwijderd')});return}
   if(a==='open'){if(!b.dataset.type)return;wDetail=b.dataset.type;wRename=false;wNew=false;renderTrain();window.scrollTo(0,0);return}
   if(a==='back'){wDetail=null;wRename=false;renderTrain();window.scrollTo(0,0);return}
   if(a==='neww'){wNew=true;renderTrain();return}
@@ -1373,7 +1382,7 @@ function trainNav(a,b,i){
   if(a==='rename'){wRename=true;renderTrain();return}
   if(a==='renamesave'){const n=$('wRenameIn').value.trim(),o=wDetail;
     if(!n||n===o){wRename=false;renderTrain();return}if(S.schemas[n]){toast('Die naam bestaat al');return}
-    S.schemas[n]=S.schemas[o];delete S.schemas[o];S.wtypes=S.wtypes.map(x=>x===o?n:x);
+    S.schemas[n]=S.schemas[o];delete S.schemas[o];markDel('schema:'+o);S.wtypes=S.wtypes.map(x=>x===o?n:x);
     for(const t of S.tasks)if(t.cat==='gym'&&t.sub===o){t.sub=n;if(t.title===o)t.title=n}
     wDetail=n;wRename=false;save();render();toast('Naam gewijzigd');return}
   if(a==='startw'){startWorkout(wDetail);return}
@@ -1381,7 +1390,7 @@ function trainNav(a,b,i){
   if(a==='editex'){openEx({mode:'schema',type:wDetail,i});return}
   if(a==='up'&&i>0){[L[i-1],L[i]]=[L[i],L[i-1]];save();renderTrain();return}
   if(a==='down'&&i<L.length-1){[L[i+1],L[i]]=[L[i],L[i+1]];save();renderTrain();return}
-  if(a==='delw'){armed(b,'Tik nogmaals om te verwijderen',()=>{const o=wDetail;delete S.schemas[o];S.wtypes=S.wtypes.filter(x=>x!==o);wDetail=null;save();render();window.scrollTo(0,0);toast('Workout verwijderd')});return}}
+  if(a==='delw'){armed(b,'Tik nogmaals om te verwijderen',()=>{const o=wDetail;delete S.schemas[o];markDel('schema:'+o);S.wtypes=S.wtypes.filter(x=>x!==o);wDetail=null;save();render();window.scrollTo(0,0);toast('Workout verwijderd')});return}}
 $('trainWrap').addEventListener('keydown',e=>{if(e.key!=='Enter')return;
   if(e.target.id==='wNewName')trainNav('newsave');if(e.target.id==='wRenameIn')trainNav('renamesave')});
 
@@ -2276,7 +2285,7 @@ function scheduleSync(){if(!auth||!fr.profile)return;clearTimeout(syncT);syncT=s
 
 /* ===== je gegevens in je account (zelfde planning, trainingen en vissen op elk toestel) ===== */
 // dingen die bij één toestel horen, gaan niet mee naar je account
-const DEVICE_KEYS=['timer','workout','restEnd','restTotal','restNext','pushOn','pushIds','pushKey','iosTimer','iosAuto','seenIosHelp','cloudUid','cloudAt','cloudHash'];
+const DEVICE_KEYS=['timer','workout','restEnd','restTotal','restNext','pushOn','pushIds','pushKey','iosTimer','iosAuto','seenIosHelp','cloudUid','cloudAt','cloudHash','bOpen','bShow'];
 function syncData(s){const d={};for(const k in s)if(!DEVICE_KEYS.includes(k))d[k]=s[k];return d}
 // vaste volgorde van de sleutels, zodat dezelfde gegevens altijd dezelfde vingerafdruk geven
 const stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}':JSON.stringify(v);
@@ -2291,6 +2300,41 @@ async function cloudPush(){const data=syncData(S),at=new Date().toISOString();
 // gegevens uit je account op dit toestel zetten (wat bij dit toestel hoort, blijft staan)
 function cloudApply(c){const keep={};for(const k of DEVICE_KEYS)if(k in S)keep[k]=S[k];
   S=Object.assign(normState(c.data),keep);S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=hashOf(syncData(S));saveLocal();render()}
+/* SAMENVOEGEN in plaats van vervangen: wat je op een toestel had, blijft altijd staan.
+   - lijsten met id (taken, workouts, cardio): samen, per id; bij hetzelfde id blijft alles wat ingevuld is (foto, uitleg…)
+   - wat je zelf verwijderde, staat in S.del en komt niet terug
+   - vissen, mutaties, badges, weekbonussen: samen (hoogste aantal)
+   - uitgegeven munten, aantal worpen, beste reeks: de hoogste waarde
+   - instellingen en de rest: je account wint
+   - "Alles wissen" (wipedAt) op een toestel dat nieuwer is: dat toestel wint helemaal */
+const ID_LISTS=['tasks','workouts','cardio'],MAX_KEYS=['spent','rolls','best'],UNION_OBJ=['fish','mut','bonus'];
+const filled=v=>v!==undefined&&v!==null&&v!=='';
+function mergeItem(a,b){const o=Object.assign({},a);for(const k in b)if(!filled(o[k])&&filled(b[k]))o[k]=b[k];return o} // a = account, b = toestel
+function mergeDeep(a,b){ // voor vissen/mutaties/bonussen: alles samen, getallen = hoogste
+  if(typeof a==='number'&&typeof b==='number')return Math.max(a,b);
+  if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)){const o=Object.assign({},a);for(const k in b)o[k]=k in o?mergeDeep(o[k],b[k]):b[k];return o}
+  return filled(a)?a:b}
+function mergeState(acc,dev){ // acc = gegevens van je account, dev = van dit toestel
+  if((dev.wipedAt||0)>(acc.wipedAt||0))return dev; // je wiste alles op dit toestel, later dan het account
+  if((acc.wipedAt||0)>(dev.wipedAt||0))return acc;
+  const m=Object.assign({},acc),del=Object.assign({},acc.del||{},dev.del||{});
+  const cut=Date.now()-90*864e5;for(const k in del)if(del[k]<cut)delete del[k]; // oude verwijderingen na 90 dagen vergeten
+  m.del=del;
+  for(const key of ID_LISTS){const A=acc[key]||[],B=dev[key]||[],byId=new Map();
+    for(const x of A)byId.set(String(x.id),x);
+    for(const x of B){const id=String(x.id);byId.set(id,byId.has(id)?mergeItem(byId.get(id),x):x)}
+    m[key]=[...byId.values()].filter(x=>!del[key+':'+x.id]);
+    if(key==='workouts')m[key].sort((x,y)=>(x.end||x.start||0)-(y.end||y.start||0))}
+  // focussessies hebben geen id: samen, zonder dubbele
+  const seen=new Set();m.focus=(acc.focus||[]).concat(dev.focus||[]).filter(f=>{const k=stable(f);if(seen.has(k))return false;seen.add(k);return true});
+  for(const k of UNION_OBJ)m[k]=mergeDeep(acc[k]||{},dev[k]||{});
+  m.badges=[...new Set((acc.badges||[]).concat(dev.badges||[]))];
+  for(const k of MAX_KEYS)if(typeof acc[k]==='number'||typeof dev[k]==='number')m[k]=Math.max(acc[k]||0,dev[k]||0);
+  // workouts (schema's): samen per naam, behalve wat je verwijderde; volgorde van je account
+  const sa=acc.schemas||{},sb2=dev.schemas||{};m.schemas=Object.assign({},sb2,sa);
+  for(const n in m.schemas)if(del['schema:'+n])delete m.schemas[n];
+  m.wtypes=[...new Set((acc.wtypes||[]).concat(dev.wtypes||[]))].filter(n=>m.schemas[n]);
+  return m}
 // vergelijken met je account. Regel: JE ACCOUNT WINT.
 // - Account niet veranderd sinds de vorige keer → jouw wijzigingen doorsturen.
 // - Account wel veranderd (op een ander toestel) → dit toestel neemt de gegevens van je account over.
@@ -2299,12 +2343,19 @@ async function cloudSync(){if(!auth||!auth.uid||!fr.profile||cloudBusy)return;cl
   try{// eerst alleen kijken óf er iets veranderd is (klein en zuinig)
     const m=await sb('/rest/v1/user_state?select=updated_at&user_id=eq.'+auth.uid),meta=m&&m[0];
     const mine=S.cloudUid===auth.uid,local=hashOf(syncData(S)),changed=!mine||local!==S.cloudHash;
-    if(!meta){await cloudPush();return}                                     // nog niets in je account: dit toestel doorsturen
+    if(!meta){if(localEmpty())return;await cloudPush();return}              // nog niets in je account: dit toestel doorsturen (maar nooit een leeg toestel)
     if(mine&&meta.updated_at===S.cloudAt){if(changed)await cloudPush();return} // account niet veranderd: jouw wijzigingen doorsturen
     const r=await sb('/rest/v1/user_state?select=data,updated_at&user_id=eq.'+auth.uid),c=r&&r[0];if(!c)return;
-    if(hashOf(syncData(normState(c.data)))===local){S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=local;saveLocal();return} // precies hetzelfde
+    const accH=hashOf(syncData(normState(c.data)));
+    if(accH===local){S.cloudUid=auth.uid;S.cloudAt=c.updated_at;S.cloudHash=local;saveLocal();return} // precies hetzelfde
+    // vangnet: een kopie van dit toestel bewaren voor we iets samenvoegen
     if(changed&&!localEmpty())try{localStorage.setItem('locked-kopie-voor-account',JSON.stringify({at:new Date().toISOString(),data:syncData(S)}))}catch(e){}
-    cloudApply(c);toast('☁️ Bijgewerkt met de gegevens van je account')}
+    // SAMENVOEGEN: alles van je account + alles wat alleen op dit toestel stond
+    const merged=normState(mergeState(normState(c.data),syncData(S)));
+    cloudApply({data:merged,updated_at:c.updated_at});
+    if(hashOf(syncData(S))!==accH){S.cloudHash=accH;saveLocal(); // zo blijft het "nog door te sturen" als het doorsturen mislukt
+      await cloudPush();toast('☁️ Samengevoegd met je account')} // dit toestel had iets extra: ook naar je account
+    else toast('☁️ Bijgewerkt met de gegevens van je account')}
   finally{cloudBusy=false}}
 // snel doorsturen na een wijziging (1,5 s), los van de vriendenscores
 let cloudT=null;
@@ -2339,6 +2390,7 @@ async function frLoad(){
   try{await frSyncEx();await frLoadEx()}catch(e){} // oefening-grafieken (stoort de ranglijst niet als het misgaat)
   try{await frSyncWo()}catch(e){} // laatste 5 workouts op je profiel
   try{await frSyncPlan(true)}catch(e){} // planning van deze en volgende week
+  try{await photoRescan()}catch(e){} // losgeraakte foto's terugvinden
   if(view==='progress')renderProgress()}
 /* oefening-grafieken delen: beste set per oefening per dag */
 function myExRows(){const best={};
@@ -2454,6 +2506,23 @@ async function storageFetch(path,opt){if(auth.exp<Date.now()+60000)await refresh
   return r}
 async function photoUpload(blob,path){await storageFetch(PHOTO_BUCKET+'/'+path,{method:'POST',headers:{'Content-Type':'image/jpeg','x-upsert':'true'},body:blob})}
 async function photoDelete(paths){if(!paths.length)return;await storageFetch(PHOTO_BUCKET,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({prefixes:paths})})}
+// foto's terugvinden die niet meer aan een workout hangen (bv. na het overnemen van oudere gegevens)
+let photoOrphans=[];
+async function photoRescan(){if(!auth||!auth.uid||!fr.profile)return;
+  const r=await storageFetch('list/'+PHOTO_BUCKET,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prefix:auth.uid+'/',limit:100,offset:0})});
+  const files=new Set(((await r.json())||[]).filter(f=>f&&f.name&&/\.jpg$/i.test(f.name)).map(f=>auth.uid+'/'+f.name));
+  let relinked=0;
+  for(const w of S.workouts||[])if(!w.photo){const p=photoPathFor(w);if(files.has(p)){w.photo=p;w.photoV=Date.now();relinked++}} // naam past bij de workout: terugzetten
+  const used=new Set((S.workouts||[]).filter(w=>w.photo).map(w=>w.photo));
+  photoOrphans=[...files].filter(p=>!used.has(p));
+  if(relinked){save();toast('📸 '+relinked+' foto'+(relinked===1?'':"'s")+' teruggezet bij je workout');try{frSyncWo().catch(()=>{})}catch(e){}}
+  if(view==='train')renderTrain()}
+function orphansHTML(){if(!photoOrphans.length)return '';
+  const opts=(S.workouts||[]).slice(-10).reverse().filter(w=>!w.photo).map(w=>{const d=parse(w.date);return '<option value="'+esc(String(w.id))+'">'+esc(w.type)+' · '+DN[d.getDay()]+' '+d.getDate()+' '+MN[d.getMonth()]+'</option>'}).join('');
+  return '<h2>📸 Teruggevonden foto\'s</h2><div class="sub" style="font-size:13px;margin:-6px 0 10px">Deze foto\'s staan nog online maar hangen niet meer aan een workout. Koppel ze terug, of verwijder ze (je hebt max 5 foto\'s).</div>'
+    +photoOrphans.map(p=>'<div class="card wocard"><div class="wophoto" data-photo="'+esc(p)+'" data-v="0"><span>📸 Foto laden…</span></div>'
+      +(opts?'<select class="field" data-orph="'+esc(p)+'" style="margin:8px 0">'+opts+'</select><div class="btns"><button class="btn" data-act="orphlink" data-p="'+esc(p)+'">🔗 Koppel aan deze workout</button><button class="btn danger" data-act="orphdel" data-p="'+esc(p)+'">Verwijderen</button></div>'
+        :'<div class="btns" style="margin-top:8px"><button class="btn danger" data-act="orphdel" data-p="'+esc(p)+'">Verwijderen</button></div>')+'</div>').join('')}
 async function photoGet(path,v){const k=path+'#'+(v||0);if(photoCache[k])return photoCache[k];
   try{const r=await storageFetch('authenticated/'+PHOTO_BUCKET+'/'+path,{method:'GET'});return photoCache[k]=URL.createObjectURL(await r.blob())}catch(e){return null}}
 // foto verkleinen op je toestel: max 1080 px, JPG, zo klein mogelijk (meestal ±150 KB)
