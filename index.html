@@ -2688,8 +2688,14 @@ $('accWrap').addEventListener('click',async e=>{const b=e.target.closest('[data-
   catch(err){accErr=err.message}accBusy=false;renderAccount()});
 
 // 🎨 Thema: achtergrond- en knopkleur (wordt in je account bewaard, dus op al je toestellen)
-const THEME_BG=[['','Auto',null],['midnight','Midnight','#08080b'],['graphite','Grafiet','#1a1b20'],['ocean','Oceaan','#06141f'],['forest','Bos','#07140d'],['grape','Druif','#140b22'],['wine','Bordeaux','#1c0a11'],['light','Licht','#f3f3f0'],['sand','Zand','#f4eee4'],['sky','Lucht','#edf3fb']];
-const THEME_BTN=[['','Auto',null],['lime','Limoen','#c6f432'],['cyan','Cyaan','#22d3ee'],['pink','Roze','#f472b6'],['orange','Oranje','#ff8a4c'],['violet','Paars','#a78bfa'],['gold','Goud','#fbbf24'],['red','Rood','#f43f5e'],['white','Wit','#f4f4f6'],['black','Zwart','#0b0b0f']];
+const THEME_BG=[['','Auto',null],['black','Zwart','#000000'],['midnight','Midnight','#08080b'],['graphite','Grafiet','#1a1b20'],['slate','Leisteen','#111827'],
+  ['navy','Marine','#0b1028'],['ocean','Oceaan','#06141f'],['teal','Lagune','#031a1a'],['forest','Bos','#07140d'],['grape','Druif','#140b22'],
+  ['plum','Pruim','#1f0d1c'],['wine','Bordeaux','#1c0a11'],['choco','Choco','#1a120b'],['white','Wit','#ffffff'],['light','Licht','#f3f3f0'],
+['sand','Zand','#f4eee4'],['sky','Lucht','#edf3fb'],['mint','Mint','#e8f5ee'],['rose','Roos','#fbeef0'],['lavender','Lavendel','#f1edfb']];
+const THEME_BTN=[['','Auto',null],['lime','Limoen','#c6f432'],['mint','Mint','#34d399'],['teal','Turkoois','#14b8a6'],['cyan','Cyaan','#22d3ee'],
+  ['sky','Hemel','#38bdf8'],['blue','Blauw','#3b82f6'],['indigo','Indigo','#6366f1'],['violet','Paars','#a78bfa'],['magenta','Magenta','#e879f9'],
+  ['pink','Roze','#f472b6'],['coral','Koraal','#fb7185'],['red','Rood','#f43f5e'],['orange','Oranje','#ff8a4c'],['peach','Perzik','#fdba74'],
+  ['gold','Goud','#fbbf24'],['lemon','Citroen','#fde047'],['bronze','Brons','#b7791f'],['white','Wit','#f4f4f6'],['black','Zwart','#0b0b0f']];
 function renderTheme(){const el=$('themeWrap');if(!el)return;const T=S.theme||{};
   const sw=(list,cur,kind)=>'<div class="swatches">'+list.map(([k,n,c])=>'<button class="swatch'+((T[kind]||'')===(c||'')?' on':'')+'" data-tk="'+kind+'" data-tc="'+(c||'')+'" aria-label="'+n+'">'
     +'<i style="'+(c?'background:'+c:'background:conic-gradient(#08080b 0 50%,#f3f3f0 50% 100%)')+'"></i><span>'+n+'</span></button>').join('')+'</div>';
