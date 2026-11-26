@@ -586,6 +586,13 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
 .thprev{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:14px;margin:10px 0 4px}
 .thcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
 .thcard span{color:var(--muted);font-size:13px}
+/* 🔥 reacties op posts */
+.reacts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.react{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:99px;padding:5px 10px;font-size:16px;line-height:1;cursor:pointer;font-family:inherit}
+.react b{font-size:13px}
+.react.on{background:color-mix(in srgb,var(--accent) 22%,var(--card2));border-color:var(--accent)}
+.react:active{transform:scale(.9)}
+.reactwho{font-size:12px;color:var(--muted);margin-top:6px}
 /* 💪 volume per spiergroep */
 .volrow{padding:9px 0;border-bottom:1px solid var(--line)}
 .volrow:last-of-type{border-bottom:0}
@@ -2829,7 +2836,7 @@ $('themeWrap').addEventListener('input',e=>{if(e.target.id!=='thFel')return;S.th
 $('themeWrap').addEventListener('change',e=>{if(e.target.id==='thFel')save()});
 // 🚀 Updates-log: bij elke upload komt hier bovenaan een nieuw blok bij
 const UPDATES=[
-  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst','🪙 Eerlijke munten: sporten levert 1 keer per dag munten op, en wat je uit- en weer afvinkt levert geen munten meer op','💪 Volume per spiergroep bij Vooruitgang: sets en kg per spier, deze en vorige week']},
+  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst','🪙 Eerlijke munten: sporten levert 1 keer per dag munten op, en wat je uit- en weer afvinkt levert geen munten meer op','💪 Volume per spiergroep bij Vooruitgang: sets en kg per spier, deze en vorige week','🔥 Reageer op posts in de feed met 🔥 💪 👏 😮 ❤️']},
   {d:'2026-11-25',t:'Account, feed en foto\'s',l:['📸 Nieuwe Feed-tab: zie de trainingen van je vrienden met foto en tekst','📷 Na een training post je een foto en uitleg','☁️ Je gegevens staan in je account: zelfde planning op elk toestel','🔀 Gegevens worden samengevoegd, niets gaat meer verloren','👤 Je eigen profiel met je laatste 5 workouts en planning','🏋️ Laatste 5 workouts (met sets) op het Training-scherm']},
   {d:'2026-11-23',t:'Aquarium en vrienden',l:['🐟 Kies zelf welke vissen in je aquarium zwemmen (max 10)','💰 Dubbele vis = helft van je munten terug','💎 Collecties voor brons, goud en diamant','🔒 Mythische LOCKED-vis (0,01% kans), ook met mutaties','🎯 Progressiedoel per oefening: popup als je zwaarder moet','💪 Recline curl bij de standaardoefeningen','📅 Planning van vrienden bekijken (deze en volgende week)','🏅 119 badges in 17 categorieën, in- en uitklappen met + en −']},
   {d:'2026-11-22',t:'Sporten, vrienden en meldingen',l:['🏋️ Sporten: eigen workouts, oefeningen, sets en rusttijd','🔥 Opwarmsets en eigen rusttijd per set','📈 Grafieken per oefening, ook vergelijken met vrienden','🏃 Cardio loggen met pace','👥 Vrienden met vriendencodes en weekranglijst','🔔 Pushmeldingen als je rust of focus voorbij is','🐠 Aquarium met munten, dobbelstenen en 50 vissen','🏫 Schooluren en vakanties bij het plannen','🎨 Nieuw app-icoon']},
@@ -2850,8 +2857,33 @@ async function loadFeed(force){if(!auth||!auth.uid){renderFeed();return}
     const ids=fr.friends.map(f=>f.id);let rows=[];
     if(ids.length)rows=await sb('/rest/v1/recent_workouts?select=*&user_id=in.('+ids.join(',')+')&order=at.desc&limit=60')||[];
     // je eigen posts rechtstreeks uit je eigen gegevens (altijd up-to-date)
-    fd.items=rows.concat(myRecentWo()).sort((a,b)=>a.at<b.at?1:-1);fd.at=Date.now()}
+    fd.items=rows.concat(myRecentWo()).sort((a,b)=>a.at<b.at?1:-1);fd.at=Date.now();
+    await loadReactions()}
   catch(e){fd.err=e.message}fd.busy=false;if(view==='feed')renderFeed()}
+// 🔥 reacties: per post (eigenaar|id) een lijst {user_id, emoji}
+const REACTS=['🔥','💪','👏','😮','❤️'];
+fd.re={};
+const reKey=(o,p)=>o+'|'+p;
+async function loadReactions(){const owners=[...new Set((fd.items||[]).map(w=>w.user_id))];if(!owners.length)return;
+  try{const r=await sb('/rest/v1/post_reactions?select=owner,post_id,user_id,emoji&owner=in.('+owners.join(',')+')&order=at.asc&limit=1000')||[];
+    const m={};for(const x of r)(m[reKey(x.owner,x.post_id)]=m[reKey(x.owner,x.post_id)]||[]).push({user_id:x.user_id,emoji:x.emoji});fd.re=m}
+  catch(e){} // tabel nog niet aangemaakt? Dan gewoon zonder reacties
+}
+function reactBar(w){const L=fd.re[reKey(w.user_id,w.id)]||[],me=auth.uid;
+  const who=[...new Set(L.map(x=>x.user_id))].sort((a,b)=>(b===me)-(a===me)).map(u=>u===me?'jij':((fr.friends.find(f=>f.id===u)||{}).nickname||null));
+  const shown=who.filter(Boolean).slice(0,3),extra=who.length-shown.length;
+  const whoTxt=shown.join(', ')+(extra?(shown.length?' en ':'')+extra+' '+(extra===1?'ander':'anderen'):'');
+  return '<div class="reacts">'+REACTS.map(e=>{const n=L.filter(x=>x.emoji===e).length,mine=L.some(x=>x.emoji===e&&x.user_id===me);
+      return '<button class="react'+(mine?' on':'')+'" data-react="'+e+'" data-o="'+esc(w.user_id)+'" data-p="'+esc(String(w.id))+'" aria-label="Reageer met '+e+'">'+e+(n?'<b>'+n+'</b>':'')+'</button>'}).join('')+'</div>'
+    +(who.length?'<div class="reactwho">'+esc(whoTxt)+(who.length===1&&shown[0]==='jij'?' reageerde':' reageerde'+(who.length===1?'':'n'))+'</div>':'')}
+async function toggleReact(b){const e=b.dataset.react,o=b.dataset.o,p=b.dataset.p,k=reKey(o,p),L=fd.re[k]=fd.re[k]||[],me=auth.uid;
+  const i=L.findIndex(x=>x.emoji===e&&x.user_id===me),had=i>=0;
+  if(had)L.splice(i,1);else L.push({user_id:me,emoji:e}); // meteen tonen, daarna pas naar de server
+  renderFeed();try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}
+  try{if(had)await sb('/rest/v1/post_reactions?owner=eq.'+o+'&post_id=eq.'+encodeURIComponent(p)+'&user_id=eq.'+me+'&emoji=eq.'+encodeURIComponent(e),{method:'DELETE'});
+    else await sb('/rest/v1/post_reactions',{method:'POST',headers:{Prefer:'return=minimal'},body:{owner:o,post_id:p,user_id:me,emoji:e}})}
+  catch(err){const j=L.findIndex(x=>x.emoji===e&&x.user_id===me);if(had)L.push({user_id:me,emoji:e});else if(j>=0)L.splice(j,1);renderFeed();
+    toast(/foreign key|violates/i.test(err.message)?'⚠️ Deze post staat niet (meer) online':/post_reactions|relation|schema cache/i.test(err.message)?'⚠️ Reacties staan nog niet aan in de database':'⚠️ '+err.message)}}
 function postCard(w){const me=w.user_id===auth.uid,f=me?{nickname:fr.profile?fr.profile.nickname:'Jij'}:(fr.friends.find(x=>x.id===w.user_id)||{nickname:'Vriend'});
   const i=w.info||{},nick=f.nickname||'?',cardio=w.kind==='cardio';
   let meta,more='';
@@ -2862,7 +2894,7 @@ function postCard(w){const me=w.user_id===auth.uid,f=me?{nickname:fr.profile?fr.
   return '<article class="post"><div class="posthead"><div class="avatar" style="background:'+avColor(nick)+'">'+esc(nick.slice(0,1).toUpperCase())+'</div>'
     +'<div><b>'+esc(nick)+(me?' <span>(jij)</span>':'')+'</b><span>'+timeAgo(w.at)+'</span></div></div>'
     +(i.photo?'<div class="wophoto" data-photo="'+esc(i.photo)+'" data-v="'+(+i.pv||0)+'"><span>📸 Foto laden…</span></div>':'')
-    +'<div class="postbody">'+(i.note?'<div class="postcap"><b>'+esc(nick)+'</b>'+esc(i.note)+'</div>':'')+'<div class="postmeta">'+meta+'</div>'+more+'</div></article>'}
+    +'<div class="postbody">'+(i.note?'<div class="postcap"><b>'+esc(nick)+'</b>'+esc(i.note)+'</div>':'')+'<div class="postmeta">'+meta+'</div>'+more+reactBar(w)+'</div></article>'}
 function renderFeed(){const el=$('feedWrap');if(!el)return;
   let h='<div class="row between" style="margin-top:6px"><h1>📸 Feed</h1>'+(auth&&auth.uid?'<button class="linkbtn" data-act="feedreload"'+(fd.busy?' disabled':'')+'>'+(fd.busy?'…':'↻ Vernieuwen')+'</button>':'')+'</div>'
     +'<div class="sub" style="margin-bottom:12px">De laatste workouts van je vrienden en jezelf.</div>';
@@ -2875,7 +2907,8 @@ function renderFeed(){const el=$('feedWrap');if(!el)return;
       +(rest?'<details class="postmore" style="margin:4px 2px 20px"><summary>'+rest+' workout'+(rest===1?'':'s')+' zonder foto ▾</summary>'+fd.items.filter(w=>!posts.includes(w)).map(postCard).join('')+'</details>':'')
       +(fr.friends.length?'':'<div class="sub" style="font-size:13px;margin:10px 2px">Voeg vrienden toe bij <b>Plannen → Vrienden</b> om hun posts te zien.</div>')}
   el.innerHTML=h;hydratePhotos(el)}
-$('feedWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act="feedreload"]');if(b)loadFeed(true)});
+$('feedWrap').addEventListener('click',e=>{const r=e.target.closest('[data-react]');if(r){toggleReact(r);return}
+  const b=e.target.closest('[data-act="feedreload"]');if(b)loadFeed(true)});
 $('feedWrap').addEventListener('toggle',e=>{if(e.target.matches('details'))hydratePhotos(e.target)},true);
 /* ===== foto's bij je workouts (Supabase Storage, map = jouw id, max 5 per persoon) ===== */
 const PHOTO_BUCKET='workout-photos',photoCache={};
