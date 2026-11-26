@@ -586,6 +586,18 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
 .thprev{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:14px;margin:10px 0 4px}
 .thcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
 .thcard span{color:var(--muted);font-size:13px}
+/* 💪 volume per spiergroep */
+.volrow{padding:9px 0;border-bottom:1px solid var(--line)}
+.volrow:last-of-type{border-bottom:0}
+.volrow .row span{font-size:13px;color:var(--muted)}
+.volrow .row span b{color:var(--text);font-size:15px}
+.volbar{position:relative;height:8px;border-radius:99px;background:var(--card2);margin:7px 0 5px;overflow:hidden}
+.volbar i{display:block;height:100%;border-radius:99px;background:var(--muted)}
+.volbar em{position:absolute;top:0;bottom:0;width:2px;background:var(--line)}
+.volrow.low .volbar i{background:#f59e0b}
+.volrow.ok .volbar i{background:var(--accent)}
+.volrow.high .volbar i{background:#ef4444}
+.volsub{font-size:12px;color:var(--muted)}
 /* 🚀 updates-log */
 .updl{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
 .updl li{font-size:14px;line-height:1.35}
@@ -1891,8 +1903,56 @@ function cmpChips(name){if(!auth||!fr.friends.length)return '';const ids=new Set
   const fs=fr.friends.filter(f=>ids.has(f.id));if(!fs.length)return '';const cur=chartCmp[name]||'';
   return '<div class="cmpchips"><span>👥 Vergelijk:</span><button data-cmp="" data-ex="'+esc(name)+'" class="'+(cur?'':'on')+'">Alleen ik</button>'
     +fs.map(f=>'<button data-cmp="'+f.id+'" data-ex="'+esc(name)+'" class="'+(cur===f.id?'on':'')+'">'+esc(f.nickname)+'</button>').join('')+'</div>'}
-$('progWrap').addEventListener('click',e=>{const b=e.target.closest('button[data-cmp]');if(!b)return;chartCmp[b.dataset.ex]=b.dataset.cmp;renderProgress()});
+$('progWrap').addEventListener('click',e=>{const w=e.target.closest('button[data-volwk]');if(w){volWk=+w.dataset.volwk;renderProgress();return}
+  const b=e.target.closest('button[data-cmp]');if(!b)return;chartCmp[b.dataset.ex]=b.dataset.cmp;renderProgress()});
 const chartSel={}; // welk punt is aangetikt per oefening
+/* 💪 Volume per spiergroep: hoeveel sets (en kg) elke spier deze week kreeg.
+   Hoofdspier telt 1 set, meewerkende spieren een halve set. Opwarmsets tellen niet mee. */
+const MUSCLES=[['borst','🫁','Borst'],['rug','🔙','Rug'],['schouders','🏋️','Schouders'],['biceps','💪','Biceps'],['triceps','🦾','Triceps'],
+  ['quads','🦵','Quadriceps'],['hamstrings','🦿','Hamstrings'],['billen','🍑','Billen'],['kuiten','🦶','Kuiten'],['overig','✨','Overig']];
+const EX_MUSCLE={'bench press':{borst:1,triceps:.5,schouders:.5},'chest press':{borst:1,triceps:.5,schouders:.5},'incline press':{borst:1,schouders:.5,triceps:.5},
+  'chest fly':{borst:1},'upper chest fly':{borst:1},'upper back row':{rug:1,biceps:.5},'lat row':{rug:1,biceps:.5},'lat pulldown':{rug:1,biceps:.5},
+  'reverse fly':{schouders:1,rug:.5},'shrugs':{rug:1},'shoulder press':{schouders:1,triceps:.5},'shoulder press (smith)':{schouders:1,triceps:.5},
+  'single arm lateral raise':{schouders:1},'single arm y-raise':{schouders:1},'squat':{quads:1,billen:.5},'deadlift':{hamstrings:1,billen:1,rug:.5},
+  'leg curl':{hamstrings:1},'leg extension':{quads:1},'calf raises':{kuiten:1}};
+function musclesOf(name){const n=String(name).toLowerCase().trim();if(EX_MUSCLE[n])return EX_MUSCLE[n];
+  // hele woorden (ook meervoud): zo wordt "machine" geen "chin" en "lateral" geen "lat"
+  const has=(...k)=>k.some(x=>new RegExp('(^|[^a-z])'+x.replace(/[-()]/g,'\\$&')+'(s|es)?([^a-z]|$)').test(n));
+  // eigen oefeningen: herkennen aan de naam
+  if(has('deadlift','rdl','romanian'))return{hamstrings:1,billen:1,rug:.5};
+  if(has('leg curl','hamstring','nordic'))return{hamstrings:1};
+  if(has('calf','calves','kuit','kuiten'))return{kuiten:1};
+  if(has('hip thrust','glute','bridge','billen','kickback','abduction'))return{billen:1};
+  if(has('squat','lunge','leg press','beenpers','leg extension','split'))return{quads:1,billen:.5};
+  if(has('tricep','pushdown','skull','dip'))return{triceps:1};
+  if(has('curl'))return{biceps:1};
+  if(has('reverse fly','rear delt','face pull'))return{schouders:1,rug:.5};
+  if(has('fly','flies','flyes','pec deck','crossover'))return{borst:1};
+  if(has('lateral','raise','delt'))return{schouders:1};
+  if(has('bench','chest','borst','push-up','pushup','push up','pec','dumbbell press'))return{borst:1,triceps:.5};
+  if(has('row','pulldown','pull-up','pullup','pull up','chin','lat','shrug','rug','back'))return{rug:1,biceps:.5};
+  if(has('shoulder','lateral','raise','overhead','ohp','delt','schouder','military','arnold'))return{schouders:1,triceps:.5};
+  return{overig:1}}
+let volWk=0; // 0 = deze week, 1 = vorige week
+function volumeOf(from,to){const v={};
+  for(const w of S.workouts||[]){if(w.date<from||w.date>to)continue;
+    for(const e of w.ex){const m=musclesOf(e.n),L=e.sets.filter(s=>!s.w),kg=L.reduce((a,s)=>a+(+s.kg||0)*(+s.reps||0),0);
+      for(const k in m){const x=v[k]=v[k]||{sets:0,kg:0,ex:new Set()};x.sets+=L.length*m[k];x.kg+=kg*m[k];x.ex.add(e.n)}}}
+  return v}
+function volumeHTML(){const m0=monday(new Date()),m=addDays(m0,-7*volWk),from=ymd(m),to=ymd(addDays(m,6));
+  const v=volumeOf(from,to),pv=volumeOf(ymd(addDays(m,-7)),ymd(addDays(m,-1)));
+  const fs=n=>String(Math.round(n*2)/2).replace('.',',');
+  const fkg=n=>n>=1000?fmtKg((n/1000).toFixed(1))+' t':Math.round(n)+' kg';
+  let h='<h2>💪 Volume per spiergroep</h2><div class="card volcard"><div class="seg" style="margin-bottom:12px"><button data-volwk="0" class="'+(volWk?'':'on')+'">Deze week</button><button data-volwk="1" class="'+(volWk?'on':'')+'">Vorige week</button></div>';
+  const keys=MUSCLES.filter(([k])=>k!=='overig'||v.overig);
+  if(!Object.keys(v).length)return h+'<div class="empty" style="padding:8px">'+(volWk?'Vorige week':'Deze week')+' nog geen krachttraining.</div></div>';
+  h+=keys.map(([k,e,n])=>{const x=v[k]||{sets:0,kg:0,ex:new Set()},p=(pv[k]||{}).sets||0,d=x.sets-p;
+    const st=k==='overig'?'':x.sets<10?' low':x.sets>20?' high':' ok';
+    return '<div class="volrow'+st+'"><div class="row between"><b>'+e+' '+n+'</b><span><b>'+fs(x.sets)+'</b> set'+(x.sets===1?'':'s')+(x.kg?' · '+fkg(x.kg):'')+'</span></div>'
+      +'<div class="volbar"><i style="width:'+Math.min(100,x.sets/20*100)+'%"></i><em style="left:50%"></em></div>'
+      +'<div class="volsub">'+(k==='overig'?esc([...x.ex].join(', ')):x.sets<10?'Nog '+fs(10-x.sets)+' sets tot de groeizone':x.sets>20?'Veel volume: let op je herstel':'✅ In de groeizone')
+      +(p||d?' · vorige week '+fs(p)+(d>0?' ↑':d<0?' ↓':''):'')+'</div></div>'}).join('');
+  return h+'<div class="sub" style="font-size:12px;margin-top:10px">Richtlijn: <b>10–20 sets</b> per spiergroep per week om te groeien. De hoofdspier telt als 1 set, meewerkende spieren als een halve.</div></div>'}
 function renderProgress(){
   const W=S.workouts,wk=ymd(monday(new Date()));
   const vol=W.reduce((a,w)=>a+w.ex.reduce((b,e)=>b+e.sets.reduce((c,s)=>c+s.kg*s.reps,0),0),0);
@@ -1900,6 +1960,7 @@ function renderProgress(){
   const rows=names.map(n=>{const h=history(n),tops=h.map(x=>bestSet(x.sets).kg),pr=prOf(n);return{n,h,tops,pr,last:h[h.length-1].date}}).sort((a,b)=>a.last<b.last?1:-1);
   $('progWrap').innerHTML='<h1>Vooruitgang</h1><div class="sub">Je records en hoe je sterker wordt. Tik op een punt in de grafiek voor details.</div>'
     +'<div class="row" style="gap:8px;margin-top:14px"><div class="stat"><b>'+(W.length+(S.cardio||[]).length)+'</b><span>workouts</span></div><div class="stat"><b>'+(W.filter(w=>w.date>=wk).length+(S.cardio||[]).filter(c=>c.date>=wk).length)+'</b><span>deze week</span></div><div class="stat"><b>'+(vol>=1000?fmtKg((vol/1000).toFixed(1))+'t':Math.round(vol)+' kg')+'</b><span>totaal gelift</span></div></div>'
+    +volumeHTML()
     +cardioProgressHTML()
     +'<h2>🏋️ Kracht: per oefening</h2>'
     +(rows.length?rows.map(r=>{const diff=r.tops[r.tops.length-1]-r.tops[0],sel=Math.min(chartSel[r.n]??r.h.length-1,r.h.length-1);
@@ -2768,7 +2829,7 @@ $('themeWrap').addEventListener('input',e=>{if(e.target.id!=='thFel')return;S.th
 $('themeWrap').addEventListener('change',e=>{if(e.target.id==='thFel')save()});
 // 🚀 Updates-log: bij elke upload komt hier bovenaan een nieuw blok bij
 const UPDATES=[
-  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst','🪙 Eerlijke munten: sporten levert 1 keer per dag munten op, en wat je uit- en weer afvinkt levert geen munten meer op']},
+  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst','🪙 Eerlijke munten: sporten levert 1 keer per dag munten op, en wat je uit- en weer afvinkt levert geen munten meer op','💪 Volume per spiergroep bij Vooruitgang: sets en kg per spier, deze en vorige week']},
   {d:'2026-11-25',t:'Account, feed en foto\'s',l:['📸 Nieuwe Feed-tab: zie de trainingen van je vrienden met foto en tekst','📷 Na een training post je een foto en uitleg','☁️ Je gegevens staan in je account: zelfde planning op elk toestel','🔀 Gegevens worden samengevoegd, niets gaat meer verloren','👤 Je eigen profiel met je laatste 5 workouts en planning','🏋️ Laatste 5 workouts (met sets) op het Training-scherm']},
   {d:'2026-11-23',t:'Aquarium en vrienden',l:['🐟 Kies zelf welke vissen in je aquarium zwemmen (max 10)','💰 Dubbele vis = helft van je munten terug','💎 Collecties voor brons, goud en diamant','🔒 Mythische LOCKED-vis (0,01% kans), ook met mutaties','🎯 Progressiedoel per oefening: popup als je zwaarder moet','💪 Recline curl bij de standaardoefeningen','📅 Planning van vrienden bekijken (deze en volgende week)','🏅 119 badges in 17 categorieën, in- en uitklappen met + en −']},
   {d:'2026-11-22',t:'Sporten, vrienden en meldingen',l:['🏋️ Sporten: eigen workouts, oefeningen, sets en rusttijd','🔥 Opwarmsets en eigen rusttijd per set','📈 Grafieken per oefening, ook vergelijken met vrienden','🏃 Cardio loggen met pace','👥 Vrienden met vriendencodes en weekranglijst','🔔 Pushmeldingen als je rust of focus voorbij is','🐠 Aquarium met munten, dobbelstenen en 50 vissen','🏫 Schooluren en vakanties bij het plannen','🎨 Nieuw app-icoon']},
