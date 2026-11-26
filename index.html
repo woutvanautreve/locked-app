@@ -589,8 +589,6 @@ nav button.on{color:var(--accent)}
     <label class="toggle" style="margin:0 0 8px"><span>🔥 <b>Opwarmen met de helft van je gewicht</b></span><input type="checkbox" id="warmHalf"></label>
     <div class="sub" style="font-size:13px;line-height:1.4">Je opwarmset krijgt automatisch <b>de helft van het gewicht van je eerste gewone set</b>, en je hoeft er <b>geen herhalingen</b> voor in te vullen.</div>
   </div>
-  <h2>🔔 Melding als je rust voorbij is</h2>
-  <div class="card"><div class="row between"><div class="sub" id="notifTxt" style="font-size:14px">…</div><button class="addday" id="notifBtn">Aanzetten</button></div></div>
   <h2>📲 Pushmeldingen</h2>
   <div class="card">
     <div class="sub" style="font-size:14px;line-height:1.4" id="pushTxt">…</div>
@@ -1527,17 +1525,12 @@ function restDone(next){
   // met pushmeldingen aan stuurt de server al een melding: dan niet nog eens zelf (anders krijg je er 2)
   let pr=false;try{pr=pushReady()}catch(e){} // (kan bij het opstarten nog niet bestaan)
   if(!pr)notify('⏱ Rust voorbij!',next?'Tijd voor je volgende set: '+next:'Tijd voor je volgende set 💪')}
-async function askNotify(){try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}catch(e){}renderNotif()}
+async function askNotify(){try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}catch(e){}}
 async function notify(title,body){try{
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
   if(r)await r.showNotification(title,{body,icon:'icon-v2-180.png',badge:'icon-v2-180.png',tag:'rest',renotify:true}); // zelfde label als de pushmelding
   else new Notification(title,{body,icon:'icon-v2-180.png'})}catch(e){}}
-function renderNotif(){const b=$('notifBtn'),t=$('notifTxt');
-  if(!('Notification' in window)){t.textContent='Meldingen werken pas als LOCKED op je beginscherm staat (iPhone). Je hoort wel altijd een piepje.';b.hidden=true;return}
-  const p=Notification.permission;b.hidden=p!=='default';
-  t.textContent=p==='granted'?'✅ Aan. Je krijgt een melding zodra je rust voorbij is (zolang LOCKED open staat).':p==='denied'?'🚫 Geblokkeerd. Zet meldingen aan via Instellingen → Meldingen → LOCKED.':'Uit. Tik op Aanzetten om een melding te krijgen als je rust voorbij is.'}
-$('notifBtn').onclick=askNotify;
 $('iosTimer').onchange=e=>{S.iosTimer=e.target.checked;save();$('iosAutoWrap').hidden=!S.iosTimer;if(S.iosTimer&&!S.seenIosHelp){S.seenIosHelp=true;save();$('iosHelp').hidden=false}};
 $('iosAuto').onchange=e=>{S.iosAuto=e.target.checked;save()};
 // pushmeldingen aan/uit (Sporten -> Instellingen)
@@ -1568,7 +1561,7 @@ setInterval(()=>{if(S.restEnd)tickRest();if(S.workout&&view==='train')tickWorkou
 /* instellingen (standaard rusttijd + meldingen) */
 function renderSchemas(){
   $('restSeg').innerHTML=[60,90,120,180].map(s=>'<button data-s="'+s+'" class="'+(S.rest===s?'on':'')+'">'+fmtRest(s)+'</button>').join('');
-  renderNotif();renderPush();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer;$('warmHalf').checked=!!S.warmHalf}
+  renderPush();$('iosTimer').checked=!!S.iosTimer;$('iosAuto').checked=!!S.iosAuto;$('iosAutoWrap').hidden=!S.iosTimer;$('warmHalf').checked=!!S.warmHalf}
 $('warmHalf').onchange=e=>{S.warmHalf=e.target.checked;save();toast(S.warmHalf?'🔥 Opwarmsets: helft van je gewicht':'🔥 Opwarmsets: zelf invullen')};
 
 /* formulier eigen oefening (voor schema of lopende training) */
