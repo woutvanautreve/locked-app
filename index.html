@@ -135,6 +135,7 @@ nav button:active{transform:scale(.88)}
 .setrow.head span{text-align:center}
 .setrow>span{text-align:center;font-weight:700;color:var(--muted)}
 .setrow input{width:100%;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--card2);text-align:center;font-weight:700}
+.setrow input::placeholder{color:var(--muted);opacity:.85;font-weight:600} /* voorstel van vorige keer: goed leesbaar */
 .setrow.done input{background:color-mix(in srgb,var(--overig) 14%,transparent);border-color:transparent}
 .setchk{height:40px;border-radius:10px;background:var(--card2);font-size:18px;font-weight:800;color:var(--muted)}
 .setrow.done .setchk{background:var(--overig);color:#fff}
@@ -1272,11 +1273,19 @@ function prOf(name){return bestSet(history(name).flatMap(h=>h.sets))}
 function lastOf(name){const h=history(name);return h.length?h[h.length-1].sets:null}
 // alle sets van vorige keer, mét opwarmsets (voor de voorstellen)
 function lastRaw(name){for(let k=S.workouts.length-1;k>=0;k--){const e=S.workouts[k].ex.find(e=>e.n===name);if(e)return e.sets}return null}
-// voorstel voor een set: vorige set van vandaag (zelfde soort), anders dezelfde set van vorige keer
+// de laatste sets van deze soort (opwarm of gewoon): zoekt verder terug als je vorige keer alleen opwarmsets deed
+function lastOfKind(name,w){for(let k=S.workouts.length-1;k>=0;k--){const e=S.workouts[k].ex.find(e=>e.n===name);
+  const L=e?e.sets.filter(x=>!!x.w===w):[];if(L.length)return L}return []}
+const val=v=>v!==''&&v!==undefined&&v!==null;
+// voorstel voor een set, per vakje apart (gewicht en herhalingen):
+// eerst de vorige set van vandaag (zelfde soort), anders dezelfde set van vorige keer
 function hint(ex,j,last){const s=ex.sets[j],w=!!s.w,same=ex.sets.filter(x=>!!x.w===w),k=same.indexOf(s),p=k>0?same[k-1]:null;
   if(w&&S.warmHalf)return{kg:halfKg(ex,last),reps:''}; // instelling: helft van je gewicht, geen herhalingen
-  if(p&&(p.kg!==''||p.reps!==''))return{kg:p.kg,reps:p.reps};
-  const L=(last||[]).filter(x=>!!x.w===w),l=L[k]||L[L.length-1];return l?{kg:l.kg,reps:l.reps}:{kg:'',reps:''}}
+  const L=lastOfKind(ex.n,w),l=L[k]||L[L.length-1]||null;
+  // 1) wat je vandaag in de vorige set invulde  2) dezelfde set van vorige keer  3) het voorstel van de vorige set
+  const pick=f=>{if(p&&val(p[f]))return p[f];if(l&&val(l[f]))return l[f];
+    if(p){const pv=hint(ex,ex.sets.indexOf(p),last);if(val(pv[f]))return pv[f]}return ''};
+  return{kg:String(pick('kg')),reps:String(pick('reps'))}}
 
 // helft van het gewicht van je eerste gewone set (wat je invulde, anders het voorstel), afgerond op 0,5 kg
 function halfKg(ex,last){const j=ex.sets.findIndex(x=>!x.w);if(j<0)return '';const f=ex.sets[j];
