@@ -7,22 +7,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Planner">
-<meta name="theme-color" content="#f4f3fb" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#121218" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f3f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08080b" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="icon-v2-180.png">
 <link rel="icon" href="icon-v2-512.png">
 <link rel="manifest" href="manifest.json">
 <title>Mijn Planner</title>
 <style>
+/* ===== LOCKED · Midnight =====
+   --accent  = accentkleur voor voortgang, actieve tab en links (limoen in donker, donkergroen in licht)
+   --btn     = hoofdknoppen (limoen met zwarte tekst in donker, zwart met limoen tekst in licht)
+   --pop-bg  = zwevende balken (rustbalk, meldingen) */
 :root{
-  --bg:#f4f3fb; --card:#ffffff; --card2:#efedf8; --text:#1c1b29; --muted:#6e6b85; --line:#e3e0f0;
-  --accent:#6c5ce7; --accent2:#a29bfe; --sport:#ff7a45; --gym:#ff7a45; --cardio:#ec4899; --studie:#3b82f6; --overig:#10b981;
-  --danger:#e5484d; --shadow:0 4px 18px rgba(40,30,90,.08);
+  --bg:#f3f3f0; --card:#ffffff; --card2:#ededE8; --text:#0b0b0f; --muted:#6b6b76; --line:#e1e1da;
+  --accent:#4d7c0f; --accent2:#84cc16; --btn:#0b0b0f; --on-btn:#c6f432; --pop-bg:#0b0b0f; --pop-fg:#f4f4f6;
+  --sport:#f97316; --gym:#f97316; --cardio:#ec4899; --studie:#2563eb; --overig:#059669;
+  --danger:#e11d48; --shadow:0 1px 2px rgba(11,11,15,.04),0 6px 20px rgba(11,11,15,.05); --glow:transparent;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#121218; --card:#1d1c26; --card2:#262533; --text:#f1f0f7; --muted:#9a97b0; --line:#2e2d3c;
-    --accent:#8b7cf6; --accent2:#5b4fc9; --shadow:0 4px 18px rgba(0,0,0,.35);
+    --bg:#08080b; --card:#121218; --card2:#1b1b23; --text:#f4f4f6; --muted:#8b8b9a; --line:#24242e;
+    --accent:#c6f432; --accent2:#9ae62a; --btn:#c6f432; --on-btn:#0b0b0f; --pop-bg:#1b1b24; --pop-fg:#f4f4f6;
+    --sport:#ff8a4c; --gym:#ff8a4c; --cardio:#f472b6; --studie:#60a5fa; --overig:#34d399;
+    --danger:#ff5d73; --shadow:none; --glow:rgba(198,244,50,.18);
   }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -462,6 +469,94 @@ nav button.on{color:var(--accent)}
 /* melding bovenaan: na het tonen echt weg (niet alleen omhoog geschoven), zodat er bij een notch geen randje blijft hangen */
 .toast{position:fixed;left:0;right:0;margin:0 auto;width:fit-content;top:calc(14px + env(safe-area-inset-top));transform:translateY(calc(-100% - 40px - env(safe-area-inset-top)));opacity:0;visibility:hidden;pointer-events:none;background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:700;font-size:15px;transition:transform .3s,opacity .25s,visibility 0s linear .3s;z-index:40;max-width:calc(100% - 32px);white-space:normal;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .toast.on{transform:translateY(0);opacity:1;visibility:visible;transition:transform .3s,opacity .2s,visibility 0s}
+
+/* =====================================================================
+   LOCKED · MIDNIGHT — de algemene look (komt na de rest, dus wint)
+   ===================================================================== */
+html,body{font-family:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+@media (prefers-color-scheme: dark){
+  body{background:radial-gradient(900px 420px at 50% -160px,rgba(198,244,50,.07),transparent 70%) no-repeat,var(--bg)}
+}
+/* letters */
+h1{font-size:30px;font-weight:800;letter-spacing:-.9px;line-height:1.1}
+.wrap>h2,.view h2,#frWrap h2,#feedWrap h2{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:28px 2px 10px}
+.view h2 .sub,.view h2 span{letter-spacing:normal;text-transform:none}
+.view h2 .bsec{font-size:16px;font-weight:800;letter-spacing:-.2px;text-transform:none;color:var(--text)}
+#fArc{stroke:var(--accent);filter:drop-shadow(0 0 10px var(--glow))}
+.sheet h2,.rollbox h2,.goalpop h2{font-size:21px;font-weight:800;letter-spacing:-.4px;text-transform:none;color:var(--text)}
+.sub{color:var(--muted)}
+/* kaarten: plat, met een dun randje */
+.card,.task,.exrow,.typecard,.dexcard,.badge,.bhead,.bsec,.post,.fpit,.rollbox,.toggle,.field,.timepick,.bigstep{border:1px solid var(--line)}
+.card{border-radius:20px;padding:16px 16px}
+.task{border-radius:16px;border-left:4px solid var(--c);padding:13px 14px}
+.task .chk{border-width:2px}
+.typecard{border-radius:18px;border-left:4px solid var(--gym)}
+.planned{border:1.5px solid var(--accent)}
+.newcard{border:1.5px dashed var(--line);border-left:1.5px dashed var(--line)}
+.newcard b{color:var(--text)}
+.dexcard{border-top:3px solid var(--rc)}
+.chip{background:var(--card2);border:1px solid var(--line);font-weight:700;white-space:nowrap}
+.lvl{min-width:0;flex:none}
+.top>div:first-child{min-width:0}
+.stat{background:var(--card2);border:1px solid var(--line);border-radius:16px}
+.stat b{font-size:24px;font-weight:800;letter-spacing:-.5px}
+/* voortgang */
+.bar{height:6px;background:var(--card2)}
+.bar>i{background:linear-gradient(90deg,var(--accent2),var(--accent));box-shadow:0 0 12px var(--glow)}
+#ringArc{filter:drop-shadow(0 0 6px var(--glow))}
+/* knoppen */
+.btn{background:var(--btn);color:var(--on-btn);font-weight:800;letter-spacing:.1px;border-radius:16px;box-shadow:0 6px 20px var(--glow)}
+.btn.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line);box-shadow:none}
+.btn.danger{box-shadow:none}
+.fab{background:var(--btn);color:var(--on-btn);font-weight:800;box-shadow:0 10px 28px var(--glow),0 4px 14px rgba(0,0,0,.25)}
+.linkbtn{font-weight:700}
+.addday{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+.opts button{background:var(--card);border-color:var(--line)}
+.opts button.on{background:var(--btn);border-color:var(--btn);color:var(--on-btn)}
+.editbtn{color:var(--text);border:1px solid var(--line)}
+.editbtn.on{background:var(--btn);color:var(--on-btn)}
+.seg{background:var(--card2);border:1px solid var(--line);border-radius:14px}
+.seg button{border-radius:10px;font-weight:700}
+.seg button.on{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+/* bovenste schakelaar: Plannen / Sporten / Aquarium / Feed */
+.modebar{padding-top:10px}
+.modebar .seg{background:color-mix(in srgb,var(--card) 70%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.modebar .seg button.on{background:var(--btn);color:var(--on-btn);box-shadow:0 4px 14px var(--glow)}
+/* week */
+.day{border:1px solid var(--line);box-shadow:none}
+.day.sel{background:var(--btn);color:var(--on-btn);border-color:var(--btn)}
+.day.sel b{color:var(--on-btn)}
+.wday.now .dayhead h3,.day.today:not(.sel) b{color:var(--accent)}
+/* onderste balk */
+nav{background:color-mix(in srgb,var(--bg) 82%,transparent);border-top:1px solid var(--line)}
+nav button{font-weight:700;position:relative}
+nav button.on{color:var(--accent)}
+nav button.on svg{filter:drop-shadow(0 0 8px var(--glow))}
+nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;height:3px;margin-left:-9px;border-radius:0 0 3px 3px;background:var(--accent)}
+/* zwevende balken */
+.restbar{background:var(--pop-bg);color:var(--pop-fg);border:1px solid color-mix(in srgb,var(--pop-fg) 12%,transparent)}
+.restbar b{color:var(--on-btn)}
+@media (prefers-color-scheme: dark){.restbar b{color:var(--accent)}}
+.restbar .bar>i{background:var(--accent)}
+.toast{background:var(--pop-bg);color:var(--pop-fg);border:1px solid color-mix(in srgb,var(--pop-fg) 14%,transparent)}
+/* vensters */
+.rollov{background:rgba(4,4,6,.72)}
+.rollbox{border-radius:26px}
+.sheet{border-top:1px solid var(--line)}
+.goalpop .gnext b{color:var(--accent)}
+/* sets tijdens de training */
+.setrow input,.srest,.setchk{border-radius:12px}
+.setrow.done .setchk{background:var(--accent);color:var(--on-btn)}
+@media (prefers-color-scheme: light){.setrow.done .setchk{background:var(--btn);color:var(--on-btn)}}
+.setrow.done input{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* vrienden en feed */
+.frme{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 14%,var(--card)),var(--card))}
+.frrow.me b{color:var(--accent)}
+.post{border-radius:22px}
+.avatar{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--accent)}
+.postmore summary{color:var(--accent)}
+/* selectievakjes en schakelaars in de accentkleur */
+.toggle input,.sdday input{accent-color:var(--accent)}
 </style>
 </head>
 <body>
