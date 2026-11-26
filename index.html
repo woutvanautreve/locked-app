@@ -586,6 +586,11 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
 .thprev{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:14px;margin:10px 0 4px}
 .thcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
 .thcard span{color:var(--muted);font-size:13px}
+/* 📝 notities bij oefeningen */
+.exnotebtn{font-size:13px;margin:6px 0 2px;padding:2px 0}
+.exnote{display:block;width:100%;box-sizing:border-box;margin:8px 0 4px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:inherit;font:inherit;font-size:14px;line-height:1.35;resize:none;min-height:40px;overflow:hidden}
+.exnote:focus{outline:none;border-color:var(--accent)}
+.woexnote{font-size:12px;color:var(--muted);margin:-2px 0 6px;padding-left:2px;font-style:italic;overflow-wrap:anywhere}
 .thfel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:14px}
 .thfel span,.thfel small{color:var(--muted);font-size:13px}
 .thfel input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:99px;border:1px solid var(--line);margin:12px 0 6px;outline:none}
@@ -1501,9 +1506,11 @@ let wDetail=null,wNew=false,wRename=false,wEdit=false; // schermstatus van het T
 function startWorkout(type){
   if(!(S.schemas[type]||[]).length){toast('Voeg eerst een oefening toe');return}
   askNotify(); // eerste keer: toestemming vragen voor meldingen (moet na een tik)
-  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>Object.assign({n:x.n,rest:x.rest||0,sets:buildSets(x)},x.goal?{goal:x.goal}:{}))};
+  S.workout={type,start:Date.now(),ex:S.schemas[type].map(x=>Object.assign({n:x.n,rest:x.rest||0,sets:buildSets(x)},x.goal?{goal:x.goal}:{},lastNote(x.n)?{note:lastNote(x.n)}:{}))};
   wEdit=false;wDetail=null;save();renderTrain();window.scrollTo(0,0);toast('💪 '+type+' gestart')}
 
+// 📝 notitie van de laatste keer dat je deze oefening deed (komt vanzelf terug in je volgende training)
+function lastNote(n){for(let k=(S.workouts||[]).length-1;k>=0;k--){const e=S.workouts[k].ex.find(e=>e.n===n);if(e)return e.note||''}return ''}
 function exInfo(x){const own=(x.wr||[]).concat(x.sr||[]).some(Boolean);
   return (x.warm?'🔥'+x.warm+' + ':'')+(x.sets||3)+' sets · ⏱ '+fmtRest(x.rest||S.rest)+(own?' · eigen rust':x.rest?'':' (standaard)')+(x.goal?' · 🎯 '+x.goal:'')}
 function renderTrain(){
@@ -1548,6 +1555,8 @@ function renderActive(el,W){
     +W.ex.map((ex,i)=>{const last=lastOf(ex.n),raw=lastRaw(ex.n),pr=prOf(ex.n);let nr=0;
       return '<div class="card exc"><div class="row between"><b>'+esc(ex.n)+'</b>'+(wEdit?'<button class="linkbtn" data-act="rmex" data-i="'+i+'" aria-label="Oefening verwijderen" style="color:var(--danger)">✕ Weg</button>':'')+'</div>'
         +'<div class="sub">⏱ '+fmtRest(restOf(ex))+' rust · '+(goalOf(ex)?'🎯 vanaf '+goalOf(ex)+' herh. zwaarder · ':'')+(last?'Vorige keer: '+last.map(s=>s.kg+'×'+s.reps).join(', '):'Eerste keer, succes!')+(pr?' · 🏆 PR '+pr.kg+' kg × '+pr.reps:'')+'</div>'
+        +(ex.note||ex.noteOpen?'<textarea class="exnote" data-note="'+i+'" rows="1" maxlength="300" placeholder="📝 Notitie, alleen voor jou (bv. stoel op stand 4)">'+esc(ex.note||'')+'</textarea>'
+          :'<button class="linkbtn exnotebtn" data-act="note" data-i="'+i+'">📝 Notitie</button>')
         +'<div class="setrow head"><span>Set</span><span>kg</span><span>Herh.</span><span>Rust</span><span></span></div>'
         +ex.sets.map((s,j)=>{const h=hint(ex,j,raw);if(!s.w)nr++;
           const rs='<select class="srest'+(s.rest?' own':'')+'" data-i="'+i+'" data-j="'+j+'" aria-label="Rust na deze set"'+(wEdit?'':' disabled')+'>'
@@ -1564,6 +1573,7 @@ function renderActive(el,W){
           +'<div class="sub" style="font-size:11px;margin:6px 0 0">Tik op de rust naast een set om die set een eigen rusttijd te geven.</div>':'')+'</div>'}).join('')
     +(wEdit?'<button class="btn ghost" data-act="addex" style="margin:4px 0 16px">+ Oefening toevoegen</button>':'<div style="height:6px"></div>')
     +'<button class="btn" data-act="finish">✅ Training afronden</button><button class="btn danger" data-act="cancel" style="margin-top:6px">Training annuleren</button>';
+  el.querySelectorAll('.exnote').forEach(t=>{t.style.height='auto';t.style.height=t.scrollHeight+'px'}); // hele notitie tonen
   tickWorkout()}
 function tickWorkout(){const e=$('wElapsed');if(e&&S.workout)e.textContent=mmss((Date.now()-S.workout.start)/1000)}
 
@@ -1600,7 +1610,10 @@ function trainNav(a,b,i){
 $('trainWrap').addEventListener('keydown',e=>{if(e.key!=='Enter')return;
   if(e.target.id==='wNewName')trainNav('newsave');if(e.target.id==='wRenameIn')trainNav('renamesave')});
 
-$('trainWrap').addEventListener('input',e=>{const f=e.target.dataset.f;if(!f||!S.workout)return;
+$('trainWrap').addEventListener('input',e=>{const t=e.target;
+  if(t.dataset.note!==undefined&&S.workout){const ex=S.workout.ex[+t.dataset.note];if(ex){ex.note=t.value;save()}
+    t.style.height='auto';t.style.height=t.scrollHeight+'px';return} // notitie: groeit mee met je tekst
+  const f=t.dataset.f;if(!f||!S.workout)return;
   const i=+e.target.dataset.i,ex=S.workout.ex[i];ex.sets[+e.target.dataset.j][f]=e.target.value.trim();save();
   // opwarmgewicht (helft) meteen bijwerken als je het gewicht van je eerste set verandert
   if(S.warmHalf&&f==='kg'){const raw=lastRaw(ex.n);ex.sets.forEach((s,j)=>{if(!s.w)return;
@@ -1611,6 +1624,7 @@ $('trainWrap').addEventListener('change',e=>{const t=e.target;if(!t.classList.co
 $('trainWrap').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,W=S.workout,i=+b.dataset.i;
   if(!W){trainNav(a,b,i);return}
   if(a==='wedit'){wEdit=!wEdit;renderTrain();return}
+  if(a==='note'){W.ex[i].noteOpen=1;renderTrain();const t=document.querySelector('#trainWrap textarea[data-note="'+i+'"]');if(t)t.focus();return}
   if(['addset','rmset','addwarm','rmwarm','rmex','addex'].includes(a)&&!wEdit)return; // vergrendeld zolang je niet op Bewerken tikt
   if(a==='set'){const ex=W.ex[i],j=+b.dataset.j,s=ex.sets[j];
     if(s.done){s.done=false;save();renderTrain();return}
@@ -1648,7 +1662,8 @@ $('goalOv').addEventListener('click',e=>{const b=e.target.closest('[data-act]');
     if(ex){ex.sets.forEach(x=>{if(!x.w&&!x.done)x.kg=kg});save();renderTrain();toast('💪 '+ex.n+': volgende sets op '+fmtKg(+kg)+' kg')}}
   $('goalOv').hidden=true});
 function finishWorkout(){
-  const W=S.workout,ex=W.ex.map(e=>({n:e.n,sets:e.sets.filter(s=>s.done).map(s=>Object.assign({kg:num(s.kg)||0,reps:num(s.reps)||0},s.w?{w:true}:{}))})).filter(e=>e.sets.length);
+  const W=S.workout,ex=W.ex.map(e=>Object.assign({n:e.n,sets:e.sets.filter(s=>s.done).map(s=>Object.assign({kg:num(s.kg)||0,reps:num(s.reps)||0},s.w?{w:true}:{}))},
+    (e.note||'').trim()?{note:e.note.trim().slice(0,300)}:{})).filter(e=>e.sets.length);
   if(!ex.length){toast('Vink minstens 1 set af met ✓');return}
   // nieuwe PR's zoeken (vóór het opslaan vergelijken met de geschiedenis)
   const prs=ex.map(e=>{const old=prOf(e.n),nw=bestSet(e.sets);return old&&nw&&(nw.kg>old.kg||(nw.kg===old.kg&&nw.reps>old.reps))?e.n+' '+nw.kg+' kg':null}).filter(Boolean);
@@ -2607,7 +2622,7 @@ async function frLoadEx(){if(!auth||!fr.friends.length){fr.exStats=[];return}
 // je laatste 5 workouts (gym + cardio) uit je eigen gegevens, zonder login (voor het Training-scherm)
 function localRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
   const gym=(S.workouts||[]).map(w=>({id:w.id,own:true,at:new Date(w.end||w.start||parse(w.date)).toISOString(),kind:'gym',title:String(w.type),
-    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:Object.assign({ex:w.ex.map(e=>({n:e.n,s:e.sets.map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])}))},woExtra(w))}));
+    mins:r(((w.end||0)-(w.start||0))/60000,1440),info:Object.assign({ex:w.ex.map(e=>Object.assign({n:e.n,s:e.sets.map(s=>s.w?[s.kg,s.reps,1]:[s.kg,s.reps])},e.note?{nt:e.note}:{}))},woExtra(w))})); // nt = je eigen notitie (niet gedeeld)
   const cd=(S.cardio||[]).map(c=>({at:new Date(parse(c.date).getTime()+12*3600000).toISOString(),kind:'cardio',title:String(c.name||c.type),mins:r(c.sec/60,1440),info:{type:c.type,km:c.km,sec:c.sec}}));
   return gym.concat(cd).sort((a,b)=>a.at<b.at?1:-1).slice(0,5)}
 function myRecentWo(){const r=(v,m)=>Math.max(0,Math.min(m,Math.round(v)));
@@ -2656,7 +2671,7 @@ function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' 
     // foto en uitleg van na de training
     +(i.photo?'<div class="wophoto" data-photo="'+esc(i.photo)+'" data-v="'+(+i.pv||0)+'"><span>📸 Foto laden…</span></div>':'')
     +(i.note?'<div class="wonote">💬 '+esc(i.note)+'</div>':'')
-    +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')
+    +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>'+(e.nt?'<div class="woexnote">📝 '+esc(e.nt)+'</div>':'')).join('')
     +(w.own?'<button class="linkbtn wophbtn" data-act="wophoto" data-id="'+esc(String(w.id))+'">📸 '+(i.photo||i.note?'Foto of uitleg aanpassen':'Foto en uitleg toevoegen')+'</button>':'')+'</div>'}
 /* ===== ⚙️ Instellingen: overzicht met groepen (Account, Meldingen, Workouts, Thema) ===== */
 let setGroup=null,accMsg='',accErr='',accBusy=false;
