@@ -586,6 +586,10 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
 .thprev{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:14px;margin:10px 0 4px}
 .thcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
 .thcard span{color:var(--muted);font-size:13px}
+/* 🚀 updates-log */
+.updl{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.updl li{font-size:14px;line-height:1.35}
+.updnew{background:var(--btn);color:var(--on-btn);border:0;font-weight:800}
 /* 📝 notities bij oefeningen */
 .exnotebtn{font-size:13px;margin:6px 0 2px;padding:2px 0}
 .exnote{display:block;width:100%;box-sizing:border-box;margin:8px 0 4px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:inherit;font:inherit;font-size:14px;line-height:1.35;resize:none;min-height:40px;overflow:hidden}
@@ -715,6 +719,7 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
    <button class="setrow2" data-g="notif"><i style="--sc:#f472b6">🔔</i><span><b>Meldingen</b><small>Pushmeldingen en iPhone-timer</small></span><em>›</em></button>
    <button class="setrow2" data-g="workouts"><i style="--sc:#ff8a4c">🏋️</i><span><b>Workouts</b><small>Rusttijd en opwarmsets</small></span><em>›</em></button>
    <button class="setrow2" data-g="theme"><i style="--sc:#c6f432">🎨</i><span><b>Thema</b><small>Achtergrond- en knopkleur</small></span><em>›</em></button>
+   <button class="setrow2" data-g="updates"><i style="--sc:#22d3ee">🚀</i><span><b>Updates</b><small id="setUpdSub">Wat er nieuw is in LOCKED</small></span><em>›</em></button>
   </div>
   <div class="sub" style="font-size:12px;text-align:center;margin-top:24px">🔒 LOCKED</div>
  </div>
@@ -755,6 +760,12 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
   <button class="linkbtn" data-act="setback" style="margin-top:6px">‹ Instellingen</button>
   <h1>🎨 Thema</h1>
   <div id="themeWrap"></div>
+ </div>
+ <div class="sgroup" data-g="updates" hidden>
+  <button class="linkbtn" data-act="setback" style="margin-top:6px">‹ Instellingen</button>
+  <h1>🚀 Updates</h1>
+  <div class="sub">Alles wat er nieuw is in LOCKED, de nieuwste bovenaan.</div>
+  <div id="updWrap"></div>
  </div>
 
  <!-- 🔔 Meldingen -->
@@ -2681,6 +2692,8 @@ function renderSettings(){
   $('setAccSub').textContent=auth&&auth.uid&&fr.profile?'Ingelogd als '+fr.profile.nickname:'Inloggen, gebruikersnaam, wachtwoord';
   if(setGroup==='account')renderAccount();
   if(setGroup==='theme')renderTheme();
+  if(setGroup==='updates')renderUpdates();
+  $('setUpdSub').textContent='Laatste update: '+updDate(UPDATES[0].d);
   if(setGroup==='workouts'||setGroup==='notif')renderSchemas()}
 $('v-settings').addEventListener('click',e=>{
   const g=e.target.closest('.setrow2[data-g]');if(g){setGroup=g.dataset.g;accMsg=accErr='';renderSettings();window.scrollTo(0,0);return}
@@ -2739,6 +2752,17 @@ $('themeWrap').addEventListener('click',e=>{const b=e.target.closest('[data-tk]'
 // slider: live meekleuren tijdens het schuiven, pas bewaren als je loslaat
 $('themeWrap').addEventListener('input',e=>{if(e.target.id!=='thFel')return;S.theme=Object.assign({},S.theme||{},{bgLvl:+e.target.value});$('thFelV').textContent=e.target.value+'%';applyTheme()});
 $('themeWrap').addEventListener('change',e=>{if(e.target.id==='thFel')save()});
+// 🚀 Updates-log: bij elke upload komt hier bovenaan een nieuw blok bij
+const UPDATES=[
+  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst']},
+  {d:'2026-11-25',t:'Account, feed en foto\'s',l:['📸 Nieuwe Feed-tab: zie de trainingen van je vrienden met foto en tekst','📷 Na een training post je een foto en uitleg','☁️ Je gegevens staan in je account: zelfde planning op elk toestel','🔀 Gegevens worden samengevoegd, niets gaat meer verloren','👤 Je eigen profiel met je laatste 5 workouts en planning','🏋️ Laatste 5 workouts (met sets) op het Training-scherm']},
+  {d:'2026-11-23',t:'Aquarium en vrienden',l:['🐟 Kies zelf welke vissen in je aquarium zwemmen (max 10)','💰 Dubbele vis = helft van je munten terug','💎 Collecties voor brons, goud en diamant','🔒 Mythische LOCKED-vis (0,01% kans), ook met mutaties','🎯 Progressiedoel per oefening: popup als je zwaarder moet','💪 Recline curl bij de standaardoefeningen','📅 Planning van vrienden bekijken (deze en volgende week)','🏅 119 badges in 17 categorieën, in- en uitklappen met + en −']},
+  {d:'2026-11-22',t:'Sporten, vrienden en meldingen',l:['🏋️ Sporten: eigen workouts, oefeningen, sets en rusttijd','🔥 Opwarmsets en eigen rusttijd per set','📈 Grafieken per oefening, ook vergelijken met vrienden','🏃 Cardio loggen met pace','👥 Vrienden met vriendencodes en weekranglijst','🔔 Pushmeldingen als je rust of focus voorbij is','🐠 Aquarium met munten, dobbelstenen en 50 vissen','🏫 Schooluren en vakanties bij het plannen','🎨 Nieuw app-icoon']},
+  {d:'2026-11-21',t:'De eerste versie',l:['🔒 LOCKED is geboren: je planner voor school en sport op je iPhone']}];
+const updDate=d=>{const x=parse(d);return x.getDate()+' '+MN[x.getMonth()]+' '+x.getFullYear()};
+function renderUpdates(){const el=$('updWrap');if(!el)return;
+  el.innerHTML=UPDATES.map((u,k)=>'<div class="card updcard"><div class="row between"><b>'+esc(u.t)+'</b>'+(k?'':'<span class="chip updnew">Nieuw</span>')+'</div>'
+    +'<div class="sub" style="font-size:12px;margin:2px 0 8px">'+updDate(u.d)+'</div><ul class="updl">'+u.l.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')}
 /* ===== 📸 Feed: de laatste workouts van je vrienden en jezelf, met foto en tekst ===== */
 const fd={items:null,err:'',at:0,busy:false};
 const timeAgo=iso=>{const m=Math.max(0,Math.round((Date.now()-new Date(iso))/60000));
