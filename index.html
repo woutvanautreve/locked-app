@@ -1239,7 +1239,9 @@ function onListClick(e){
   if(b.dataset.act==='move')return;
   if(b.dataset.act==='moveall'){for(const t of S.tasks)if(!t.done&&t.date<today())t.date=today();save();render();toast('Naar vandaag verplaatst');return}
   const el=b.closest('.task'),t=S.tasks.find(x=>x.id===el.dataset.id);if(!t)return;
-  if(b.dataset.act==='toggle'){t.done=!t.done;save();if(t.done)toast(CHEER[t.cat]+' +'+XP[t.cat]+' XP · +'+coinFor(t)+' 🪙');
+  if(b.dataset.act==='toggle'){const before=earned();if(t.done)t.nopay=1; // uitgevinkt: opnieuw afvinken levert geen munten meer op
+    t.done=!t.done;save();const got=earned()-before;
+    if(t.done)toast(CHEER[t.cat]+' +'+XP[t.cat]+' XP · '+(got>0?'+'+got+' 🪙':t.nopay?'geen 🪙 (al eens afgevinkt)':SPORT_CATS.includes(t.cat)?'geen 🪙 (sport vandaag al beloond)':'+0 🪙'));
     render();const n=document.querySelector('.view.on [data-id="'+t.id+'"]');if(n)n.classList.add('pop')}
   else openSheet(t)
 }
@@ -1679,17 +1681,18 @@ function finishWorkout(){
   // nieuwe PR's zoeken (vóór het opslaan vergelijken met de geschiedenis)
   const prs=ex.map(e=>{const old=prOf(e.n),nw=bestSet(e.sets);return old&&nw&&(nw.kg>old.kg||(nw.kg===old.kg&&nw.reps>old.reps))?e.n+' '+nw.kg+' kg':null}).filter(Boolean);
   const end=Date.now(),mins=Math.max(15,Math.round((end-W.start)/60000));
+  const before=earned();
   S.workouts.push(Object.assign({id:uid(),type:W.type,date:today(),start:W.start,end,ex},prs.length?{prog:prs.length}:{})); // prog = oefeningen met vooruitgang
   // geplande gymtaak van vandaag afvinken, of er een aanmaken zodat het meetelt voor je doelen
   let t=S.tasks.find(t=>t.cat==='gym'&&t.date===today()&&!t.done&&t.sub===W.type)||S.tasks.find(t=>t.cat==='gym'&&t.date===today()&&!t.done);
   if(!t){const st=new Date(W.start),from=pad(st.getHours())+':'+pad(Math.floor(st.getMinutes()/15)*15);
     t={id:uid(),title:W.type,cat:'gym',sub:W.type,date:today(),time:from,end:fromMin(toMin(from)+mins),dur:mins,done:false};S.tasks.push(t)}
-  t.done=true;S.workout=null;stopRest();save();render();
+  t.done=true;const got=earned()-before;S.workout=null;stopRest();save();render();
   try{frSyncEx().catch(()=>{});frSyncWo().catch(()=>{})}catch(e){} // nieuwe resultaten delen met vrienden
-  toast('💪 Training opgeslagen! +'+XP.gym+' XP · +'+(15+COIN.gym)+' 🪙');
+  toast('💪 Training opgeslagen! +'+XP.gym+' XP · '+coinTxt(got));
   // meteen vragen: foto en uitleg voor je vrienden?
   const newId=S.workouts[S.workouts.length-1].id;setTimeout(()=>{try{openPhotoPop(newId,true)}catch(e){}},600); // verplicht posten
-  if(prs.length)setTimeout(()=>toast('🏆 Vooruitgang op '+(prs.length===1?prs[0]:prs.length+' oefeningen')+'! +'+prs.length*PROG_XP+' XP · +'+prs.length*PROG_COIN+' 🪙'),2400)}
+  if(prs.length)setTimeout(()=>toast('🏆 Vooruitgang op '+(prs.length===1?prs[0]:prs.length+' oefeningen')+'! +'+prs.length*PROG_XP+' XP'+(got>0?' · +'+prs.length*PROG_COIN+' 🪙':'')),2400)}
 
 /* ===== cardio-workouts: afstand + tijd -> gemiddelde pace ===== */
 const CTYPE={Lopen:{e:'🏃',unit:'km'},Fietsen:{e:'🚴',unit:'km'},Zwemmen:{e:'🏊',unit:'m'},Ander:{e:'✨',unit:'km'}};
@@ -1718,15 +1721,15 @@ $('cdSave').onclick=()=>{const{km,sec}=cdRead(),err=$('cdErr');
   S.cardio=S.cardio||[];const prev=S.cardio.filter(c=>c.type===type);
   const best=prev.length?prev.reduce((b,c)=>{const v=paceOf(type,c.km,c.sec).v;return p.higher?Math.max(b,v):Math.min(b,v)},p.higher?-1:Infinity):null;
   const longest=prev.length?Math.max(...prev.map(c=>c.km)):null;
-  S.cardio.push({id:uid(),type,name,date,km,sec});
+  const before=earned();S.cardio.push({id:uid(),type,name,date,km,sec});
   setTimeout(()=>{try{frSyncWo().catch(()=>{})}catch(e){}},0); // laatste workouts op je profiel bijwerken
   // geplande cardiotaak van die dag afvinken, of er een aanmaken (telt mee voor je cardiodoel)
   const mins=Math.max(1,Math.round(sec/60));
   let t=S.tasks.find(x=>x.cat==='cardio'&&x.date===date&&!x.done&&x.sub===type)||S.tasks.find(x=>x.cat==='cardio'&&x.date===date&&!x.done);
   if(!t){const n=new Date(),from=pad(n.getHours())+':'+pad(Math.floor(n.getMinutes()/15)*15);t={id:uid(),title:name,cat:'cardio',sub:type==='Ander'?'Ander':type,date,time:from,end:fromMin(toMin(from)+mins),dur:mins,done:false};S.tasks.push(t)}
   t.done=true;t.dur=mins;if(t.time)t.end=fromMin(toMin(t.time)+mins);
-  save();closeCardio();render();
-  toast(CTYPE[type].e+' '+fmtKm(type==='Zwemmen'?km*1000:km)+' '+CTYPE[type].unit+' in '+fmtDur(sec)+' · '+p.txt+' · +'+(15+COIN.cardio)+' 🪙');
+  const got=earned()-before;save();closeCardio();render();
+  toast(CTYPE[type].e+' '+fmtKm(type==='Zwemmen'?km*1000:km)+' '+CTYPE[type].unit+' in '+fmtDur(sec)+' · '+p.txt+' · '+coinTxt(got));
   const pr=best!==null&&(p.higher?p.v>best:p.v<best),far=longest!==null&&km>longest;
   if(pr||far)setTimeout(()=>toast(pr?'🏆 Nieuw record: snelste '+type.toLowerCase()+' ooit!':'🏆 Nieuw record: verste afstand!'),2200)};
 function cardioListHTML(){const L=(S.cardio||[]).slice().sort((a,b)=>a.date<b.date?1:-1).slice(0,6);
@@ -2257,10 +2260,21 @@ function fishSVG(F,sil,cls,mut){
 /* munten: verdiend (uit je voortgang) min uitgegeven */
 const COIN={gym:10,cardio:10,studie:5,overig:2};
 const coinFor=t=>(COIN[t.cat]||0)+(t.kind==='toets'?10:0);
-function earned(){let c=0;
-  for(const t of S.tasks)if(t.done)c+=coinFor(t);
+// Eerlijke regels (vanaf 26 nov 2026, oudere munten blijven zoals ze waren):
+// - sporten levert maar 1 keer per dag munten op (de beste workout van die dag telt)
+// - iets dat je afvinkt en weer uitvinkt, levert bij opnieuw afvinken geen munten meer op (t.nopay)
+const COIN_RULES='2026-11-26',SPORT_CATS=['gym','cardio'];
+const coinTxt=n=>n>0?'+'+n+' 🪙':'geen 🪙 (je sport van vandaag is al beloond)';
+function earned(){let c=0;const sportDay=new Set(),woDay={};
+  for(const t of S.tasks){if(!t.done||t.nopay)continue;
+    if(t.date>=COIN_RULES&&SPORT_CATS.includes(t.cat)){if(sportDay.has(t.date))continue;sportDay.add(t.date)}
+    c+=coinFor(t)}
   for(const f of S.focus)c+=Math.floor(f.min/5);
-  c+=(S.workouts||[]).length*15+(S.cardio||[]).length*15+(S.badges||[]).length*25+progCount(S.workouts)*PROG_COIN;
+  const wo=(d,v)=>{if(d<COIN_RULES)c+=v;else woDay[d]=Math.max(woDay[d]||0,v)}; // per dag alleen de beste workout
+  for(const w of S.workouts||[])wo(w.date,15+(w.prog||0)*PROG_COIN);
+  for(const x of S.cardio||[])wo(x.date,15);
+  for(const d in woDay)c+=woDay[d];
+  c+=(S.badges||[]).length*25;
   for(const w in S.bonus||{})c+=Object.keys(S.bonus[w]).length*50;
   return c}
 const coins=()=>Math.max(0,earned()-(S.spent||0));
@@ -2754,7 +2768,7 @@ $('themeWrap').addEventListener('input',e=>{if(e.target.id!=='thFel')return;S.th
 $('themeWrap').addEventListener('change',e=>{if(e.target.id==='thFel')save()});
 // 🚀 Updates-log: bij elke upload komt hier bovenaan een nieuw blok bij
 const UPDATES=[
-  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst']},
+  {d:'2026-11-26',t:'Instellingen en thema',l:['⚙️ Nieuwe instellingen: ronde knop naast Feed met Account, Meldingen, Workouts, Thema en Updates','🎨 Thema: kies zelf je achtergrond- en knopkleur (20 + 20 kleuren)','🎚️ Schuifregelaar "Hoe fel" voor je achtergrondkleur','👤 Gebruikersnaam en wachtwoord wijzigen in Account','📝 Notities per oefening tijdens je training, die komen volgende keer terug','🖤 Nieuwe look: LOCKED Midnight','🏋️ Gewicht van vorige keer altijd zichtbaar bij een nieuwe training','🚀 Deze Updates-lijst','🪙 Eerlijke munten: sporten levert 1 keer per dag munten op, en wat je uit- en weer afvinkt levert geen munten meer op']},
   {d:'2026-11-25',t:'Account, feed en foto\'s',l:['📸 Nieuwe Feed-tab: zie de trainingen van je vrienden met foto en tekst','📷 Na een training post je een foto en uitleg','☁️ Je gegevens staan in je account: zelfde planning op elk toestel','🔀 Gegevens worden samengevoegd, niets gaat meer verloren','👤 Je eigen profiel met je laatste 5 workouts en planning','🏋️ Laatste 5 workouts (met sets) op het Training-scherm']},
   {d:'2026-11-23',t:'Aquarium en vrienden',l:['🐟 Kies zelf welke vissen in je aquarium zwemmen (max 10)','💰 Dubbele vis = helft van je munten terug','💎 Collecties voor brons, goud en diamant','🔒 Mythische LOCKED-vis (0,01% kans), ook met mutaties','🎯 Progressiedoel per oefening: popup als je zwaarder moet','💪 Recline curl bij de standaardoefeningen','📅 Planning van vrienden bekijken (deze en volgende week)','🏅 119 badges in 17 categorieën, in- en uitklappen met + en −']},
   {d:'2026-11-22',t:'Sporten, vrienden en meldingen',l:['🏋️ Sporten: eigen workouts, oefeningen, sets en rusttijd','🔥 Opwarmsets en eigen rusttijd per set','📈 Grafieken per oefening, ook vergelijken met vrienden','🏃 Cardio loggen met pace','👥 Vrienden met vriendencodes en weekranglijst','🔔 Pushmeldingen als je rust of focus voorbij is','🐠 Aquarium met munten, dobbelstenen en 50 vissen','🏫 Schooluren en vakanties bij het plannen','🎨 Nieuw app-icoon']},
