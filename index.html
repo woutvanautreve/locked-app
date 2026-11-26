@@ -557,11 +557,41 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
 .postmore summary{color:var(--accent)}
 /* selectievakjes en schakelaars in de accentkleur */
 .toggle input,.sdday input{accent-color:var(--accent)}
+/* ⚙️ instellingen: ronde knop naast de modusbalk + groepen */
+.modewrap{display:flex;gap:8px;align-items:stretch}
+.modewrap .seg{flex:1;min-width:0}
+.setbtn{flex:none;width:46px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--card) 70%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--text);display:grid;place-items:center;cursor:pointer;padding:0;aspect-ratio:1}
+.setbtn svg{width:22px;height:22px;transition:transform .4s}
+.setbtn.on{background:var(--btn);color:var(--on-btn);border-color:transparent}
+.setbtn.on svg{transform:rotate(60deg)}
+.setlist{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.setrow2{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;color:var(--text);font:inherit;cursor:pointer;box-shadow:var(--shadow)}
+.setrow2:active{transform:scale(.985)}
+.setrow2 i{flex:none;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-style:normal;font-size:20px;background:color-mix(in srgb,var(--sc) 18%,transparent)}
+.setrow2 span{flex:1;min-width:0;display:flex;flex-direction:column}
+.setrow2 b{font-size:16px}
+.setrow2 small{color:var(--muted);font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setrow2 em{font-style:normal;color:var(--muted);font-size:22px}
+.sgroup .backbtn,.sgroup [data-act="setback"]{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;font-size:15px;padding:4px 0;margin-bottom:6px;cursor:pointer}
+.accrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.accrow:last-child{border-bottom:0}
+.accrow span{color:var(--muted);font-size:14px}
+.accrow b{text-align:right;overflow-wrap:anywhere;font-size:14px}
+.swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:8px}
+.swatch{background:none;border:0;padding:0;color:var(--muted);font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;min-width:0}
+.swatch i{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);display:block;box-shadow:0 0 0 3px var(--bg)}
+.swatch.on i{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--accent)}
+.swatch.on{color:var(--text);font-weight:700}
+.swatch span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thprev{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:14px;margin:10px 0 4px}
+.thcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column}
+.thcard span{color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
 
-<div class="modebar"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button><button data-m="aqua">🐠 Aquarium</button><button data-m="feed">📸 Feed</button></div></div>
+<div class="modebar"><div class="modewrap"><div class="seg" id="modeSeg"><button data-m="plan" class="on">📅 Plannen</button><button data-m="sport">🏋️ Sporten</button><button data-m="aqua">🐠 Aquarium</button><button data-m="feed">📸 Feed</button></div>
+  <button class="setbtn" id="setBtn" aria-label="Instellingen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></div>
 
 <!-- VANDAAG -->
 <section class="view on" id="v-today"><div class="wrap">
@@ -656,15 +686,6 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
   <div class="card" id="schoolSet"></div>
   <h2>🏖️ Vakanties</h2>
   <div class="card" id="vacSet"></div>
-  <h2>Instellingen</h2>
-  <div class="card">
-    <label class="l" for="nameIn">Je naam</label>
-    <input class="field" id="nameIn" placeholder="Hoe mag ik je noemen?" maxlength="30">
-    <div class="btns"><button class="btn ghost" id="exportBtn">Back-up downloaden</button><button class="btn ghost" id="importBtn">Back-up terugzetten</button></div>
-    <input type="file" id="importFile" accept=".json,application/json" hidden>
-    <div class="sub" style="font-size:12px;margin-top:6px;line-height:1.4">Tip: download een back-up voor je LOCKED opnieuw op je beginscherm zet. Daarna zet je hem hier terug, zodat je niets kwijt bent.</div>
-    <button class="btn danger" id="resetBtn" style="margin-top:6px">Alles wissen</button>
-  </div>
 </div></section>
 
 <!-- ===== VRIENDEN ===== -->
@@ -673,9 +694,41 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
 <!-- ===== SPORTEN ===== -->
 <section class="view" id="v-train"><div class="wrap" id="trainWrap"></div></section>
 
-<section class="view" id="v-schemas"><div class="wrap">
-  <h1>Instellingen</h1>
-  <div class="sub">Voor al je trainingen. Je workouts pas je aan bij <b>Training</b>.</div>
+<!-- ===== INSTELLINGEN (rond knopje naast Feed) ===== -->
+<section class="view" id="v-settings"><div class="wrap">
+ <!-- overzicht van de groepen -->
+ <div id="setHome">
+  <h1 style="margin-top:6px">Instellingen</h1>
+  <div class="sub" style="margin-bottom:14px">Alles van LOCKED op één plek.</div>
+  <div class="setlist">
+   <button class="setrow2" data-g="account"><i style="--sc:#60a5fa">👤</i><span><b>Account</b><small id="setAccSub">Gebruikersnaam, e-mail, wachtwoord</small></span><em>›</em></button>
+   <button class="setrow2" data-g="notif"><i style="--sc:#f472b6">🔔</i><span><b>Meldingen</b><small>Pushmeldingen en iPhone-timer</small></span><em>›</em></button>
+   <button class="setrow2" data-g="workouts"><i style="--sc:#ff8a4c">🏋️</i><span><b>Workouts</b><small>Rusttijd en opwarmsets</small></span><em>›</em></button>
+   <button class="setrow2" data-g="theme"><i style="--sc:#c6f432">🎨</i><span><b>Thema</b><small>Achtergrond- en knopkleur</small></span><em>›</em></button>
+  </div>
+  <div class="sub" style="font-size:12px;text-align:center;margin-top:24px">🔒 LOCKED</div>
+ </div>
+
+ <!-- 👤 Account -->
+ <div class="sgroup" data-g="account" hidden>
+  <button class="linkbtn" data-act="setback" style="margin-top:6px">‹ Instellingen</button>
+  <h1>👤 Account</h1>
+  <div id="accWrap"></div>
+  <h2>Op dit toestel</h2>
+  <div class="card">
+    <label class="l" for="nameIn">Je naam (voor je begroeting)</label>
+    <input class="field" id="nameIn" placeholder="Hoe mag ik je noemen?" maxlength="30">
+    <div class="btns"><button class="btn ghost" id="exportBtn">Back-up downloaden</button><button class="btn ghost" id="importBtn">Back-up terugzetten</button></div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <div class="sub" style="font-size:12px;margin-top:6px;line-height:1.4">Tip: download een back-up voor je LOCKED opnieuw op je beginscherm zet. Daarna zet je hem hier terug, zodat je niets kwijt bent.</div>
+    <button class="btn danger" id="resetBtn" style="margin-top:6px">Alles wissen</button>
+  </div>
+ </div>
+
+ <!-- 🏋️ Workouts -->
+ <div class="sgroup" data-g="workouts" hidden>
+  <button class="linkbtn" data-act="setback" style="margin-top:6px">‹ Instellingen</button>
+  <h1>🏋️ Workouts</h1>
   <h2>Standaard rusttijd</h2>
   <div class="sub" style="font-size:13px;margin:-6px 0 10px">Voor oefeningen zonder eigen rusttijd.</div>
   <div class="seg" id="restSeg"></div>
@@ -684,6 +737,20 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
     <label class="toggle" style="margin:0 0 8px"><span>🔥 <b>Opwarmen met de helft van je gewicht</b></span><input type="checkbox" id="warmHalf"></label>
     <div class="sub" style="font-size:13px;line-height:1.4">Je opwarmset krijgt automatisch <b>de helft van het gewicht van je eerste gewone set</b>, en je hoeft er <b>geen herhalingen</b> voor in te vullen.</div>
   </div>
+  <div class="sub" style="font-size:13px;margin-top:14px">Je workouts en oefeningen zelf pas je aan bij <b>Sporten → Training</b>.</div>
+ </div>
+
+ <!-- 🎨 Thema -->
+ <div class="sgroup" data-g="theme" hidden>
+  <button class="linkbtn" data-act="setback" style="margin-top:6px">‹ Instellingen</button>
+  <h1>🎨 Thema</h1>
+  <div id="themeWrap"></div>
+ </div>
+
+ <!-- 🔔 Meldingen -->
+ <div class="sgroup" data-g="notif" hidden>
+  <button class="linkbtn" data-act="setback" style="margin-top:6px">‹ Instellingen</button>
+  <h1>🔔 Meldingen</h1>
   <h2>📲 Pushmeldingen</h2>
   <div class="card">
     <div class="sub" style="font-size:14px;line-height:1.4" id="pushTxt">…</div>
@@ -702,6 +769,7 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
       <p><b>Tip</b><br>Tik je in LOCKED op <b>Klaar</b> om je rust over te slaan, dan loopt de iPhone-timer nog door. Stop hem dan via je vergrendelscherm of de Dynamic Island.</p>
     </div>
   </div>
+ </div>
 </div></section>
 
 <section class="view" id="v-progress"><div class="wrap" id="progWrap"></div></section>
@@ -779,7 +847,6 @@ nav button.on::after{content:"";position:absolute;top:-9px;left:50%;width:18px;h
  </div>
  <div class="navgroup" id="navSport" hidden>
   <button data-v="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg>Training</button>
-  <button data-v="schemas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Instellingen</button>
   <button data-v="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Vooruitgang</button>
  </div>
  <div class="navgroup" id="navAqua" hidden>
@@ -872,6 +939,28 @@ function normState(s){const x=Object.assign(defaults(),s);
   for(const t of x.tasks)if(t.cat==='sport')t.cat='gym';return x}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return normState(s)}catch(e){}return defaults()}
 let S=load();
+/* 🎨 Thema toepassen: uit je achtergrond- en knopkleur rekent LOCKED kaarten, randen en tekstkleuren uit,
+   zodat alles leesbaar blijft. Geen keuze = de standaard Midnight-look (volgt licht/donker van je iPhone). */
+function hexLum(h){const n=parseInt(String(h).slice(1),16),c=[n>>16&255,n>>8&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]}
+const hexRgb=h=>{const n=parseInt(String(h).slice(1),16);return (n>>16&255)+','+(n>>8&255)+','+(n&255)};
+const THEME_VARS=['--bg','--card','--card2','--line','--text','--muted','--accent','--accent2','--btn','--on-btn','--pop-bg','--pop-fg','--glow','--shadow'];
+function applyTheme(){const r=document.documentElement,T=(S&&S.theme)||{},set=(k,v)=>r.style.setProperty(k,v);
+  for(const v of THEME_VARS)r.style.removeProperty(v);r.style.colorScheme='';if(document.body)document.body.style.background='';
+  const metas=document.querySelectorAll('meta[name="theme-color"]');
+  if(!T.bg&&!T.btn){if(metas[0])metas[0].content='#f3f3f0';if(metas[1])metas[1].content='#08080b';return}
+  const sysDark=matchMedia('(prefers-color-scheme: dark)').matches,bg=T.bg||(sysDark?'#08080b':'#f3f3f0'),dark=hexLum(bg)<.2;
+  if(T.bg){set('--bg',bg);r.style.colorScheme=dark?'dark':'light';
+    if(dark){set('--card',mix(bg,'#ffffff',.06));set('--card2',mix(bg,'#ffffff',.1));set('--line',mix(bg,'#ffffff',.14));set('--text','#f4f4f6');set('--muted','#8b8b9a');set('--pop-bg',mix(bg,'#ffffff',.1));set('--pop-fg','#f4f4f6');set('--shadow','none')}
+    else{set('--card',mix(bg,'#ffffff',.75));set('--card2',mix(bg,'#000000',.045));set('--line',mix(bg,'#000000',.1));set('--text','#0b0b0f');set('--muted','#6b6b76');set('--pop-bg','#0b0b0f');set('--pop-fg','#f4f4f6');set('--shadow','0 1px 2px rgba(11,11,15,.04),0 6px 20px rgba(11,11,15,.05)')}}
+  const btn=T.btn||(dark?'#c6f432':'#0b0b0f'),bl=hexLum(btn);
+  set('--btn',btn);set('--on-btn',!T.btn&&!dark?'#c6f432':bl>.45?'#0b0b0f':'#ffffff');
+  // accentkleur (voortgang, actieve tab): moet goed zichtbaar zijn op de achtergrond
+  const acc=dark?(bl<.06?'#f4f4f6':btn):(!T.btn?'#4d7c0f':bl>.35?mix(btn,'#000000',.45):btn);
+  set('--accent',acc);set('--accent2',mix(acc,dark?'#000000':'#ffffff',.25));
+  set('--glow',dark?'rgba('+hexRgb(btn)+',.18)':'transparent');
+  if(document.body)document.body.style.background=dark?'radial-gradient(900px 420px at 50% -160px,rgba('+hexRgb(btn)+',.07),transparent 70%) no-repeat,'+bg:bg;
+  metas.forEach(m=>m.content=bg)}
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>applyTheme())}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
   try{scheduleSync()}catch(e){}} // weekscores doorsturen naar je vrienden (als je ingelogd bent)
 
@@ -1080,7 +1169,9 @@ $('vacSet').addEventListener('click',e=>{const b=e.target.closest('[data-act]');
   if(b.dataset.act==='rmvac'){const id=b.closest('.vacrow').dataset.id;armed(b,'Weg?',()=>{S.vac=S.vac.filter(v=>v.id!==id);save();renderVacSet();renderToday();renderWeek()})}});
 $('tDate').addEventListener('change',()=>showTimes());
 
+let themeKey=null;
 function render(){
+  {const k=JSON.stringify(S.theme||{});if(k!==themeKey){themeKey=k;applyTheme()}} // thema (ook als het van je account komt)
   if(!S.schemas)S.schemas=JSON.parse(JSON.stringify(DEF_SCHEMAS));if(!S.workouts)S.workouts=[];if(!S.rest)S.rest=90; // ook na "Alles wissen"
   for(const k in S.schemas)S.schemas[k]=S.schemas[k].map(x=>typeof x==='string'?{n:x,sets:3,rest:0}:x); // oud formaat omzetten
   // oude standaardworkouts die je nooit aanpaste -> nieuwe basisoefeningen
@@ -1099,11 +1190,13 @@ function render(){
 /* ---------- navigatie ---------- */
 function show(v){view=v;if(v!=='week')planMode=false;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  const mode=v==='feed'?'feed':SPORT_VIEWS.includes(v)?'sport':AQ_VIEWS.includes(v)?'aqua':'plan';
+  const mode=v==='feed'?'feed':v==='settings'?'settings':SPORT_VIEWS.includes(v)?'sport':AQ_VIEWS.includes(v)?'aqua':'plan';
   if(mode==='sport')lastSport=v;else if(mode==='aqua')lastAqua=v;else if(mode==='plan')lastPlan=v;
   $('navPlan').hidden=mode!=='plan';$('navSport').hidden=mode!=='sport';$('navAqua').hidden=mode!=='aqua';
-  document.querySelector('nav').hidden=mode==='feed'; // de feed heeft geen tabbladen onderaan
+  document.querySelector('nav').hidden=mode==='feed'||mode==='settings'; // feed en instellingen hebben geen tabbladen onderaan
+  $('setBtn').classList.toggle('on',mode==='settings');
   if(v==='feed')loadFeed();
+  if(v==='settings'){setGroup=null;renderSettings()}
   document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.m===mode));
   if(S.restEnd)tickRest();
   if(v==='friends'){fr.err='';renderFriends();if(auth&&!fr.busy&&!fr.pending&&Date.now()-fr.loaded>30000)frRun(frLoad)}
@@ -2309,9 +2402,10 @@ $('aqWrap').addEventListener('click',e=>{const s=e.target.closest('.swim');if(!s
 const AQ_VIEWS=['aquarium','dice','dex'];let lastAqua='aquarium';
 
 /* wisselen tussen Plannen en Sporten */
-const SPORT_VIEWS=['train','schemas','progress'];
+const SPORT_VIEWS=['train','progress'];
 let lastPlan='today',lastSport='train';
 $('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;show(b.dataset.m==='feed'?'feed':b.dataset.m==='sport'?lastSport:b.dataset.m==='aqua'?lastAqua:lastPlan)});
+$('setBtn').addEventListener('click',()=>show('settings'));
 
 /* =====================================================================
    VRIENDEN: accounts (e-mail + wachtwoord), vriendencodes en weekranglijst
@@ -2553,6 +2647,60 @@ function woCard(w){const d=new Date(w.at),when=DN[d.getDay()]+' '+d.getDate()+' 
     +(i.note?'<div class="wonote">💬 '+esc(i.note)+'</div>':'')
     +ex.map(e=>'<div class="woex"><span>'+esc(e.n)+'</span><span>'+e.s.map(s=>(s[2]?'🔥':'')+fmtKg(s[0])+(s[1]?'×'+s[1]:' kg')).join(', ')+'</span></div>').join('')
     +(w.own?'<button class="linkbtn wophbtn" data-act="wophoto" data-id="'+esc(String(w.id))+'">📸 '+(i.photo||i.note?'Foto of uitleg aanpassen':'Foto en uitleg toevoegen')+'</button>':'')+'</div>'}
+/* ===== ⚙️ Instellingen: overzicht met groepen (Account, Meldingen, Workouts, Thema) ===== */
+let setGroup=null,accMsg='',accErr='',accBusy=false;
+function renderSettings(){
+  document.querySelectorAll('#v-settings .sgroup').forEach(g=>g.hidden=g.dataset.g!==setGroup);
+  $('setHome').hidden=!!setGroup;
+  $('setAccSub').textContent=auth&&auth.uid&&fr.profile?'Ingelogd als '+fr.profile.nickname:'Inloggen, gebruikersnaam, wachtwoord';
+  if(setGroup==='account')renderAccount();
+  if(setGroup==='theme')renderTheme();
+  if(setGroup==='workouts'||setGroup==='notif')renderSchemas()}
+$('v-settings').addEventListener('click',e=>{
+  const g=e.target.closest('.setrow2[data-g]');if(g){setGroup=g.dataset.g;accMsg=accErr='';renderSettings();window.scrollTo(0,0);return}
+  if(e.target.closest('[data-act="setback"]')){setGroup=null;renderSettings();window.scrollTo(0,0)}});
+
+// 👤 Account
+function renderAccount(){const el=$('accWrap');if(!el)return;
+  const msg=(accErr?'<div class="frmsg err">⚠️ '+esc(accErr)+'</div>':'')+(accMsg?'<div class="frmsg ok">'+esc(accMsg)+'</div>':'');
+  if(!auth||!auth.uid){el.innerHTML='<div class="card"><b>Je bent niet ingelogd</b><div class="sub" style="margin:6px 0 12px;font-size:14px">Met een account staan je gegevens veilig online, zie je je vrienden en kun je posten in de feed.</div>'
+    +'<button class="btn" data-acc="login">Inloggen of account maken</button></div>';return}
+  if(!fr.profile){el.innerHTML='<div class="card"><div class="empty">Laden…</div></div>';frLoad().then(()=>{if(setGroup==='account')renderAccount()}).catch(e=>{accErr=e.message;renderAccount()});return}
+  const busy=accBusy?' disabled':'';
+  el.innerHTML=msg
+    +'<div class="card"><label class="l" for="accNick">Gebruikersnaam <span style="font-weight:400">(zien je vrienden)</span></label>'
+    +'<div class="row" style="gap:8px"><input class="field" id="accNick" maxlength="20" value="'+esc(fr.profile.nickname)+'" style="margin:0"><button class="btn" data-acc="nick" style="width:auto;padding:0 18px;align-self:stretch"'+busy+'>Opslaan</button></div></div>'
+    +'<div class="card"><div class="accrow"><span>E-mail</span><b>'+esc(auth.email||'')+'</b></div>'
+    +'<div class="accrow"><span>Vriendencode</span><b class="frcode" style="font-size:16px">'+esc(fr.profile.friend_code)+'</b></div>'
+    +'<div class="accrow"><span>Gegevens</span><b>'+(cloudReady()?'☁️ Opgeslagen in je account':'☁️ Koppelen…')+'</b></div></div>'
+    +'<div class="card"><label class="l" for="accPw">Nieuw wachtwoord <span style="font-weight:400">(minstens 6 tekens)</span></label>'
+    +'<input class="field" id="accPw" type="password" autocomplete="new-password"><button class="btn ghost" data-acc="pw"'+busy+'>Wachtwoord wijzigen</button></div>'
+    +'<button class="btn danger" data-acc="logout">Uitloggen</button>'}
+$('accWrap').addEventListener('click',async e=>{const b=e.target.closest('[data-acc]');if(!b||b.disabled)return;const a=b.dataset.acc;accMsg=accErr='';
+  if(a==='login'){show('friends');return}
+  if(a==='logout'){armed(b,'Tik nogmaals om uit te loggen',()=>{frLogout().then(()=>{renderAccount();renderSettings();toast('Uitgelogd')})});return}
+  accBusy=true;renderAccount();
+  try{if(a==='nick'){const n=$('accNick').value.trim();if(n.length<2||n.length>20)throw new Error('Kies een naam van 2 tot 20 tekens');
+      const r=await sb('/rest/v1/profiles?id=eq.'+auth.uid+'&select=id,nickname,friend_code',{method:'PATCH',headers:{Prefer:'return=representation'},body:{nickname:n}});
+      if(r&&r[0])fr.profile=r[0];auth.nick=n;setAuth(auth);accMsg='✅ Je gebruikersnaam is nu '+n}
+    if(a==='pw'){const pw=$('accPw').value;if(pw.length<6)throw new Error('Je wachtwoord moet minstens 6 tekens hebben');
+      await sb('/auth/v1/user',{method:'PUT',body:{password:pw}});accMsg='✅ Je wachtwoord is gewijzigd'}}
+  catch(err){accErr=err.message}accBusy=false;renderAccount()});
+
+// 🎨 Thema: achtergrond- en knopkleur (wordt in je account bewaard, dus op al je toestellen)
+const THEME_BG=[['','Auto',null],['midnight','Midnight','#08080b'],['graphite','Grafiet','#1a1b20'],['ocean','Oceaan','#06141f'],['forest','Bos','#07140d'],['grape','Druif','#140b22'],['wine','Bordeaux','#1c0a11'],['light','Licht','#f3f3f0'],['sand','Zand','#f4eee4'],['sky','Lucht','#edf3fb']];
+const THEME_BTN=[['','Auto',null],['lime','Limoen','#c6f432'],['cyan','Cyaan','#22d3ee'],['pink','Roze','#f472b6'],['orange','Oranje','#ff8a4c'],['violet','Paars','#a78bfa'],['gold','Goud','#fbbf24'],['red','Rood','#f43f5e'],['white','Wit','#f4f4f6'],['black','Zwart','#0b0b0f']];
+function renderTheme(){const el=$('themeWrap');if(!el)return;const T=S.theme||{};
+  const sw=(list,cur,kind)=>'<div class="swatches">'+list.map(([k,n,c])=>'<button class="swatch'+((T[kind]||'')===(c||'')?' on':'')+'" data-tk="'+kind+'" data-tc="'+(c||'')+'" aria-label="'+n+'">'
+    +'<i style="'+(c?'background:'+c:'background:conic-gradient(#08080b 0 50%,#f3f3f0 50% 100%)')+'"></i><span>'+n+'</span></button>').join('')+'</div>';
+  el.innerHTML='<div class="sub" style="margin-bottom:4px">Maak LOCKED helemaal van jou. Je keuze wordt in je account bewaard, dus op al je toestellen.</div>'
+    +'<div class="thprev"><div class="thcard"><b>Voorbeeld</b><span>Zo ziet je app eruit</span><div class="bar" style="margin:10px 0"><i style="width:65%"></i></div><button class="btn" style="padding:10px;font-size:15px">Knop</button></div></div>'
+    +'<h2>Achtergrondkleur</h2>'+sw(THEME_BG,T.bg,'bg')
+    +'<h2>Knopkleur</h2>'+sw(THEME_BTN,T.btn,'btn')
+    +((T.bg||T.btn)?'<button class="btn ghost" data-tk="reset" style="margin-top:16px">↺ Terug naar Midnight (standaard)</button>':'')}
+$('themeWrap').addEventListener('click',e=>{const b=e.target.closest('[data-tk]');if(!b)return;
+  if(b.dataset.tk==='reset'){S.theme={}}else{S.theme=Object.assign({},S.theme||{});if(b.dataset.tc)S.theme[b.dataset.tk]=b.dataset.tc;else delete S.theme[b.dataset.tk]}
+  save();applyTheme();renderTheme()});
 /* ===== 📸 Feed: de laatste workouts van je vrienden en jezelf, met foto en tekst ===== */
 const fd={items:null,err:'',at:0,busy:false};
 const timeAgo=iso=>{const m=Math.max(0,Math.round((Date.now()-new Date(iso))/60000));
